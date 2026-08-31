@@ -34,7 +34,11 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
+      // paddingBottom: 100 clears the floating glass nav (same value the
+      // customer app uses) now that this screen sits under a floating,
+      // absolutely-positioned nav instead of a native tab bar that used
+      // to reserve its own space automatically.
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 16 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View>
