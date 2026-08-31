@@ -1,59 +1,25 @@
-import { Tabs } from 'expo-router';
-import { Home, Package, User, Wallet } from 'lucide-react-native';
-import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { colors } from '@/src/theme';
+import { Stack } from 'expo-router';
+import { View } from 'react-native';
+import { FloatingNav } from '@/src/shared/components/FloatingNav';
 
-export default function PartnerTabsLayout() {
-  const { isDark } = useResolvedTheme();
-  const theme = isDark ? colors.dark : colors.light;
-
+// Ported from the customer app's (main)/_layout.tsx pattern: a header-less
+// Stack with the floating glass nav mounted as a sibling, not inside any
+// one screen. FloatingNav is absolutely positioned so it needs this
+// full-screen flex:1 parent to anchor to, and it needs to live above the
+// Stack so it persists across screen transitions instead of remounting per
+// screen. Its own segment-matching logic decides which screens show it —
+// section roots only (home, jobs, wallet, notifications, profile); job
+// detail, active delivery, and settings hide it since those are
+// task-focused screens.
+//
+// Replaces the previous native Tabs navigator so the partner app's chrome
+// matches the customer app's floating-nav visual language instead of a
+// platform-default tab bar.
+export default function PartnerLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        // The partner's own accent, not any single job-type color — the
-        // tab bar is chrome that belongs to the partner, not to a job.
-        tabBarActiveTintColor: colors.partner.orange,
-        tabBarInactiveTintColor: theme.textSecondary,
-        tabBarStyle: {
-          backgroundColor: theme.surface,
-          borderTopColor: theme.border,
-        },
-        tabBarLabelStyle: { fontFamily: 'Fredoka_500Medium', fontSize: 11 },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="jobs/index"
-        options={{ title: 'Jobs', tabBarIcon: ({ color, size }) => <Package color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="jobs/[id]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="active/[id]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="notifications/index"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="settings/index"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="wallet/index"
-        options={{ title: 'Wallet', tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} /> }}
-      />
-      <Tabs.Screen
-        name="profile/index"
-        options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User color={color} size={size} /> }}
-      />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      <FloatingNav />
+    </View>
   );
 }
