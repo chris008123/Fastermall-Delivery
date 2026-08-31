@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { Lock, Phone } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { Button } from '@/src/shared/components/Button';
+import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
@@ -40,20 +41,21 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.background }}
+      className="flex-1 bg-neutral-50 dark:bg-neutral-950"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 18 }}>
-        <View style={{ gap: 6, marginBottom: 8 }}>
-          <Text className="text-overline font-semibold" style={{ color: colors.partner.orange, letterSpacing: 0.8 }}>
-            FASTERMALL PARTNER
-          </Text>
-          <Text className="text-display font-bold" style={{ color: theme.text }}>Sign in</Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            Use the phone number and password from your partner onboarding.
-          </Text>
-        </View>
+      {/* Same gradient-hero language as the customer app's auth screens,
+          recolored to the partner app's own orange identity. */}
+      <PartnerAuthHeroHeader
+        title="Sign in"
+        subtitle="Use the phone number and password from your partner onboarding."
+      />
 
+      <ScrollView
+        className="-mt-6 flex-1 rounded-t-[24px] bg-white dark:bg-neutral-900"
+        contentContainerStyle={{ padding: 24, paddingBottom: 32, gap: 18 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Field label="Phone number" theme={theme} icon={<Phone size={18} color={theme.textSecondary} />}>
           <TextInput
             value={phone}
@@ -83,7 +85,7 @@ export default function LoginScreen() {
         )}
 
         <Button title="Sign in" variant="partner" fullWidth loading={loading} onPress={onSubmit} />
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
