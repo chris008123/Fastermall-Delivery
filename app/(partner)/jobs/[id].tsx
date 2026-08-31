@@ -3,6 +3,7 @@ import { Bike, Footprints, MapPin, PackageX, Wallet } from 'lucide-react-native'
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
@@ -53,6 +54,7 @@ export default function JobDetailScreen() {
       {/* Nav is hidden on this screen (task-focused detail view), so 32px
           is enough here — no floating nav to clear, unlike the section
           root tabs which use 100. */}
+      <BackButton />
       <Badge jobType={job.type} label={job.type} />
       <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(job.deliveryFee)}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

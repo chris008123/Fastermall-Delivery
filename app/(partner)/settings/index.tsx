@@ -2,6 +2,7 @@ import { Laptop, Moon, Sun } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type ThemeMode } from '@/src/stores/settingsStore';
@@ -22,7 +23,16 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 16, paddingHorizontal: 20, gap: 16 }}>
-      <Text className="text-h1 font-bold" style={{ color: theme.text }}>Settings</Text>
+      {/* This screen is pushed on top of the headerless (partner) Stack
+          (screenOptions sets headerShown: false for every route so the
+          tab roots stay clean under the floating nav), which left
+          Settings with no visible way back — only an OS swipe/hardware
+          gesture. BackButton is the shared fix, also used on the job
+          detail and active delivery screens. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <BackButton />
+        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Settings</Text>
+      </View>
 
       <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>

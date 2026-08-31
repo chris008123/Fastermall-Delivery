@@ -3,6 +3,7 @@ import { CheckCircle2, KeyRound, PackageX } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
@@ -105,6 +106,12 @@ export default function ActiveDeliveryScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
     >
+      {/* Nav is hidden on this screen (task-focused, one-way workflow),
+          and unlike jobs/[id] there was previously no way at all to
+          leave it mid-delivery except completing every stage. This is
+          purely a navigation pop — the job stays active in the store
+          regardless of leaving this screen, so it's safe to add. */}
+      <BackButton />
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Badge jobType={job.type} label={job.type} />
         <Text className="text-caption" style={{ color: theme.textSecondary }}>{job.customerName}</Text>
