@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Bike, ChevronRight, Footprints, Settings, User } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
@@ -26,7 +26,15 @@ export default function ProfileScreen() {
   const { average, count } = useJobsStore((s) => selectPartnerRating(s.jobs));
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 16, paddingHorizontal: 20, gap: 16 }}>
+    // Switched from a fixed View to a ScrollView, matching the main app's
+    // profile screen: this list only grows over time (more settings rows
+    // are a near-certainty), and a fixed View risks the Sign out button
+    // sitting under the floating nav on shorter screens. paddingBottom: 100
+    // clears the nav, same convention as the other tabs.
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 16 }}
+    >
       <View style={{ alignItems: 'center', gap: 10, paddingVertical: 12 }}>
         <View
           style={{
@@ -110,6 +118,6 @@ export default function ProfileScreen() {
           router.replace('/(auth)/login');
         }}
       />
-    </View>
+    </ScrollView>
   );
 }
