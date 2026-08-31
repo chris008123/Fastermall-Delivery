@@ -31,9 +31,12 @@ export default function WalletScreen() {
   const canWithdraw = earnings >= threshold;
 
   return (
+    // paddingBottom: 100 clears the floating glass nav, same convention
+    // used on Home and Jobs, now that this list sits under an absolutely
+    // positioned nav instead of a native tab bar.
     <FlatList<LedgerEntry>
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
       data={ledger}
       keyExtractor={(e) => e.id}
       ListHeaderComponent={
