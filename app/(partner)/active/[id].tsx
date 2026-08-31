@@ -150,6 +150,8 @@ function StepAction({
   accent: string;
   onAdvance: () => void;
 }) {
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const label = STAGE_COPY[stage].action ?? 'Continue';
 
   if (stage === 'DELIVERED') {
@@ -161,6 +163,7 @@ function StepAction({
             value={code}
             onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 4))}
             placeholder="4-digit code"
+            placeholderTextColor={theme.textSecondary}
             keyboardType="number-pad"
             maxLength={4}
             style={{
@@ -172,6 +175,10 @@ function StepAction({
               paddingVertical: 10,
               fontSize: 16,
               letterSpacing: 4,
+              // Was missing — the entered digits fell back to default
+              // black text, invisible against the dark-mode background.
+              // Same class of bug as the earlier back-arrow icon fixes.
+              color: theme.text,
             }}
           />
         </View>

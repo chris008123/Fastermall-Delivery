@@ -50,6 +50,9 @@ export default function JobDetailScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
     >
+      {/* Nav is hidden on this screen (task-focused detail view), so 32px
+          is enough here — no floating nav to clear, unlike the section
+          root tabs which use 100. */}
       <Badge jobType={job.type} label={job.type} />
       <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(job.deliveryFee)}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
