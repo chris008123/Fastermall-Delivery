@@ -55,9 +55,12 @@ export default function JobsScreen() {
 
   if (view === 'history') {
     return (
+      // paddingBottom: 100 clears the floating glass nav, same convention
+      // as the home screen, now that this list sits under an absolutely
+      // positioned nav instead of a native tab bar.
       <FlatList<Job>
         style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
         data={history}
         keyExtractor={(j) => j.id}
         ListHeaderComponent={
@@ -83,7 +86,7 @@ export default function JobsScreen() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
       data={openJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
