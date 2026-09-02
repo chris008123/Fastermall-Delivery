@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, CheckCircle2, KeyRound, LifeBuoy, PackageX, ShieldAlert } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, KeyRound, LifeBuoy, Navigation, PackageX, ShieldAlert } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,9 +15,11 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
 import { pipelineFor, useJobsStore } from '@/src/stores/jobsStore';
+import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 import type { Job, JobStage, JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
+import { openNavigation } from '@/src/utils/navigation';
 
 const STEP_VARIANT: Record<JobType, 'primary' | 'gold' | 'laundry'> = {
   MARKETPLACE: 'primary',
@@ -47,6 +49,7 @@ export default function ActiveDeliveryScreen() {
   const job = useJobsStore((s) => s.jobs.find((j) => j.id === id));
   const advanceStage = useJobsStore((s) => s.advanceStage);
   const failJob = useJobsStore((s) => s.failJob);
+  const navigationApp = useSettingsStore((s) => s.navigationApp);
   const [safetyVisible, setSafetyVisible] = useState(false);
   const [failedSheetVisible, setFailedSheetVisible] = useState(false);
 
@@ -75,6 +78,10 @@ export default function ActiveDeliveryScreen() {
   }
 
   const accent = colors.jobType[job.type].dark;
+  const pipeline = pipelineFor(job.type);
+  const pickedUpIndex = pipeline.indexOf('PICKED_UP');
+  const currentIndex = pipeline.indexOf(job.stage);
+  const navTarget = currentIndex < pickedUpIndex ? job.pickup.coordinate : job.dropoff.coordinate;
 
   if (job.stage === 'COMPLETED') {
     return (
@@ -197,6 +204,29 @@ export default function ActiveDeliveryScreen() {
       </View>
 
       <DeliveryMap job={job} />
+
+      {navigationApp !== 'FASTERMALL_MAPS' && (
+        <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingVertical: 12,
+              borderRadius: 14,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
+          >
+            <Navigation size={16} color={accent} />
+            <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+              Navigate with {navigationApp === 'GOOGLE_MAPS' ? 'Google Maps' : 'Waze'}
+            </Text>
+          </View>
+        </AnimatedPressable>
+      )}
 
       <GlassView radius="card" style={{ padding: 20 }}>
         <RouteStepper
