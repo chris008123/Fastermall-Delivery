@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { AlertTriangle, Bike, Check, ChevronRight, FileCheck2, Footprints, LifeBuoy, Settings, ShieldCheck, User } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { AlertTriangle, Bike, Check, ChevronRight, CreditCard, FileCheck2, Footprints, LifeBuoy, Pencil, Settings, ShieldCheck, User } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
+import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
+  const [editPlateVisible, setEditPlateVisible] = useState(false);
   const jobs = useJobsStore((s) => s.jobs);
   // selectPartnerRating returns a fresh object every call — computing it
   // *inside* the zustand selector (as this used to) hands
@@ -142,11 +144,54 @@ export default function ProfileScreen() {
           })}
         </View>
         {partner.vehiclePlate && (
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            Plate: {partner.vehiclePlate}
-          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 12,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
+          >
+            <CreditCard size={18} color={theme.textSecondary} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>
+                Plate number
+              </Text>
+              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+                {partner.vehiclePlate}
+              </Text>
+            </View>
+            <AnimatedPressable onPress={() => setEditPlateVisible(true)} scaleTo={0.95}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: colors.partner.orangeTint,
+                }}
+              >
+                <Pencil size={13} color={colors.partner.orange} />
+                <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>
+                  Edit
+                </Text>
+              </View>
+            </AnimatedPressable>
+          </View>
         )}
       </GlassView>
+
+      <EditPlateSheet
+        visible={editPlateVisible}
+        onClose={() => setEditPlateVisible(false)}
+        initialValue={partner.vehiclePlate ?? ''}
+        onSave={(plate) => partner.setVehiclePlate(plate)}
+      />
 
       <AnimatedPressable onPress={() => router.push('/documents')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>

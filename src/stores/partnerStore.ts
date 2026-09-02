@@ -8,6 +8,7 @@ interface PartnerState {
   isAvailable: boolean;
   setAvailable: (available: boolean) => void;
   setMode: (mode: PartnerMode) => void;
+  setVehiclePlate: (plate: string) => void;
 }
 
 export const usePartnerStore = create<PartnerState>((set) => ({
@@ -17,4 +18,5 @@ export const usePartnerStore = create<PartnerState>((set) => ({
   isAvailable: false,
   setAvailable: (isAvailable) => set({ isAvailable }),
   setMode: (mode) => set({ mode, vehiclePlate: mode === 'MOTORCYCLE' ? 'AS 4471-24' : null }),
+  setVehiclePlate: (vehiclePlate) => set({ vehiclePlate }),
 }));
