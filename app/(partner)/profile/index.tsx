@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import { AlertTriangle, Bike, Check, ChevronRight, CreditCard, FileCheck2, Footprints, LifeBuoy, Pencil, Settings, ShieldCheck, User } from 'lucide-react-native';
+import { AlertTriangle, Bike, Check, ChevronRight, CreditCard, FileCheck2, Footprints, LifeBuoy, LogOut, Pencil, Settings, ShieldCheck, User } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
-import { Button } from '@/src/shared/components/Button';
 import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { StarRating } from '@/src/shared/components/StarRating';
@@ -270,14 +269,18 @@ export default function ProfileScreen() {
         </GlassView>
       </AnimatedPressable>
 
-      <Button
-        title="Sign out"
-        variant="ghost"
+      <AnimatedPressable
         onPress={() => {
           useAuthStore.getState().signOut();
           router.replace('/(auth)/login');
         }}
-      />
+        scaleTo={0.98}
+      >
+        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <LogOut size={18} color={colors.semantic.error} />
+          <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>Sign out</Text>
+        </GlassView>
+      </AnimatedPressable>
     </ScrollView>
   );
 }
