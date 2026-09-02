@@ -1,14 +1,20 @@
-import { ArrowDownCircle, Banknote, PiggyBank, RefreshCcw } from 'lucide-react-native';
+import { ArrowDownCircle, Banknote, Clock3, PiggyBank, RefreshCcw } from 'lucide-react-native';
+import { useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { EarningsChart } from '@/src/shared/components/EarningsChart';
+import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
 import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
+import { nextPayoutDate } from '@/src/utils/date';
 import { formatCurrency } from '@/src/utils/money';
 
 const ENTRY_META: Record<LedgerEntryType, { icon: typeof Banknote; label: string }> = {
@@ -16,6 +22,13 @@ const ENTRY_META: Record<LedgerEntryType, { icon: typeof Banknote; label: string
   REIMBURSEMENT: { icon: RefreshCcw, label: 'Reimbursement' },
   WITHDRAWAL: { icon: ArrowDownCircle, label: 'Withdrawal' },
 };
+
+// Small flat-ish instant-transfer fee, capped so a big balance doesn't
+// pay a disproportionate amount — same shape as the mobile-money instant
+// transfer fees this is modeling.
+function instantFeeFor(balance: number): number {
+  return Math.min(Math.round(balance * 0.02 * 100) / 100, 5);
+}
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
@@ -25,10 +38,18 @@ export default function WalletScreen() {
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
   const withdraw = useWalletStore((s) => s.withdraw);
+  const withdrawInstant = useWalletStore((s) => s.withdrawInstant);
+  const jobs = useJobsStore((s) => s.jobs);
+
+  const [cashoutVisible, setCashoutVisible] = useState(false);
+  const [fareEntry, setFareEntry] = useState<LedgerEntry | null>(null);
 
   const earnings = selectEarningsBalance(ledger);
   const reimbursed = selectReimbursedTotal(ledger);
   const canWithdraw = earnings >= threshold;
+  const instantFee = instantFeeFor(earnings);
+  const payoutLabel = nextPayoutDate();
+  const fareJob = fareEntry?.jobId ? jobs.find((j) => j.id === fareEntry.jobId) ?? null : null;
 
   return (
     // paddingBottom: 100 clears the floating glass nav, same convention
@@ -60,7 +81,26 @@ export default function WalletScreen() {
                 ? `You've crossed the ${formatCurrency(threshold)} cash-out threshold.`
                 : `${formatCurrency(Math.max(threshold - earnings, 0))} more to unlock a cash-out.`}
             </Text>
-            <Button title="Cash out" variant="partner" disabled={!canWithdraw} onPress={withdraw} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Cash out instantly"
+                  variant="partner"
+                  disabled={!canWithdraw}
+                  onPress={() => setCashoutVisible(true)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button title="Scheduled payout" variant="secondary" disabled={!canWithdraw} onPress={withdraw} />
+              </View>
+            </View>
+          </GlassView>
+
+          <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Clock3 size={18} color={colors.partner.orange} />
+            <Text className="text-caption" style={{ color: theme.textSecondary, flex: 1 }}>
+              Next automatic payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{payoutLabel}</Text> — free, no fee.
+            </Text>
           </GlassView>
 
           <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
@@ -88,19 +128,49 @@ export default function WalletScreen() {
         </View>
       }
       ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />}
-      renderItem={({ item }) => <LedgerRow entry={item} theme={theme} />}
+      renderItem={({ item }) => (
+        <LedgerRow
+          entry={item}
+          theme={theme}
+          onPress={item.type === 'EARNING' && item.jobId ? () => setFareEntry(item) : undefined}
+        />
+      )}
+      ListFooterComponent={
+        <>
+          <InstantCashoutSheet
+            visible={cashoutVisible}
+            onClose={() => setCashoutVisible(false)}
+            onConfirm={() => {
+              withdrawInstant(instantFee);
+              setCashoutVisible(false);
+            }}
+            balance={earnings}
+            feeAmount={instantFee}
+            nextPayoutLabel={payoutLabel}
+          />
+          <FareBreakdownSheet visible={!!fareEntry} onClose={() => setFareEntry(null)} job={fareJob} />
+        </>
+      }
     />
   );
 }
 
-function LedgerRow({ entry, theme }: { entry: LedgerEntry; theme: { text: string; textSecondary: string } }) {
+function LedgerRow({
+  entry,
+  theme,
+  onPress,
+}: {
+  entry: LedgerEntry;
+  theme: { text: string; textSecondary: string };
+  onPress?: () => void;
+}) {
   const meta = ENTRY_META[entry.type];
   const Icon = meta.icon;
   const positive = entry.amount >= 0;
   const iconColor =
     entry.type === 'EARNING' ? colors.partner.orange : entry.type === 'REIMBURSEMENT' ? colors.brand.teal : theme.textSecondary;
 
-  return (
+  const Row = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
       <View
         style={{
@@ -126,5 +196,13 @@ function LedgerRow({ entry, theme }: { entry: LedgerEntry; theme: { text: string
         {positive ? '+' : ''}{formatCurrency(entry.amount)}
       </Text>
     </View>
+  );
+
+  if (!onPress) return Row;
+
+  return (
+    <AnimatedPressable onPress={onPress} scaleTo={0.99}>
+      {Row}
+    </AnimatedPressable>
   );
 }
