@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, KeyRound, PackageX } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, KeyRound, PackageX, ShieldAlert } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,9 +7,12 @@ import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
+import { FailedDeliverySheet, FAILURE_REASONS } from '@/src/shared/components/FailedDeliverySheet';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { SafetySheet } from '@/src/shared/components/SafetySheet';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
 import { pipelineFor, useJobsStore } from '@/src/stores/jobsStore';
 import { colors } from '@/src/theme';
@@ -43,6 +46,9 @@ export default function ActiveDeliveryScreen() {
 
   const job = useJobsStore((s) => s.jobs.find((j) => j.id === id));
   const advanceStage = useJobsStore((s) => s.advanceStage);
+  const failJob = useJobsStore((s) => s.failJob);
+  const [safetyVisible, setSafetyVisible] = useState(false);
+  const [failedSheetVisible, setFailedSheetVisible] = useState(false);
 
   const steps: RouteStep[] = useMemo(() => {
     if (!job) return [];
@@ -101,6 +107,34 @@ export default function ActiveDeliveryScreen() {
     );
   }
 
+  if (job.stage === 'FAILED') {
+    const reasonMeta = FAILURE_REASONS.find((r) => r.key === job.failureReason);
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 24, paddingHorizontal: 20, gap: 16 }}>
+        <View style={{ alignItems: 'center', gap: 12, paddingVertical: 24 }}>
+          <AlertTriangle size={48} color={colors.semantic.error} />
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>Delivery couldn't be completed</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            {reasonMeta ? reasonMeta.label : 'This delivery was marked as failed.'} Support has been notified and
+            will follow up if anything further is needed.
+          </Text>
+        </View>
+
+        {job.vendorPayoutAmount != null && (
+          <GlassView radius="card" style={{ padding: 18, gap: 10 }}>
+            <SummaryRow label="Reimbursed to you" amount={job.vendorPayoutAmount} theme={theme} />
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              The delivery fee for this job wasn't earned since it couldn't be completed — the vendor cost you
+              already covered has still been returned to you.
+            </Text>
+          </GlassView>
+        )}
+
+        <Button title="Back to jobs" variant="partner" fullWidth onPress={() => router.replace('/jobs')} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
@@ -116,6 +150,27 @@ export default function ActiveDeliveryScreen() {
         <Badge jobType={job.type} label={job.type} />
         <Text className="text-caption" style={{ color: theme.textSecondary }}>{job.customerName}</Text>
       </View>
+
+      {/* Persistent but unobtrusive — reachable from any stage of an
+          active delivery, not tucked behind a menu. Highest-priority
+          gap identified in the partner-app research: no equivalent of
+          this existed anywhere in the app before. */}
+      <AnimatedPressable onPress={() => setSafetyVisible(true)} scaleTo={0.97} style={{ alignSelf: 'flex-start' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: 'rgba(214, 69, 69, 0.1)',
+          }}
+        >
+          <ShieldAlert size={14} color={colors.semantic.error} />
+          <Text className="text-caption font-semibold" style={{ color: colors.semantic.error }}>Safety</Text>
+        </View>
+      </AnimatedPressable>
 
       <DeliveryMap job={job} />
 
@@ -138,6 +193,23 @@ export default function ActiveDeliveryScreen() {
           )}
         />
       </GlassView>
+
+      <AnimatedPressable onPress={() => setFailedSheetVisible(true)} scaleTo={0.98}>
+        <Text className="text-caption font-semibold" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+          Can't complete this delivery?
+        </Text>
+      </AnimatedPressable>
+
+      <SafetySheet visible={safetyVisible} onClose={() => setSafetyVisible(false)} />
+      <FailedDeliverySheet
+        visible={failedSheetVisible}
+        onClose={() => setFailedSheetVisible(false)}
+        customerName={job.customerName}
+        onConfirmFailed={(reason) => {
+          setFailedSheetVisible(false);
+          failJob(job.id, reason);
+        }}
+      />
     </ScrollView>
   );
 }
