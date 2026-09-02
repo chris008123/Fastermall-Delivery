@@ -256,7 +256,7 @@ function JobCard({ job, disabled, onPress }: { job: Job; disabled: boolean; onPr
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <ModeIcon size={14} color={theme.textSecondary} />
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
-              {job.distanceKm.toFixed(1)} km \u00b7 ~{job.etaMinutes} min
+              {`${job.distanceKm.toFixed(1)} km \u00b7 ~${job.etaMinutes} min`}
             </Text>
           </View>
           {disabled && (
@@ -289,7 +289,7 @@ function HistoryCard({ job }: { job: Job }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <MapPin size={14} color={theme.textSecondary} />
         <Text className="text-body font-medium" style={{ color: theme.text }} numberOfLines={1}>
-          {job.pickup.label} \u2192 {job.dropoff.label}
+          {`${job.pickup.label} \u2192 ${job.dropoff.label}`}
         </Text>
       </View>
 

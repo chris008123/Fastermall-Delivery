@@ -60,7 +60,7 @@ export default function JobDetailScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <ModeIcon size={16} color={theme.textSecondary} />
         <Text className="text-body" style={{ color: theme.textSecondary }}>
-          {job.distanceKm.toFixed(1)} km \u00b7 ~{job.etaMinutes} min \u00b7 {job.partnerMode === 'MOTORCYCLE' ? 'Motorcycle' : 'Walking'}
+          {`${job.distanceKm.toFixed(1)} km \u00b7 ~${job.etaMinutes} min \u00b7 ${job.partnerMode === 'MOTORCYCLE' ? 'Motorcycle' : 'Walking'}`}
         </Text>
       </View>
 

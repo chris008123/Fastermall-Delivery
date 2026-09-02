@@ -64,7 +64,7 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <StarRating rating={average} size={16} />
             <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>
-              {average.toFixed(1)} \u00b7 {count} deliver{count === 1 ? 'y' : 'ies'}
+              {`${average.toFixed(1)} \u00b7 ${count} deliver${count === 1 ? 'y' : 'ies'}`}
             </Text>
           </View>
         )}
