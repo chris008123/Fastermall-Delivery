@@ -37,7 +37,16 @@ export function GlassView({
   const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.5)';
 
   return (
-    <View style={[shadow ? shadows.glass : undefined, style]} {...rest}>
+    // Shadow lives on the outermost view (elevation/shadow props don't play
+    // well with overflow: hidden), while `style` — almost always padding,
+    // gap, and alignment meant for the card's content — is applied on the
+    // innermost view, where `children` actually render. Previously `style`
+    // was applied to this outer wrapper instead, which left the visible
+    // card with little to no real internal padding: text sat close enough
+    // to the rounded corners to visually clip against them, and the whole
+    // card rendered ~20px further right/narrower than sibling elements
+    // that share the same screen padding.
+    <View style={shadow ? shadows.glass : undefined} {...rest}>
       <View style={{ borderRadius, overflow: 'hidden' }}>
         {Platform.OS !== 'android' && (
           <BlurView
@@ -47,12 +56,15 @@ export function GlassView({
           />
         )}
         <View
-          style={{
-            backgroundColor: Platform.OS === 'android' ? solidTint : tint,
-            borderWidth: StyleSheet.hairlineWidth * 2,
-            borderColor,
-            borderRadius,
-          }}
+          style={[
+            {
+              backgroundColor: Platform.OS === 'android' ? solidTint : tint,
+              borderWidth: StyleSheet.hairlineWidth * 2,
+              borderColor,
+              borderRadius,
+            },
+            style,
+          ]}
         >
           {children}
         </View>

@@ -53,7 +53,7 @@ function NotificationRow({ notification, theme }: { notification: AppNotificatio
   const accent = notification.type === 'PAYMENT' ? colors.partner.orange : notification.type === 'JOB' ? colors.brand.teal : theme.textSecondary;
 
   return (
-    <GlassView radius="card" shadow={false} style={{ padding: 16, flexDirection: 'row', gap: 12, opacity: notification.read ? 0.75 : 1 }}>
+    <GlassView radius="card" shadow={false} style={{ padding: 20, flexDirection: 'row', gap: 12, opacity: notification.read ? 0.75 : 1 }}>
       <View
         style={{
           width: 36,
