@@ -1,0 +1,208 @@
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Car,
+  Camera,
+  CreditCard,
+  FileText,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { BackButton } from '@/src/shared/components/BackButton';
+import { Button } from '@/src/shared/components/Button';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/documentsStore';
+import { colors } from '@/src/theme';
+import type { DocumentStatus, DocumentType, PartnerDocument } from '@/src/types/document';
+import { daysUntil, formatDate } from '@/src/utils/date';
+
+const TYPE_ICON: Record<DocumentType, typeof CreditCard> = {
+  GHANA_CARD: CreditCard,
+  DRIVERS_LICENCE: FileText,
+  VEHICLE_REGISTRATION: Car,
+  SELFIE: Camera,
+};
+
+const STATUS_META: Record<DocumentStatus, { label: string; icon: typeof CheckCircle2; color: string; tint: string }> = {
+  VERIFIED: { label: 'Verified', icon: CheckCircle2, color: colors.semantic.success, tint: 'rgba(26, 156, 92, 0.12)' },
+  EXPIRING_SOON: { label: 'Expiring soon', icon: AlertTriangle, color: colors.semantic.warning, tint: 'rgba(224, 163, 0, 0.14)' },
+  EXPIRED: { label: 'Expired', icon: XCircle, color: colors.semantic.error, tint: 'rgba(214, 69, 69, 0.12)' },
+  REJECTED: { label: 'Rejected', icon: XCircle, color: colors.semantic.error, tint: 'rgba(214, 69, 69, 0.12)' },
+  PENDING: { label: 'Under review', icon: Clock, color: colors.semantic.info, tint: 'rgba(59, 130, 196, 0.12)' },
+  NOT_UPLOADED: { label: 'Not uploaded', icon: Clock, color: colors.neutral[500], tint: colors.neutral[100] },
+};
+
+export default function DocumentsScreen() {
+  const insets = useSafeAreaInsets();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
+  const documents = useDocumentsStore((s) => s.documents);
+  const summary = selectVerificationSummary(documents);
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <BackButton />
+        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Documents</Text>
+      </View>
+
+      <StatusBanner summary={summary} theme={theme} />
+
+      <View style={{ gap: 12 }}>
+        {documents.map((doc) => (
+          <DocumentCard key={doc.id} document={doc} theme={theme} />
+        ))}
+      </View>
+
+      <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 8 }}>
+        Keeping every document current lets you stay online without interruption. We'll remind you before
+        anything expires.
+      </Text>
+    </ScrollView>
+  );
+}
+
+function StatusBanner({
+  summary,
+  theme,
+}: {
+  summary: ReturnType<typeof selectVerificationSummary>;
+  theme: { text: string; textSecondary: string };
+}) {
+  if (summary.isBlocked) {
+    return (
+      <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <XCircle size={22} color={colors.semantic.error} />
+        <View style={{ flex: 1 }}>
+          <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
+            Action needed
+          </Text>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            {summary.blockingCount === 1
+              ? 'One document has expired or was rejected. Renew it to keep receiving jobs.'
+              : `${summary.blockingCount} documents have expired or were rejected. Renew them to keep receiving jobs.`}
+          </Text>
+        </View>
+      </GlassView>
+    );
+  }
+
+  if (summary.attentionCount > 0) {
+    return (
+      <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <AlertTriangle size={22} color={colors.semantic.warning} />
+        <View style={{ flex: 1 }}>
+          <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.warning }}>
+            Expiring soon
+          </Text>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            {summary.attentionCount === 1
+              ? 'One document expires soon. Renew it early to avoid any gap in going online.'
+              : `${summary.attentionCount} documents expire soon. Renew them early to avoid any gap in going online.`}
+          </Text>
+        </View>
+      </GlassView>
+    );
+  }
+
+  return (
+    <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <ShieldCheck size={22} color={colors.semantic.success} />
+      <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.success }}>
+        Your account is verified
+      </Text>
+    </GlassView>
+  );
+}
+
+function DocumentCard({
+  document,
+  theme,
+}: {
+  document: PartnerDocument;
+  theme: { text: string; textSecondary: string; border: string; surface: string };
+}) {
+  const reupload = useDocumentsStore((s) => s.reuploadDocument);
+  const Icon = TYPE_ICON[document.type];
+  const meta = STATUS_META[document.status];
+  const StatusIcon = meta.icon;
+  const needsAction = document.status === 'EXPIRED' || document.status === 'REJECTED' || document.status === 'NOT_UPLOADED';
+  const isPending = document.status === 'PENDING';
+
+  const expiryText = (() => {
+    if (!document.expiresAt) return null;
+    if (document.status === 'EXPIRED') return `Expired ${formatDate(document.expiresAt)}`;
+    if (document.status === 'EXPIRING_SOON') return `Expires in ${daysUntil(document.expiresAt)} days`;
+    return `Expires ${formatDate(document.expiresAt)}`;
+  })();
+
+  return (
+    <GlassView radius="card" style={{ padding: 16, gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            backgroundColor: colors.partner.orangeTint,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon size={20} color={colors.partner.orange} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{document.label}</Text>
+          {expiryText && (
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>{expiryText}</Text>
+          )}
+        </View>
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          alignSelf: 'flex-start',
+          backgroundColor: meta.tint,
+          borderRadius: 999,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+        }}
+      >
+        <StatusIcon size={14} color={meta.color} />
+        <Text className="text-caption font-semibold" style={{ color: meta.color }}>{meta.label}</Text>
+      </View>
+
+      {needsAction && (
+        <Button
+          title={document.status === 'NOT_UPLOADED' ? 'Upload document' : 'Renew document'}
+          variant="partner"
+          size="sm"
+          onPress={() => reupload(document.id)}
+        />
+      )}
+      {document.status === 'EXPIRING_SOON' && (
+        <AnimatedPressable onPress={() => reupload(document.id)} scaleTo={0.98}>
+          <Text className="text-caption font-semibold" style={{ color: colors.partner.orange, textAlign: 'center' }}>
+            Renew early
+          </Text>
+        </AnimatedPressable>
+      )}
+      {isPending && (
+        <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+          We're reviewing your document — usually within 24–48 hours.
+        </Text>
+      )}
+    </GlassView>
+  );
+}

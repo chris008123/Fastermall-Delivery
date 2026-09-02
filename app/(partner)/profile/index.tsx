@@ -1,13 +1,15 @@
 import { router } from 'expo-router';
-import { Bike, ChevronRight, Footprints, Settings, User } from 'lucide-react-native';
+import { AlertTriangle, Bike, ChevronRight, FileCheck2, Footprints, Settings, ShieldCheck, User } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
+import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/documentsStore';
 import { selectPartnerRating, useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
@@ -24,6 +26,8 @@ export default function ProfileScreen() {
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
   const { average, count } = useJobsStore((s) => selectPartnerRating(s.jobs));
+  const documents = useDocumentsStore((s) => s.documents);
+  const verification = selectVerificationSummary(documents);
 
   return (
     // Switched from a fixed View to a ScrollView, matching the main app's
@@ -101,6 +105,25 @@ export default function ProfileScreen() {
           </Text>
         )}
       </GlassView>
+
+      <AnimatedPressable onPress={() => router.push('/documents')} scaleTo={0.98}>
+        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {verification.isBlocked || verification.attentionCount > 0 ? (
+            <AlertTriangle size={18} color={colors.semantic.warning} />
+          ) : (
+            <FileCheck2 size={18} color={theme.textSecondary} />
+          )}
+          <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Documents</Text>
+          {verification.isBlocked ? (
+            <Badge label="Action needed" color={colors.semantic.error} tint="rgba(214, 69, 69, 0.12)" />
+          ) : verification.attentionCount > 0 ? (
+            <Badge label="Expiring soon" color={colors.semantic.warning} tint="rgba(224, 163, 0, 0.14)" />
+          ) : (
+            <ShieldCheck size={16} color={colors.semantic.success} />
+          )}
+          <ChevronRight size={18} color={theme.textSecondary} />
+        </GlassView>
+      </AnimatedPressable>
 
       <AnimatedPressable onPress={() => router.push('/settings')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
