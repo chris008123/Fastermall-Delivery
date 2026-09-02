@@ -15,17 +15,45 @@ import type { Job } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
 
 type JobsView = 'available' | 'history';
+type JobTypeFilter = 'ALL' | Job['type'];
+type SortOption = 'HIGHEST_PAY' | 'CLOSEST' | 'SHORTEST';
+
+const TYPE_FILTERS: { value: JobTypeFilter; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'MARKETPLACE', label: 'Marketplace' },
+  { value: 'FOOD', label: 'Food' },
+  { value: 'LAUNDRY', label: 'Laundry' },
+];
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'HIGHEST_PAY', label: 'Highest pay' },
+  { value: 'CLOSEST', label: 'Closest' },
+  { value: 'SHORTEST', label: 'Shortest' },
+];
+
+function sortJobs(jobs: Job[], sortBy: SortOption): Job[] {
+  const sorted = [...jobs];
+  if (sortBy === 'HIGHEST_PAY') sorted.sort((a, b) => b.deliveryFee - a.deliveryFee);
+  if (sortBy === 'CLOSEST') sorted.sort((a, b) => a.distanceKm - b.distanceKm);
+  if (sortBy === 'SHORTEST') sorted.sort((a, b) => a.etaMinutes - b.etaMinutes);
+  return sorted;
+}
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [view, setView] = useState<JobsView>('available');
+  const [typeFilter, setTypeFilter] = useState<JobTypeFilter>('ALL');
+  const [sortBy, setSortBy] = useState<SortOption>('HIGHEST_PAY');
 
   const isAvailable = usePartnerStore((s) => s.isAvailable);
   const jobs = useJobsStore((s) => s.jobs);
   const hasActiveJob = jobs.some((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED');
-  const openJobs = jobs.filter((j) => j.stage === 'AVAILABLE');
+  const openJobs = sortJobs(
+    jobs.filter((j) => j.stage === 'AVAILABLE' && (typeFilter === 'ALL' || j.type === typeFilter)),
+    sortBy
+  );
   const history = jobs
     .filter((j) => j.stage === 'COMPLETED' || j.stage === 'FAILED')
     .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
@@ -93,7 +121,22 @@ export default function JobsScreen() {
         <View style={{ gap: 4, marginBottom: 4 }}>
           <Text className="text-h1 font-bold" style={{ color: theme.text }}>Jobs</Text>
           {segmented}
-          <Text className="text-caption font-medium" style={{ color: theme.textSecondary, marginTop: 4 }}>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+            {TYPE_FILTERS.map(({ value, label }) => (
+              <FilterChip key={value} label={label} active={typeFilter === value} onPress={() => setTypeFilter(value)} theme={theme} />
+            ))}
+          </View>
+          <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 10 }}>
+            SORT BY
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {SORT_OPTIONS.map(({ value, label }) => (
+              <FilterChip key={value} label={label} active={sortBy === value} onPress={() => setSortBy(value)} theme={theme} />
+            ))}
+          </View>
+
+          <Text className="text-caption font-medium" style={{ color: theme.textSecondary, marginTop: 8 }}>
             {openJobs.length} job{openJobs.length === 1 ? '' : 's'} near you
           </Text>
         </View>
@@ -141,6 +184,37 @@ function SegmentButton({
           className="text-caption font-semibold"
           style={{ color: active ? colors.partner.orange : theme.textSecondary }}
         >
+          {label}
+        </Text>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onPress,
+  theme,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  theme: { border: string; textSecondary: string };
+}) {
+  return (
+    <AnimatedPressable onPress={onPress} scaleTo={0.96}>
+      <View
+        style={{
+          paddingHorizontal: 14,
+          paddingVertical: 7,
+          borderRadius: 999,
+          backgroundColor: active ? colors.partner.orangeTint : 'transparent',
+          borderWidth: 1.5,
+          borderColor: active ? colors.partner.orange : theme.border,
+        }}
+      >
+        <Text className="text-caption font-semibold" style={{ color: active ? colors.partner.orange : theme.textSecondary }}>
           {label}
         </Text>
       </View>
