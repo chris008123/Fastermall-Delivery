@@ -6,7 +6,12 @@ interface WalletState {
   ledger: LedgerEntry[];
   withdrawalThreshold: number;
   addEntry: (entry: Omit<LedgerEntry, 'id' | 'createdAt'>) => void;
+  /** Free, scheduled payout — the full balance, no fee, arrives on the
+   * next payout date. */
   withdraw: () => void;
+  /** Same balance, available right now instead of waiting for payout day,
+   * for a small fee that's disclosed before confirming. */
+  withdrawInstant: (feeAmount: number) => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -28,6 +33,19 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const balance = selectEarningsBalance(get().ledger);
     if (balance < get().withdrawalThreshold) return;
     get().addEntry({ type: 'WITHDRAWAL', amount: -balance, note: 'Cashed out to mobile money' });
+  },
+
+  withdrawInstant: (feeAmount) => {
+    const balance = selectEarningsBalance(get().ledger);
+    if (balance < get().withdrawalThreshold) return;
+    // The full balance still leaves the "unlocked earnings" pool — the
+    // fee just reduces what actually lands in mobile money, same as any
+    // instant-transfer fee, so it's noted rather than double-counted.
+    get().addEntry({
+      type: 'WITHDRAWAL',
+      amount: -balance,
+      note: `Instant cash out (GH₵ ${feeAmount.toFixed(2)} fee) to mobile money`,
+    });
   },
 }));
 
