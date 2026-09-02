@@ -74,27 +74,27 @@ export function FloatingNav() {
                   accessibilityRole="button"
                   accessibilityLabel={item.label}
                 >
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 16,
-                      paddingHorizontal: 8,
-                      paddingVertical: 8,
-                      backgroundColor: active ? activeBackground : 'transparent',
-                    }}
-                  >
-                    <View>
-                      <Icon size={22} color={active ? activeColor : inactiveColor} />
+                  <View style={{ alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: active ? activeBackground : 'transparent',
+                      }}
+                    >
+                      <Icon size={20} color={active ? activeColor : inactiveColor} />
                       {item.key === 'notifications' && unreadCount > 0 && (
                         <View
                           style={{
                             position: 'absolute',
-                            top: -3,
-                            right: -5,
-                            width: 9,
-                            height: 9,
-                            borderRadius: 5,
+                            top: 2,
+                            right: 2,
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
                             backgroundColor: colors.semantic.error,
                           }}
                         />
@@ -102,7 +102,7 @@ export function FloatingNav() {
                     </View>
                     <Text
                       className="text-caption font-medium"
-                      style={{ color: active ? activeColor : inactiveColor, marginTop: 2, fontSize: 11, textAlign: 'center' }}
+                      style={{ color: active ? activeColor : inactiveColor, fontSize: 11, textAlign: 'center' }}
                     >
                       {item.label}
                     </Text>
