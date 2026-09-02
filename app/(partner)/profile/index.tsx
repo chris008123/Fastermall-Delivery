@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { AlertTriangle, Bike, ChevronRight, FileCheck2, Footprints, LifeBuoy, Settings, ShieldCheck, User } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -25,7 +26,13 @@ export default function ProfileScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
-  const { average, count } = useJobsStore((s) => selectPartnerRating(s.jobs));
+  const jobs = useJobsStore((s) => s.jobs);
+  // selectPartnerRating returns a fresh object every call — computing it
+  // *inside* the zustand selector (as this used to) hands
+  // useSyncExternalStore a non-stable snapshot and trips React's
+  // infinite-loop guard. Pulling the raw array out of the store first and
+  // memoizing the derived value keeps the store selector itself stable.
+  const { average, count } = useMemo(() => selectPartnerRating(jobs), [jobs]);
   const documents = useDocumentsStore((s) => s.documents);
   const verification = selectVerificationSummary(documents);
 
