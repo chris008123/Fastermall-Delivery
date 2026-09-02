@@ -1,13 +1,15 @@
 import { router } from 'expo-router';
-import { Bell, ChevronRight, MapPin, PackageSearch, Zap } from 'lucide-react-native';
+import { Bell, ChevronRight, Flame, MapPin, PackageSearch, Zap } from 'lucide-react-native';
 import { ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
+import { DemandMap } from '@/src/shared/components/DemandMap';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { demandSnapshot } from '@/src/data/mockDemand';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
@@ -82,6 +84,26 @@ export default function DashboardScreen() {
           </View>
         </View>
       </View>
+
+      {!activeJob && (
+        <AnimatedPressable onPress={() => router.push('/demand')} scaleTo={0.98}>
+          <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Flame size={18} color={colors.semantic.error} />
+              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
+            </View>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km · est.{' '}
+              {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
+            </Text>
+            <DemandMap zones={demandSnapshot.zones} height={110} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
+              <ChevronRight size={14} color={colors.partner.orange} />
+            </View>
+          </GlassView>
+        </AnimatedPressable>
+      )}
 
       {!partner.isAvailable && !activeJob && (
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
