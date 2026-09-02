@@ -72,7 +72,10 @@ export default function LoginScreen() {
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="\u2022\u2022\u2022\u2022\u2022\u2022"
+            // Wrapped in {} so this is a real JS string literal — a bare
+            // JSX attribute string ("\u2022...") is never unicode-escaped
+            // and was rendering as the literal backslash-u text on device.
+            placeholder={'\u2022\u2022\u2022\u2022\u2022\u2022'}
             placeholderTextColor={theme.textSecondary}
             secureTextEntry
             style={{ flex: 1, fontSize: 16, color: theme.text }}
