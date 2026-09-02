@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { AlertTriangle, Bike, ChevronRight, FileCheck2, Footprints, LifeBuoy, Settings, ShieldCheck, User } from 'lucide-react-native';
+import { AlertTriangle, Bike, Check, ChevronRight, FileCheck2, Footprints, LifeBuoy, Settings, ShieldCheck, User } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -112,6 +112,23 @@ export default function ProfileScreen() {
                     backgroundColor: active ? colors.partner.orangeTint : 'transparent',
                   }}
                 >
+                  {active && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: colors.partner.orange,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Check size={13} color={colors.onBrand} strokeWidth={3} />
+                    </View>
+                  )}
                   <Icon size={20} color={active ? colors.partner.orange : theme.textSecondary} />
                   <Text
                     className="text-caption font-semibold"
