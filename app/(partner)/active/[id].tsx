@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, CheckCircle2, KeyRound, PackageX, ShieldAlert } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, KeyRound, LifeBuoy, PackageX, ShieldAlert } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -155,22 +155,46 @@ export default function ActiveDeliveryScreen() {
           active delivery, not tucked behind a menu. Highest-priority
           gap identified in the partner-app research: no equivalent of
           this existed anywhere in the app before. */}
-      <AnimatedPressable onPress={() => setSafetyVisible(true)} scaleTo={0.97} style={{ alignSelf: 'flex-start' }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: 999,
-            backgroundColor: 'rgba(214, 69, 69, 0.1)',
-          }}
-        >
-          <ShieldAlert size={14} color={colors.semantic.error} />
-          <Text className="text-caption font-semibold" style={{ color: colors.semantic.error }}>Safety</Text>
-        </View>
-      </AnimatedPressable>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <AnimatedPressable onPress={() => setSafetyVisible(true)} scaleTo={0.97}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: 'rgba(214, 69, 69, 0.1)',
+            }}
+          >
+            <ShieldAlert size={14} color={colors.semantic.error} />
+            <Text className="text-caption font-semibold" style={{ color: colors.semantic.error }}>Safety</Text>
+          </View>
+        </AnimatedPressable>
+
+        {/* Goes straight to the Delivery problems topic — not the main
+            Support menu — so a partner mid-job never has to dig through
+            unrelated topics to reach a relevant answer. */}
+        <AnimatedPressable onPress={() => router.push('/support/DELIVERY')} scaleTo={0.97}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
+          >
+            <LifeBuoy size={14} color={theme.textSecondary} />
+            <Text className="text-caption font-semibold" style={{ color: theme.textSecondary }}>Help</Text>
+          </View>
+        </AnimatedPressable>
+      </View>
 
       <DeliveryMap job={job} />
 

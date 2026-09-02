@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { AlertTriangle, Bike, ChevronRight, FileCheck2, Footprints, Settings, ShieldCheck, User } from 'lucide-react-native';
+import { AlertTriangle, Bike, ChevronRight, FileCheck2, Footprints, LifeBuoy, Settings, ShieldCheck, User } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -129,6 +129,14 @@ export default function ProfileScreen() {
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Settings size={18} color={theme.textSecondary} />
           <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Settings</Text>
+          <ChevronRight size={18} color={theme.textSecondary} />
+        </GlassView>
+      </AnimatedPressable>
+
+      <AnimatedPressable onPress={() => router.push('/support')} scaleTo={0.98}>
+        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <LifeBuoy size={18} color={theme.textSecondary} />
+          <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Support</Text>
           <ChevronRight size={18} color={theme.textSecondary} />
         </GlassView>
       </AnimatedPressable>
