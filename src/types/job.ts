@@ -30,6 +30,14 @@ export interface JobLocation {
   coordinate: Coordinate;
 }
 
+export type FailureReason =
+  | 'CUSTOMER_NOT_ANSWERING'
+  | 'WRONG_ADDRESS'
+  | 'CUSTOMER_REFUSED'
+  | 'VEHICLE_PROBLEM'
+  | 'VENDOR_ISSUE'
+  | 'OTHER';
+
 export interface Job {
   id: string;
   type: JobType;
@@ -58,4 +66,7 @@ export interface Job {
   /** Set once the job reaches COMPLETED — a mock rating from the customer,
    * since there's no backend yet to actually collect one. */
   rating?: number;
+  /** Set once the job reaches FAILED. */
+  failureReason?: FailureReason;
+  failedAt?: string;
 }
