@@ -3,6 +3,7 @@ import { Lock, Phone } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -85,6 +86,12 @@ export default function LoginScreen() {
         )}
 
         <Button title="Sign in" variant="partner" fullWidth loading={loading} onPress={onSubmit} />
+
+        <AnimatedPressable onPress={() => router.push('/(auth)/onboarding')} scaleTo={0.98} style={{ alignSelf: 'center' }}>
+          <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>
+            New partner? <Text style={{ color: colors.partner.orange, fontFamily: 'Fredoka_600SemiBold' }}>Get started</Text>
+          </Text>
+        </AnimatedPressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
