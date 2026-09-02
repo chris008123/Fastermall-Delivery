@@ -1,11 +1,12 @@
 import { useRouter, useSegments } from 'expo-router';
 import { Bell, Home, Package, User, Wallet } from 'lucide-react-native';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from './GlassView';
 import { AnimatedPressable } from './AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { colors } from '@/src/theme';
+import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 
 type NavKey = 'home' | 'jobs' | 'wallet' | 'notifications' | 'profile';
 
@@ -35,6 +36,8 @@ export function FloatingNav() {
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
+  const notifications = useNotificationsStore((s) => s.notifications);
+  const unreadCount = selectUnreadCount(notifications);
 
   if (segments[0] !== '(partner)') return null;
 
@@ -59,7 +62,7 @@ export function FloatingNav() {
       style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + 12, alignItems: 'center' }}
     >
       <GlassView radius="pill" intensity="strong">
-        <View className="flex-row items-center gap-5 px-5 py-4">
+        <View className="flex-row items-center gap-4 px-4 py-3">
           {items.map((item) => {
             const active = item.key === activeSection;
             const Icon = item.icon;
@@ -67,13 +70,34 @@ export function FloatingNav() {
               <AnimatedPressable
                 key={item.key}
                 onPress={() => router.push(item.href as never)}
-                scaleTo={0.85}
-                className="h-11 w-11 items-center justify-center rounded-full"
-                style={{ backgroundColor: active ? activeBackground : 'transparent' }}
+                scaleTo={0.9}
+                className="items-center justify-center rounded-2xl px-2 py-2"
+                style={{ backgroundColor: active ? activeBackground : 'transparent', minWidth: 52 }}
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
               >
-                <Icon size={23} color={active ? activeColor : inactiveColor} />
+                <View>
+                  <Icon size={22} color={active ? activeColor : inactiveColor} />
+                  {item.key === 'notifications' && unreadCount > 0 && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -3,
+                        right: -5,
+                        width: 9,
+                        height: 9,
+                        borderRadius: 5,
+                        backgroundColor: colors.semantic.error,
+                      }}
+                    />
+                  )}
+                </View>
+                <Text
+                  className="text-caption font-medium"
+                  style={{ color: active ? activeColor : inactiveColor, marginTop: 2, fontSize: 11 }}
+                >
+                  {item.label}
+                </Text>
               </AnimatedPressable>
             );
           })}
