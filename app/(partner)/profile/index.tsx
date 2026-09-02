@@ -195,12 +195,26 @@ export default function ProfileScreen() {
 
       <AnimatedPressable onPress={() => router.push('/documents')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {verification.isBlocked || verification.attentionCount > 0 ? (
-            <AlertTriangle size={18} color={colors.semantic.warning} />
-          ) : (
-            <FileCheck2 size={18} color={theme.textSecondary} />
-          )}
-          <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Documents</Text>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(26, 156, 92, 0.14)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {verification.isBlocked || verification.attentionCount > 0 ? (
+              <AlertTriangle size={18} color={colors.semantic.warning} />
+            ) : (
+              <FileCheck2 size={18} color={colors.accent.green} />
+            )}
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Documents</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>Manage your documents</Text>
+          </View>
           {verification.isBlocked ? (
             <Badge label="Action needed" color={colors.semantic.error} tint="rgba(214, 69, 69, 0.12)" />
           ) : verification.attentionCount > 0 ? (
@@ -214,16 +228,44 @@ export default function ProfileScreen() {
 
       <AnimatedPressable onPress={() => router.push('/settings')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Settings size={18} color={theme.textSecondary} />
-          <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Settings</Text>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(139, 92, 246, 0.14)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Settings size={18} color={colors.accent.purple} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Settings</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>App preferences and account</Text>
+          </View>
           <ChevronRight size={18} color={theme.textSecondary} />
         </GlassView>
       </AnimatedPressable>
 
       <AnimatedPressable onPress={() => router.push('/support')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <LifeBuoy size={18} color={theme.textSecondary} />
-          <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Support</Text>
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(59, 130, 196, 0.14)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <LifeBuoy size={18} color={colors.accent.blue} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Support</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>Get help and contact us</Text>
+          </View>
           <ChevronRight size={18} color={theme.textSecondary} />
         </GlassView>
       </AnimatedPressable>
