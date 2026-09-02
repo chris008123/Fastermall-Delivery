@@ -67,38 +67,48 @@ export function FloatingNav() {
             const active = item.key === activeSection;
             const Icon = item.icon;
             return (
-              <AnimatedPressable
-                key={item.key}
-                onPress={() => router.push(item.href as never)}
-                scaleTo={0.9}
-                className="items-center justify-center rounded-2xl px-2 py-2"
-                style={{ backgroundColor: active ? activeBackground : 'transparent', minWidth: 52 }}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-              >
-                <View>
-                  <Icon size={22} color={active ? activeColor : inactiveColor} />
-                  {item.key === 'notifications' && unreadCount > 0 && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: -3,
-                        right: -5,
-                        width: 9,
-                        height: 9,
-                        borderRadius: 5,
-                        backgroundColor: colors.semantic.error,
-                      }}
-                    />
-                  )}
-                </View>
-                <Text
-                  className="text-caption font-medium"
-                  style={{ color: active ? activeColor : inactiveColor, marginTop: 2, fontSize: 11 }}
+              <View key={item.key} style={{ minWidth: 52, alignItems: 'center' }}>
+                <AnimatedPressable
+                  onPress={() => router.push(item.href as never)}
+                  scaleTo={0.9}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
                 >
-                  {item.label}
-                </Text>
-              </AnimatedPressable>
+                  <View
+                    style={{
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 16,
+                      paddingHorizontal: 8,
+                      paddingVertical: 8,
+                      backgroundColor: active ? activeBackground : 'transparent',
+                    }}
+                  >
+                    <View>
+                      <Icon size={22} color={active ? activeColor : inactiveColor} />
+                      {item.key === 'notifications' && unreadCount > 0 && (
+                        <View
+                          style={{
+                            position: 'absolute',
+                            top: -3,
+                            right: -5,
+                            width: 9,
+                            height: 9,
+                            borderRadius: 5,
+                            backgroundColor: colors.semantic.error,
+                          }}
+                        />
+                      )}
+                    </View>
+                    <Text
+                      className="text-caption font-medium"
+                      style={{ color: active ? activeColor : inactiveColor, marginTop: 2, fontSize: 11, textAlign: 'center' }}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                </AnimatedPressable>
+              </View>
             );
           })}
         </View>
