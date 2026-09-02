@@ -100,45 +100,46 @@ export default function ProfileScreen() {
           {MODES.map(({ value, label, icon: Icon }) => {
             const active = partner.mode === value;
             return (
-              <AnimatedPressable key={value} onPress={() => partner.setMode(value)} scaleTo={0.97} style={{ flex: 1 }}>
-                <View
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingVertical: 14,
-                    borderRadius: 16,
-                    borderWidth: 1.5,
-                    borderColor: active ? colors.partner.orange : theme.border,
-                    backgroundColor: active ? colors.partner.orangeTint : 'transparent',
-                  }}
-                >
-                  {active && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        width: 22,
-                        height: 22,
-                        borderRadius: 11,
-                        backgroundColor: colors.partner.orange,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Check size={13} color={colors.onBrand} strokeWidth={3} />
-                    </View>
-                  )}
-                  <Icon size={20} color={active ? colors.partner.orange : theme.textSecondary} />
-                  <Text
-                    className="text-caption font-semibold"
-                    style={{ color: active ? colors.partner.orange : theme.textSecondary }}
+              <View key={value} style={{ flex: 1 }}>
+                <AnimatedPressable onPress={() => partner.setMode(value)} scaleTo={0.97}>
+                  <View
+                    style={{
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: active ? colors.partner.orange : theme.border,
+                      backgroundColor: active ? colors.partner.orangeTint : 'transparent',
+                    }}
                   >
-                    {label}
-                  </Text>
-                </View>
-              </AnimatedPressable>
+                    {active && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: -8,
+                          right: -8,
+                          width: 22,
+                          height: 22,
+                          borderRadius: 11,
+                          backgroundColor: colors.partner.orange,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Check size={13} color={colors.onBrand} strokeWidth={3} />
+                      </View>
+                    )}
+                    <Icon size={20} color={active ? colors.partner.orange : theme.textSecondary} />
+                    <Text
+                      className="text-caption font-semibold"
+                      style={{ color: active ? colors.partner.orange : theme.textSecondary }}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                </AnimatedPressable>
+              </View>
             );
           })}
         </View>
