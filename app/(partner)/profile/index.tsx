@@ -87,9 +87,14 @@ export default function ProfileScreen() {
       </View>
 
       <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
-        <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-          TRAVEL MODE
-        </Text>
+        <View style={{ gap: 2 }}>
+          <Text className="text-card-title font-medium" style={{ color: theme.text }}>
+            Travel mode
+          </Text>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            Choose how you want to move
+          </Text>
+        </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {MODES.map(({ value, label, icon: Icon }) => {
             const active = partner.mode === value;
