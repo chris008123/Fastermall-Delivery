@@ -58,6 +58,19 @@ export default function ProfileScreen() {
           }}
         >
           <User size={32} color={colors.partner.orange} />
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 2,
+              right: 2,
+              width: 16,
+              height: 16,
+              borderRadius: 8,
+              backgroundColor: colors.semantic.success,
+              borderWidth: 2,
+              borderColor: theme.background,
+            }}
+          />
         </View>
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>{partner.name}</Text>
         {count > 0 && (
