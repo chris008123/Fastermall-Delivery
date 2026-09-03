@@ -54,7 +54,6 @@ export function FloatingNav() {
   // this chrome belongs to the partner, not to a marketplace/food/laundry
   // job, matching the `partner` Button variant and tab bar convention.
   const activeColor = isDark ? colors.partner.orangeBright : colors.partner.orange;
-  const activeBackground = isDark ? 'rgba(242, 149, 79, 0.18)' : colors.partner.orangeTint;
 
   return (
     <View
@@ -75,23 +74,14 @@ export function FloatingNav() {
                   accessibilityLabel={item.label}
                 >
                   <View style={{ alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: active ? activeBackground : 'transparent',
-                      }}
-                    >
-                      <Icon size={20} color={active ? activeColor : inactiveColor} />
+                    <View>
+                      <Icon size={22} color={active ? activeColor : inactiveColor} />
                       {item.key === 'notifications' && unreadCount > 0 && (
                         <View
                           style={{
                             position: 'absolute',
-                            top: 2,
-                            right: 2,
+                            top: -2,
+                            right: -4,
                             width: 8,
                             height: 8,
                             borderRadius: 4,
