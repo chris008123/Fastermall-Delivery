@@ -8,6 +8,18 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { colors } from '@/src/theme';
 import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 
+// Exported so every screen's ScrollView can compute a correct, insets-aware
+// paddingBottom instead of hardcoding a magic number that drifts out of sync
+// whenever this bar's own height changes (e.g. when labels were added).
+// NAV_BAR_HEIGHT: the pill's own content height (py-3 padding 24 + icon 22 +
+// gap 4 + label line-height 18 ≈ 68, rounded up for breathing room).
+// NAV_BAR_BOTTOM_OFFSET: matches `bottom: insets.bottom + 12` below.
+export const NAV_BAR_HEIGHT = 76;
+export const NAV_BAR_BOTTOM_OFFSET = 12;
+// What a screen should add on top of its own insets.bottom: offset + bar
+// height + a little extra breathing room above the bar.
+export const NAV_BAR_CLEARANCE = NAV_BAR_BOTTOM_OFFSET + NAV_BAR_HEIGHT + 16;
+
 type NavKey = 'home' | 'jobs' | 'wallet' | 'notifications' | 'profile';
 
 const items: { key: NavKey; href: string; icon: typeof Home; label: string }[] = [

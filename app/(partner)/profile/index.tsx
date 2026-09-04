@@ -7,6 +7,7 @@ import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
@@ -41,11 +42,12 @@ export default function ProfileScreen() {
     // Switched from a fixed View to a ScrollView, matching the main app's
     // profile screen: this list only grows over time (more settings rows
     // are a near-certainty), and a fixed View risks the Sign out button
-    // sitting under the floating nav on shorter screens. paddingBottom: 100
-    // clears the nav, same convention as the other tabs.
+    // sitting under the floating nav on shorter screens. paddingBottom uses
+    // NAV_BAR_CLEARANCE (+ insets.bottom) so it stays correct if the nav's
+    // own height ever changes, instead of a hardcoded magic number.
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
     >
       <View style={{ alignItems: 'center', gap: 10, paddingVertical: 12 }}>
         <View

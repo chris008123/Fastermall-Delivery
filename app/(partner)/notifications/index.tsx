@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useNotificationsStore } from '@/src/stores/notificationsStore';
 import { colors } from '@/src/theme';
@@ -31,7 +32,7 @@ export default function NotificationsScreen() {
   return (
     <FlatList<AppNotification>
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
       data={notifications}
       keyExtractor={(n) => n.id}
       ListHeaderComponent={

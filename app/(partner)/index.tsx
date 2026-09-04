@@ -7,6 +7,7 @@ import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { DemandMap } from '@/src/shared/components/DemandMap';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { demandSnapshot } from '@/src/data/mockDemand';
@@ -36,11 +37,10 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      // paddingBottom: 100 clears the floating glass nav (same value the
-      // customer app uses) now that this screen sits under a floating,
-      // absolutely-positioned nav instead of a native tab bar that used
-      // to reserve its own space automatically.
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 16 }}
+      // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom) now that this
+      // screen sits under a floating, absolutely-positioned nav instead of a
+      // native tab bar that used to reserve its own space automatically.
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View>

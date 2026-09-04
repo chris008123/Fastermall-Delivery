@@ -7,6 +7,7 @@ import { Button } from '@/src/shared/components/Button';
 import { EarningsChart } from '@/src/shared/components/EarningsChart';
 import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -52,12 +53,12 @@ export default function WalletScreen() {
   const fareJob = fareEntry?.jobId ? jobs.find((j) => j.id === fareEntry.jobId) ?? null : null;
 
   return (
-    // paddingBottom: 100 clears the floating glass nav, same convention
-    // used on Home and Jobs, now that this list sits under an absolutely
-    // positioned nav instead of a native tab bar.
+    // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom), same
+    // convention used on Home and Jobs, now that this list sits under an
+    // absolutely positioned nav instead of a native tab bar.
     <FlatList<LedgerEntry>
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
       data={ledger}
       keyExtractor={(e) => e.id}
       ListHeaderComponent={

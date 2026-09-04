@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useJobsStore } from '@/src/stores/jobsStore';
@@ -83,12 +84,12 @@ export default function JobsScreen() {
 
   if (view === 'history') {
     return (
-      // paddingBottom: 100 clears the floating glass nav, same convention
-      // as the home screen, now that this list sits under an absolutely
-      // positioned nav instead of a native tab bar.
+      // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom), same
+      // convention as the home screen, now that this list sits under an
+      // absolutely positioned nav instead of a native tab bar.
       <FlatList<Job>
         style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
         data={history}
         keyExtractor={(j) => j.id}
         ListHeaderComponent={
@@ -114,7 +115,7 @@ export default function JobsScreen() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 100, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
       data={openJobs}
       keyExtractor={(j) => j.id}
       ListHeaderComponent={
