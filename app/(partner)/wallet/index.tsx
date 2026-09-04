@@ -98,7 +98,18 @@ export default function WalletScreen() {
           </GlassView>
 
           <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Clock3 size={18} color={colors.partner.orange} />
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.partner.orangeTint,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Clock3 size={18} color={colors.partner.orange} />
+            </View>
             <Text className="text-caption" style={{ color: theme.textSecondary, flex: 1 }}>
               Next automatic payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{payoutLabel}</Text> — free, no fee.
             </Text>
@@ -117,13 +128,27 @@ export default function WalletScreen() {
           </GlassView>
 
           <GlassView radius="card" style={{ padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-                REIMBURSED
-              </Text>
-              <Text className="text-h2 font-bold" style={{ color: theme.text }}>{formatCurrency(reimbursed)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: colors.brand.tealTint,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <RefreshCcw size={18} color={colors.brand.teal} />
+              </View>
+              <View>
+                <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                  REIMBURSED
+                </Text>
+                <Text className="text-h2 font-bold" style={{ color: colors.brand.teal }}>{formatCurrency(reimbursed)}</Text>
+              </View>
             </View>
-            <Text className="text-caption" style={{ color: theme.textSecondary, maxWidth: 160, textAlign: 'right' }}>
+            <Text className="text-caption" style={{ color: theme.textSecondary, maxWidth: 130, textAlign: 'right' }}>
               Your own money, returned instantly — never gated by the threshold above.
             </Text>
           </GlassView>
