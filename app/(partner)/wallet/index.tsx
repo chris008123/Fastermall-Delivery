@@ -4,7 +4,7 @@ import { FlatList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
-import { EarningsChart } from '@/src/shared/components/EarningsChart';
+import { EarningsChart, sumLastSevenDays } from '@/src/shared/components/EarningsChart';
 import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
@@ -105,9 +105,14 @@ export default function WalletScreen() {
           </GlassView>
 
           <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
-            <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-              LAST 7 DAYS
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                LAST 7 DAYS
+              </Text>
+              <Text className="text-body-lg font-bold" style={{ color: colors.partner.orange }}>
+                {formatCurrency(sumLastSevenDays(ledger))}
+              </Text>
+            </View>
             <EarningsChart ledger={ledger} />
           </GlassView>
 
