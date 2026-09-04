@@ -1,6 +1,6 @@
 import { ArrowDownCircle, Banknote, Clock3, PiggyBank, RefreshCcw } from 'lucide-react-native';
 import { useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
@@ -31,6 +31,29 @@ function instantFeeFor(balance: number): number {
   return Math.min(Math.round(balance * 0.02 * 100) / 100, 5);
 }
 
+/** Groups ledger entries into Today / Yesterday / calendar-date sections,
+ * preserving the ledger's existing order within each day. Assumes the
+ * ledger already comes newest-first, same as before this grouping — this
+ * only inserts headers, it doesn't re-sort. */
+function groupLedgerByDate(ledger: LedgerEntry[]): { title: string; data: LedgerEntry[] }[] {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  const sections: { title: string; data: LedgerEntry[] }[] = [];
+  for (const entry of ledger) {
+    const key = new Date(entry.createdAt).toDateString();
+    const title =
+      key === today ? 'Today' : key === yesterday ? 'Yesterday' : new Date(entry.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    const section = sections.find((s) => s.title === title);
+    if (section) {
+      section.data.push(entry);
+    } else {
+      sections.push({ title, data: [entry] });
+    }
+  }
+  return sections;
+}
+
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
@@ -51,16 +74,18 @@ export default function WalletScreen() {
   const instantFee = instantFeeFor(earnings);
   const payoutLabel = nextPayoutDate();
   const fareJob = fareEntry?.jobId ? jobs.find((j) => j.id === fareEntry.jobId) ?? null : null;
+  const sections = groupLedgerByDate(ledger);
 
   return (
     // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom), same
     // convention used on Home and Jobs, now that this list sits under an
     // absolutely positioned nav instead of a native tab bar.
-    <FlatList<LedgerEntry>
+    <SectionList<LedgerEntry, { title: string }>
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
-      data={ledger}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE }}
+      sections={sections}
       keyExtractor={(e) => e.id}
+      stickySectionHeadersEnabled={false}
       ListHeaderComponent={
         <View style={{ gap: 16, marginBottom: 8 }}>
           <Text className="text-h1 font-bold" style={{ color: theme.text }}>Wallet</Text>
@@ -152,12 +177,16 @@ export default function WalletScreen() {
               Your own money, returned instantly — never gated by the threshold above.
             </Text>
           </GlassView>
-
-          <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 4 }}>
-            HISTORY
-          </Text>
         </View>
       }
+      renderSectionHeader={({ section }) => (
+        <Text
+          className="text-overline font-semibold"
+          style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 16, marginBottom: 8 }}
+        >
+          {section.title.toUpperCase()}
+        </Text>
+      )}
       ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />}
       renderItem={({ item }) => (
         <LedgerRow
@@ -220,7 +249,7 @@ function LedgerRow({
           {entry.note}
         </Text>
         <Text className="text-caption" style={{ color: theme.textSecondary }}>
-          {new Date(entry.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          {meta.label}
         </Text>
       </View>
       <Text className="text-body-lg font-semibold" style={{ color: positive ? theme.text : colors.semantic.error }}>
