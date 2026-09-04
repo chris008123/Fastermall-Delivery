@@ -1,6 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import {
+  Ban,
+  BellOff,
+  Car,
+  ChevronDown,
+  ChevronUp,
+  FileClock,
+  HandCoins,
+  MapPinOff,
+  MapPinX,
+  PhoneOff,
+  Receipt,
+  ShieldAlert,
+  Star,
+  UserX,
+  Wallet2,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +27,23 @@ import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { supportTopics } from '@/src/data/mockSupport';
 import { colors } from '@/src/theme';
-import type { SupportTopicId } from '@/src/types/support';
+import type { SupportFaqIconName, SupportTopicId } from '@/src/types/support';
+
+const FAQ_ICON: Record<SupportFaqIconName, typeof Wallet2> = {
+  Wallet2,
+  Receipt,
+  HandCoins,
+  PhoneOff,
+  ShieldAlert,
+  MapPinOff,
+  Ban,
+  FileClock,
+  Car,
+  MapPinX,
+  BellOff,
+  UserX,
+  Star,
+};
 
 export default function SupportTopicScreen() {
   const { topicId } = useLocalSearchParams<{ topicId: SupportTopicId }>();
@@ -44,14 +76,30 @@ export default function SupportTopicScreen() {
       <View style={{ gap: 10 }}>
         {topic.faqs.map((faq) => {
           const expanded = expandedId === faq.id;
+          const Icon = FAQ_ICON[faq.icon];
           return (
-            <GlassView key={faq.id} radius="card" style={{ padding: 16, gap: expanded ? 10 : 0 }}>
+            <GlassView key={faq.id} radius="card" style={{ padding: 16, gap: expanded ? 12 : 0 }}>
               <AnimatedPressable
                 onPress={() => setExpandedId(expanded ? null : faq.id)}
                 scaleTo={0.99}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
               >
-                <Text className="text-body-lg font-semibold" style={{ color: theme.text, flex: 1 }}>{faq.question}</Text>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: colors.brand.tealTint,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Icon size={18} color={colors.brand.teal} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{faq.question}</Text>
+                  <Text className="text-caption" style={{ color: theme.textSecondary }}>{faq.subtitle}</Text>
+                </View>
                 {expanded ? (
                   <ChevronUp size={18} color={theme.textSecondary} />
                 ) : (
@@ -59,7 +107,7 @@ export default function SupportTopicScreen() {
                 )}
               </AnimatedPressable>
               {expanded && (
-                <Text className="text-body" style={{ color: theme.textSecondary }}>{faq.answer}</Text>
+                <Text className="text-body" style={{ color: theme.textSecondary, paddingLeft: 52 }}>{faq.answer}</Text>
               )}
             </GlassView>
           );
