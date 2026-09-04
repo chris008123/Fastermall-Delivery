@@ -143,18 +143,47 @@ export default function SupportScreen() {
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
           NEED MORE HELP?
         </Text>
+
         <AnimatedPressable onPress={() => router.push('/support/chat')} scaleTo={0.98}>
-          <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <MessageCircleQuestion size={18} color={colors.partner.orange} />
-            <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Chat with Support</Text>
-            <ChevronRight size={18} color={theme.textSecondary} />
-          </GlassView>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 16,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: colors.brand.teal,
+              backgroundColor: colors.brand.tealTint,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MessageCircleQuestion size={18} color={colors.brand.teal} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text className="text-body-lg font-bold" style={{ color: colors.brand.teal }}>Chat with Support</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>Get help from our support team.</Text>
+            </View>
+            <ChevronRight size={18} color={colors.brand.teal} />
+          </View>
         </AnimatedPressable>
+
         <AnimatedPressable onPress={() => Linking.openURL('tel:0800000000').catch(() => {})} scaleTo={0.98}>
           <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Phone size={18} color={colors.partner.orange} />
-            <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>Call Fastermall</Text>
-            <ChevronRight size={18} color={theme.textSecondary} />
+            <Phone size={18} color={colors.brand.teal} />
+            <View style={{ flex: 1 }}>
+              <Text className="text-body-lg font-bold" style={{ color: colors.brand.teal }}>Call Fastermall</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>Talk to us directly.</Text>
+            </View>
           </GlassView>
         </AnimatedPressable>
       </View>
