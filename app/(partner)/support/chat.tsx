@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react-native';
+import { Headset, Send } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ export default function SupportChatScreen() {
   const theme = isDark ? colors.dark : colors.light;
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL);
   const [draft, setDraft] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   const send = () => {
     const text = draft.trim();
@@ -37,8 +38,10 @@ export default function SupportChatScreen() {
     const mine: ChatMessage = { id: `me-${Date.now()}`, from: 'me', text };
     setMessages((m) => [...m, mine]);
     setDraft('');
+    setIsTyping(true);
 
     setTimeout(() => {
+      setIsTyping(false);
       setMessages((m) => [
         ...m,
         {
@@ -75,24 +78,74 @@ export default function SupportChatScreen() {
           <View
             key={m.id}
             style={{
+              flexDirection: 'row',
               alignSelf: m.from === 'me' ? 'flex-end' : 'flex-start',
-              maxWidth: '82%',
-              backgroundColor: m.from === 'me' ? colors.partner.orange : theme.surface,
-              borderWidth: m.from === 'me' ? 0 : 1,
-              borderColor: theme.border,
-              borderRadius: 18,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
+              alignItems: 'flex-end',
+              gap: 8,
+              maxWidth: '86%',
             }}
           >
-            <Text
-              className="text-body"
-              style={{ color: m.from === 'me' ? colors.onBrand : theme.text }}
+            {m.from === 'agent' && (
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: colors.brand.tealTint,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Headset size={14} color={colors.brand.teal} />
+              </View>
+            )}
+            <View
+              style={{
+                backgroundColor: m.from === 'me' ? colors.partner.orange : theme.surface,
+                borderWidth: m.from === 'me' ? 0 : 1,
+                borderColor: theme.border,
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
             >
-              {m.text}
-            </Text>
+              <Text
+                className="text-body"
+                style={{ color: m.from === 'me' ? colors.onBrand : theme.text }}
+              >
+                {m.text}
+              </Text>
+            </View>
           </View>
         ))}
+        {isTyping && (
+          <View style={{ flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'flex-end', gap: 8 }}>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: colors.brand.tealTint,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Headset size={14} color={colors.brand.teal} />
+            </View>
+            <View
+              style={{
+                backgroundColor: theme.surface,
+                borderWidth: 1,
+                borderColor: theme.border,
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
+            >
+              <Text className="text-body" style={{ color: theme.textSecondary }}>Typing…</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <View
