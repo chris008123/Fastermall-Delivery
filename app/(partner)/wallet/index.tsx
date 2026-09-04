@@ -237,6 +237,10 @@ function LedgerRow({
   const positive = entry.amount >= 0;
   const iconColor =
     entry.type === 'EARNING' ? colors.partner.orange : entry.type === 'REIMBURSEMENT' ? colors.brand.teal : theme.textSecondary;
+  // Amount color follows entry type, not sign — a withdrawal's negative
+  // amount is a routine, deliberate cash-out, not an error, so it stays
+  // neutral instead of red like the semantic.error earlier version used.
+  const amountColor = entry.type === 'EARNING' ? colors.partner.orange : entry.type === 'REIMBURSEMENT' ? colors.brand.teal : theme.text;
 
   const Row = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
@@ -260,7 +264,7 @@ function LedgerRow({
           {meta.label}
         </Text>
       </View>
-      <Text className="text-body-lg font-semibold" style={{ color: positive ? theme.text : colors.semantic.error }}>
+      <Text className="text-body-lg font-semibold" style={{ color: amountColor }}>
         {positive ? '+' : ''}{formatCurrency(entry.amount)}
       </Text>
     </View>
