@@ -5,11 +5,14 @@ import {
   BellOff,
   Car,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   FileClock,
   HandCoins,
   MapPinOff,
   MapPinX,
+  MessageCircleQuestion,
+  Phone,
   PhoneOff,
   Receipt,
   ShieldAlert,
@@ -22,7 +25,6 @@ import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
-import { Button } from '@/src/shared/components/Button';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { supportTopics } from '@/src/data/mockSupport';
@@ -118,18 +120,49 @@ export default function SupportTopicScreen() {
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
           STILL NEED HELP?
         </Text>
-        <Button
-          title="Chat with Support"
-          variant="secondary"
-          fullWidth
-          onPress={() => router.push('/support/chat')}
-        />
-        <Button
-          title="Call Fastermall"
-          variant="ghost"
-          fullWidth
-          onPress={() => Linking.openURL('tel:0800000000').catch(() => {})}
-        />
+
+        <AnimatedPressable onPress={() => router.push('/support/chat')} scaleTo={0.98}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 16,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: colors.brand.teal,
+              backgroundColor: colors.brand.tealTint,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MessageCircleQuestion size={18} color={colors.brand.teal} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text className="text-body-lg font-bold" style={{ color: colors.brand.teal }}>Chat with Support</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>Get help from our support team.</Text>
+            </View>
+            <ChevronRight size={18} color={colors.brand.teal} />
+          </View>
+        </AnimatedPressable>
+
+        <AnimatedPressable onPress={() => Linking.openURL('tel:0800000000').catch(() => {})} scaleTo={0.98}>
+          <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Phone size={18} color={colors.brand.teal} />
+            <View style={{ flex: 1 }}>
+              <Text className="text-body-lg font-bold" style={{ color: colors.brand.teal }}>Call Fastermall</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>Talk to us directly.</Text>
+            </View>
+          </GlassView>
+        </AnimatedPressable>
       </View>
     </ScrollView>
   );
