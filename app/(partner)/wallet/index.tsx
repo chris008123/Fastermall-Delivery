@@ -1,4 +1,4 @@
-import { ArrowDownCircle, Banknote, Clock3, PiggyBank, RefreshCcw } from 'lucide-react-native';
+import { ArrowDownCircle, Banknote, Clock3, History, PiggyBank, RefreshCcw } from 'lucide-react-native';
 import { useState } from 'react';
 import { SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -187,6 +187,14 @@ export default function WalletScreen() {
           {section.title.toUpperCase()}
         </Text>
       )}
+      ListEmptyComponent={
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8, marginTop: 16 }}>
+          <History size={20} color={theme.textSecondary} />
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            No transactions yet — earnings and reimbursements will show up here once you complete your first job.
+          </Text>
+        </GlassView>
+      }
       ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />}
       renderItem={({ item }) => (
         <LedgerRow
