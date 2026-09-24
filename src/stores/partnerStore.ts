@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { apiFetch } from '@/src/services/api';
 import type { PartnerMode } from '@/src/types/job';
 
 interface PartnerState {
@@ -6,17 +7,96 @@ interface PartnerState {
   mode: PartnerMode;
   vehiclePlate: string | null;
   isAvailable: boolean;
-  setAvailable: (available: boolean) => void;
+  profileId: string | null;
+  setAvailable: (available: boolean) => Promise<void>;
   setMode: (mode: PartnerMode) => void;
   setVehiclePlate: (plate: string) => void;
+  loadProfile: () => Promise<void>;
+}
+
+interface StaffProfile {
+  id: string;
+  fullName: string;
+  role: string;
+  deliveryProfile?: {
+    id: string;
+    type: PartnerMode;
+    isAvailable: boolean;
+    vehiclePlate: string | null;
+  } | null;
 }
 
 export const usePartnerStore = create<PartnerState>((set) => ({
-  name: 'Kojo Mensah',
-  mode: 'MOTORCYCLE',
-  vehiclePlate: 'AS 4471-24',
+  name: '',
+  mode: 'WALKING',
+  vehiclePlate: null,
   isAvailable: false,
-  setAvailable: (isAvailable) => set({ isAvailable }),
-  setMode: (mode) => set({ mode, vehiclePlate: mode === 'MOTORCYCLE' ? 'AS 4471-24' : null }),
-  setVehiclePlate: (vehiclePlate) => set({ vehiclePlate }),
+  profileId: null,
+
+  loadProfile: async () => {
+    const profile = await apiFetch<StaffProfile>('/staff/me');
+
+    const deliveryProfile = profile.deliveryProfile;
+
+    if (!deliveryProfile) {
+      throw new Error(
+        'This staff account does not have a delivery partner profile.',
+      );
+    }
+
+    set({
+      name: profile.fullName,
+      mode: deliveryProfile.type,
+      isAvailable: deliveryProfile.isAvailable,
+      vehiclePlate: deliveryProfile.vehiclePlate,
+      profileId: deliveryProfile.id,
+    });
+  },
+
+  setAvailable: async (available) => {
+    const previous = usePartnerStore.getState().isAvailable;
+
+    console.log('TOGGLE PRESSED:', available);
+
+    set({
+      isAvailable: available,
+    });
+
+    console.log(
+      'LOCAL STATE AFTER SET:',
+      usePartnerStore.getState().isAvailable,
+    );
+
+    try {
+      const response = await apiFetch('/logistics/me', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          isAvailable: available,
+        }),
+      });
+
+      console.log(
+        'BACKEND AVAILABILITY RESPONSE:',
+        JSON.stringify(response, null, 2),
+      );
+    } catch (error) {
+      console.log('AVAILABILITY ERROR:', error);
+
+      set({
+        isAvailable: previous,
+      });
+
+      throw error;
+    }
+  },
+
+  setMode: (mode) =>
+    set({
+      mode,
+    }),
+
+  setVehiclePlate: (vehiclePlate) =>
+    set({
+      vehiclePlate,
+    }),
 }));

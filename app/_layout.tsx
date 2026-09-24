@@ -14,7 +14,9 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { useAuthStore } from '@/src/stores/authStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -31,9 +33,25 @@ export default function RootLayout() {
     Fredoka_600SemiBold,
     Fredoka_700Bold,
   });
+
   const { isDark } = useResolvedTheme();
+
+  const hydrate = useAuthStore(
+    (state) => state.hydrate,
+  );
+
+  const isHydrating = useAuthStore(
+    (state) => state.isHydrating,
+  );
+
+  const isAuthenticated = useAuthStore(
+    (state) => state.isAuthenticated,
+  );
+
   const [ready, setReady] = useState(false);
-  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootError, setBootError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (fontError) {
@@ -43,32 +61,67 @@ export default function RootLayout() {
   }, [fontError]);
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync()
-        .catch(() => {})
-        .finally(() => setReady(true));
+    if (!fontsLoaded) {
+      return;
     }
-  }, [fontsLoaded]);
 
-  if (!ready) return null;
+    const initializeApp = async () => {
+      try {
+        await hydrate();
+      } catch (error) {
+        setBootError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to initialize authentication.',
+        );
+      } finally {
+        await SplashScreen.hideAsync().catch(() => {});
+        setReady(true);
+      }
+    };
+
+    void initializeApp();
+  }, [fontsLoaded, hydrate]);
+
+  if (!ready || isHydrating) {
+    return null;
+  }
 
   if (bootError) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ color: '#d64545' }}>Boot error: {bootError}</Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+        }}
+      >
+        <Text style={{ color: '#d64545' }}>
+          Boot error: {bootError}
+        </Text>
       </View>
     );
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View className={`flex-1 ${isDark ? 'dark' : ''}`}>
+      <View
+        className={`flex-1 ${isDark ? 'dark' : ''}`}
+      >
         <SafeAreaProvider>
-          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <StatusBar
+            style={isDark ? 'light' : 'dark'}
+          />
+
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: isDark ? '#121211' : '#fafafa' },
+              contentStyle: {
+                backgroundColor: isDark
+                  ? '#121211'
+                  : '#fafafa',
+              },
             }}
           >
             <Stack.Screen name="index" />

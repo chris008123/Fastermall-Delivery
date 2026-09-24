@@ -1,43 +1,66 @@
 import { router } from 'expo-router';
-import { Lock, Phone } from 'lucide-react-native';
+import { Lock, Mail } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
-import { formatGhanaPhone, stripPhoneFormatting } from '@/src/shared/utils/phone';
 
-type Theme = { text: string; textSecondary: string; border: string; surface: string };
+type Theme = {
+  text: string;
+  textSecondary: string;
+  border: string;
+  surface: string;
+};
 
 export default function LoginScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
+
   const signIn = useAuthStore((s) => s.signIn);
 
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = stripPhoneFormatting(phone).length === 10 && password.length >= 4;
+  const canSubmit =
+    email.trim().length > 0 &&
+    email.includes('@') &&
+    password.length >= 4;
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!canSubmit) {
-      setError('Enter a valid 10-digit phone number and a password of at least 4 characters.');
+      setError('Enter your partner email and password.');
       return;
     }
+
     setError(null);
     setLoading(true);
-    // Mock auth — no backend yet, so this just simulates a network round trip.
-    setTimeout(() => {
-      setLoading(false);
-      signIn(stripPhoneFormatting(phone));
+
+    try {
+      await signIn(email, password);
       router.replace('/(partner)');
-    }, 500);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to sign in. Please check your credentials.',
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,54 +68,99 @@ export default function LoginScreen() {
       className="flex-1 bg-neutral-50 dark:bg-neutral-950"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Same gradient-hero language as the customer app's auth screens,
-          recolored to the partner app's own orange identity. */}
       <PartnerAuthHeroHeader
         title="Sign in"
-        subtitle="Use the phone number and password from your partner onboarding."
+        subtitle="Use the email and password from your partner account."
       />
 
       <ScrollView
         className="-mt-6 flex-1 rounded-t-[24px] bg-white dark:bg-neutral-900"
-        contentContainerStyle={{ padding: 24, paddingBottom: 32, gap: 18 }}
+        contentContainerStyle={{
+          padding: 24,
+          paddingBottom: 32,
+          gap: 18,
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        <Field label="Phone number" theme={theme} icon={<Phone size={18} color={theme.textSecondary} />}>
+        <Field
+          label="Email address"
+          theme={theme}
+          icon={<Mail size={18} color={theme.textSecondary} />}
+        >
           <TextInput
-            value={phone}
-            onChangeText={(v) => setPhone(formatGhanaPhone(v))}
-            placeholder="024 412 3456"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="partner@example.com"
             placeholderTextColor={theme.textSecondary}
-            keyboardType="phone-pad"
-            style={{ flex: 1, fontSize: 16, color: theme.text }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            style={{
+              flex: 1,
+              fontSize: 16,
+              color: theme.text,
+            }}
           />
         </Field>
 
-        <Field label="Password" theme={theme} icon={<Lock size={18} color={theme.textSecondary} />}>
+        <Field
+          label="Password"
+          theme={theme}
+          icon={<Lock size={18} color={theme.textSecondary} />}
+        >
           <TextInput
             value={password}
             onChangeText={setPassword}
-            // Wrapped in {} so this is a real JS string literal — a bare
-            // JSX attribute string ("\u2022...") is never unicode-escaped
-            // and was rendering as the literal backslash-u text on device.
-            placeholder={'\u2022\u2022\u2022\u2022\u2022\u2022'}
+            placeholder={'••••••'}
             placeholderTextColor={theme.textSecondary}
             secureTextEntry
-            style={{ flex: 1, fontSize: 16, color: theme.text }}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{
+              flex: 1,
+              fontSize: 16,
+              color: theme.text,
+            }}
           />
         </Field>
 
         {error && (
-          <Text className="text-caption" style={{ color: colors.semantic.error }}>
+          <Text
+            className="text-caption"
+            style={{ color: colors.semantic.error }}
+          >
             {error}
           </Text>
         )}
 
-        <Button title="Sign in" variant="partner" fullWidth loading={loading} onPress={onSubmit} />
+        <Button
+          title="Sign in"
+          variant="partner"
+          fullWidth
+          loading={loading}
+          disabled={!canSubmit}
+          onPress={onSubmit}
+        />
 
-        <AnimatedPressable onPress={() => router.push('/(auth)/onboarding')} scaleTo={0.98} style={{ alignSelf: 'center' }}>
-          <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>
-            New partner? <Text style={{ color: colors.partner.orange, fontFamily: 'Fredoka_600SemiBold' }}>Get started</Text>
+        <AnimatedPressable
+          onPress={() => router.push('/(auth)/onboarding')}
+          scaleTo={0.98}
+          style={{ alignSelf: 'center' }}
+        >
+          <Text
+            className="text-caption font-medium"
+            style={{ color: theme.textSecondary }}
+          >
+            New partner?{' '}
+            <Text
+              style={{
+                color: colors.partner.orange,
+                fontFamily: 'Fredoka_600SemiBold',
+              }}
+            >
+              Get started
+            </Text>
           </Text>
         </AnimatedPressable>
       </ScrollView>
@@ -113,7 +181,13 @@ function Field({
 }) {
   return (
     <View style={{ gap: 6 }}>
-      <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>{label}</Text>
+      <Text
+        className="text-caption font-medium"
+        style={{ color: theme.textSecondary }}
+      >
+        {label}
+      </Text>
+
       <View
         style={{
           flexDirection: 'row',
