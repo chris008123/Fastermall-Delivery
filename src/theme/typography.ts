@@ -3,9 +3,9 @@
 // overline) instead of the delivery app's previous raw fontFamily map.
 export const typography = {
   // Large Title — 30-32px SemiBold. Screen-level headers.
-  display: { fontSize: 32, lineHeight: 40, fontFamily: 'Fredoka_600SemiBold' },
+  display: { fontSize: 32, lineHeight: 40, fontFamily: 'Fredoka_600SemiBold', letterSpacing: -1 },
   // Section Titles — 22-24px Bold. "Available Jobs", "Today's Earnings".
-  h1: { fontSize: 24, lineHeight: 32, fontFamily: 'Fredoka_700Bold' },
+  h1: { fontSize: 24, lineHeight: 32, fontFamily: 'Fredoka_700Bold', letterSpacing: -0.6 },
   h2: { fontSize: 20, lineHeight: 28, fontFamily: 'Fredoka_600SemiBold' },
   // Card Titles — 16-18px Medium.
   cardTitle: { fontSize: 17, lineHeight: 24, fontFamily: 'Fredoka_500Medium' },
