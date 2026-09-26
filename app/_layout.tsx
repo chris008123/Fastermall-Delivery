@@ -16,7 +16,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { ToastProvider } from '@/src/shared/toast/ToastProvider';
 import { useAuthStore } from '@/src/stores/authStore';
+import { colors } from '@/src/theme';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -114,20 +116,22 @@ export default function RootLayout() {
             style={isDark ? 'light' : 'dark'}
           />
 
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: isDark
-                  ? '#121211'
-                  : '#fafafa',
-              },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(partner)" />
-          </Stack>
+          <ToastProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: isDark
+                    ? colors.dark.background
+                    : colors.light.background,
+                },
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(partner)" />
+            </Stack>
+          </ToastProvider>
         </SafeAreaProvider>
       </View>
     </GestureHandlerRootView>
