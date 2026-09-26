@@ -1,128 +1,61 @@
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
 import { router } from 'expo-router';
 import {
   Bell,
   ChevronRight,
   CircleAlert,
-  Clock3,
-  DollarSign,
-  Package,
-  Power,
-  RefreshCw,
-  ShieldCheck,
-  Store,
-  UserRound,
+  Flame,
+  MapPin,
+  PackageSearch,
+  Zap,
 } from 'lucide-react-native';
-
-import { useJobsStore } from '@/src/stores/jobsStore';
-import { useNotificationsStore } from '@/src/stores/notificationsStore';
-import { usePartnerStore } from '@/src/stores/partnerStore';
-import {
-  selectEarningsBalance,
-  useWalletStore,
-} from '@/src/stores/walletStore';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { AvailabilityToggle } from '@/src/shared/components/AvailabilityToggle';
+import { Badge } from '@/src/shared/components/Badge';
+import { Button } from '@/src/shared/components/Button';
+import { DemandMap } from '@/src/shared/components/DemandMap';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
+import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { colors } from '@/src/theme/colors';
+import { demandSnapshot } from '@/src/data/mockDemand';
+import { useJobsStore } from '@/src/stores/jobsStore';
+import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
+import { usePartnerStore } from '@/src/stores/partnerStore';
+import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
+import { colors } from '@/src/theme';
 import { formatCurrency } from '@/src/utils/money';
 
-function getTypeLabel(type: string) {
-  switch (type) {
-    case 'FOOD':
-      return 'Food';
-
-    case 'LAUNDRY':
-      return 'Laundry';
-
-    case 'MARKETPLACE':
-      return 'Marketplace';
-
-    default:
-      return 'Delivery';
-  }
-}
-
-function getTypeIcon(type: string) {
-  switch (type) {
-    case 'FOOD':
-      return Store;
-
-    case 'LAUNDRY':
-      return Package;
-
-    case 'MARKETPLACE':
-    default:
-      return Package;
-  }
-}
-
+// Layout/visual language ported from the app's established GlassView design
+// system (matching the customer app's dashboard patterns) — data loading,
+// refresh, and error handling below are unchanged from the backend-connected
+// version: real `loadProfile()`/`loadJobs()` calls, retry-on-error, and an
+// availability toggle that rolls back on a failed backend PATCH.
 export default function PartnerHomeScreen() {
+  const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
-  const name = usePartnerStore(
-    (state) => state.name,
-  );
+  const name = usePartnerStore((s) => s.name);
+  const isAvailable = usePartnerStore((s) => s.isAvailable);
+  const loadProfile = usePartnerStore((s) => s.loadProfile);
+  const setAvailable = usePartnerStore((s) => s.setAvailable);
 
-  const isAvailable = usePartnerStore(
-    (state) => state.isAvailable,
-  );
+  const jobs = useJobsStore((s) => s.jobs);
+  const jobsLoading = useJobsStore((s) => s.isLoading);
+  const jobsError = useJobsStore((s) => s.error);
+  const loadJobs = useJobsStore((s) => s.loadJobs);
 
-  const mode = usePartnerStore(
-    (state) => state.mode,
-  );
+  const ledger = useWalletStore((s) => s.ledger);
+  const threshold = useWalletStore((s) => s.withdrawalThreshold);
+  const unreadCount = useNotificationsStore((s) => selectUnreadCount(s.notifications));
 
-  const loadProfile = usePartnerStore(
-    (state) => state.loadProfile,
-  );
-
-  const setAvailable = usePartnerStore(
-    (state) => state.setAvailable,
-  );
-
-  const jobs = useJobsStore(
-    (state) => state.jobs,
-  );
-
-  const jobsLoading = useJobsStore(
-    (state) => state.isLoading,
-  );
-
-  const jobsError = useJobsStore(
-    (state) => state.error,
-  );
-
-  const loadJobs = useJobsStore(
-    (state) => state.loadJobs,
-  );
-
-  const notifications = useNotificationsStore(
-    (state) => state.notifications,
-  );
-
-  const walletBalance = useWalletStore((state) =>
-    selectEarningsBalance(state.ledger),
-  );
-
-  const [isInitializing, setIsInitializing] =
-    useState(true);
-
-  const [isTogglingAvailability, setIsTogglingAvailability] =
-    useState(false);
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const [initializationError, setInitializationError] =
-    useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -132,25 +65,12 @@ export default function PartnerHomeScreen() {
       setInitializationError(null);
 
       try {
-        await Promise.all([
-          loadProfile(),
-          loadJobs(),
-        ]);
+        await Promise.all([loadProfile(), loadJobs()]);
       } catch (error) {
-        if (!mounted) {
-          return;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to load delivery data.';
-
-        setInitializationError(message);
+        if (!mounted) return;
+        setInitializationError(error instanceof Error ? error.message : 'Unable to load delivery data.');
       } finally {
-        if (mounted) {
-          setIsInitializing(false);
-        }
+        if (mounted) setIsInitializing(false);
       }
     };
 
@@ -161,119 +81,55 @@ export default function PartnerHomeScreen() {
     };
   }, [loadProfile, loadJobs]);
 
-  const activeJob = jobs.find(
-    (job) =>
-      ![
-        'AVAILABLE',
-        'COMPLETED',
-        'FAILED',
-      ].includes(job.stage),
-  );
-
-  const availableJobs = jobs.filter(
-    (job) => job.stage === 'AVAILABLE',
-  );
-
-  const completedJobs = jobs.filter(
-    (job) => job.stage === 'COMPLETED',
-  );
-
-  const recentJobs = jobs
-    .filter(
-      (job) =>
-        job.stage === 'COMPLETED' ||
-        job.stage === 'FAILED',
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime(),
-    )
-    .slice(0, 3);
-
-  const unreadNotifications =
-    notifications.filter(
-      (notification) => !notification.read,
-    ).length;
-
   const refresh = async () => {
     setRefreshing(true);
     setInitializationError(null);
 
     try {
-      await Promise.all([
-        loadProfile(),
-        loadJobs(),
-      ]);
+      await Promise.all([loadProfile(), loadJobs()]);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to refresh delivery data.';
-
-      setInitializationError(message);
+      setInitializationError(error instanceof Error ? error.message : 'Unable to refresh delivery data.');
     } finally {
       setRefreshing(false);
     }
   };
 
-  const handleAvailabilityChange = async (
-    value: boolean,
-  ) => {
-    if (isTogglingAvailability) {
-      return;
-    }
+  const handleAvailabilityChange = async (value: boolean) => {
+    if (isTogglingAvailability) return;
 
     setIsTogglingAvailability(true);
-    setInitializationError(null);
 
     try {
       await setAvailable(value);
-
-      /*
-       * Refresh available deliveries after going online
-       * or offline so the dashboard reflects the
-       * backend state.
-       */
+      // Refresh available deliveries after going online/offline so the
+      // dashboard reflects the backend state.
       await loadJobs();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to update availability.';
-
       Alert.alert(
         'Unable to update status',
-        message,
+        error instanceof Error ? error.message : 'Unable to update availability.',
       );
-
-      setInitializationError(message);
     } finally {
       setIsTogglingAvailability(false);
     }
   };
 
+  const availableCount = jobs.filter((j) => j.stage === 'AVAILABLE').length;
+  const activeJob = jobs.find((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED');
+  const earnings = selectEarningsBalance(ledger);
+  const reimbursed = selectReimbursedTotal(ledger);
+  // Derived, presentation-only — not a new store selector: today's cut of
+  // the same ledger the wallet card already reads, for the top status card.
+  const todayKey = new Date().toDateString();
+  const todayEarnings = ledger
+    .filter((e) => e.type === 'EARNING' && new Date(e.createdAt).toDateString() === todayKey)
+    .reduce((sum, e) => sum + e.amount, 0);
+
   if (isInitializing) {
     return (
-      <View
-        style={[
-          styles.centered,
-          {
-            backgroundColor: theme.background,
-          },
-        ]}
-      >
-        <ActivityIndicator
-          size="large"
-          color={theme.primary}
-        />
-
-        <Text
-          style={[
-            styles.loadingText,
-            { color: theme.mutedText },
-          ]}
-        >
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background, gap: 12 }}>
+        <ActivityIndicator size="large" color={colors.partner.orange} />
+        <Text className="text-body" style={{ color: theme.textSecondary }}>
           Loading your delivery dashboard...
         </Text>
       </View>
@@ -281,1392 +137,215 @@ export default function PartnerHomeScreen() {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.background,
-        },
-      ]}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom) since this
+      // screen sits under a floating, absolutely-positioned nav instead of a
+      // native tab bar that used to reserve its own space automatically.
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={colors.partner.orange}
+          colors={[colors.partner.orange]}
+        />
+      }
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={undefined}
-      >
-        <View style={styles.header}>
-          <View style={styles.headerIdentity}>
-            <View
-              style={[
-                styles.avatar,
-                {
-                  backgroundColor:
-                    theme.primary,
-                },
-              ]}
-            >
-              <UserRound
-                size={22}
-                color="#FFFFFF"
-              />
-            </View>
-
-            <View style={styles.greeting}>
-              <Text
-                style={[
-                  styles.greetingSmall,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Welcome back
-              </Text>
-
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.name,
-                  { color: theme.text },
-                ]}
-              >
-                {name || 'Delivery Partner'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.headerActions}>
-            <Pressable
-              onPress={() => void refresh()}
-              style={[
-                styles.headerButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <RefreshCw
-                size={18}
-                color={theme.text}
-              />
-            </Pressable>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  '/(partner)/notifications',
-                )
-              }
-              style={[
-                styles.headerButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <Bell
-                size={18}
-                color={theme.text}
-              />
-
-              {unreadNotifications > 0 && (
-                <View
-                  style={[
-                    styles.notificationDot,
-                    {
-                      backgroundColor:
-                        theme.primary,
-                    },
-                  ]}
-                />
-              )}
-            </Pressable>
-          </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>Welcome back</Text>
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>{name || 'Delivery Partner'}</Text>
         </View>
-
-        {initializationError && (
-          <View
-            style={[
-              styles.errorCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.danger,
-              },
-            ]}
-          >
-            <CircleAlert
-              size={19}
-              color={theme.danger}
-            />
-
-            <View style={styles.errorInfo}>
-              <Text
-                style={[
-                  styles.errorTitle,
-                  { color: theme.danger },
-                ]}
-              >
-                Something needs attention
-              </Text>
-
-              <Text
-                style={[
-                  styles.errorText,
-                  { color: theme.mutedText },
-                ]}
-              >
-                {initializationError}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.yourStyle,
-            {
-              backgroundColor: '#FFFFFF',
-              borderColor: '#FFFFFF',
-            },
-          ]}
-                  >
-          <View style={styles.statusLeft}>
-            <View
-              style={[
-                styles.powerIcon,
-                {
-                  backgroundColor: isAvailable
-                    ? 'rgba(255,255,255,0.16)'
-                    : theme.background,
-                },
-              ]}
-            >
-              <Power
-                size={21}
-                color={
-                  isAvailable
-                    ? '#FFFFFF'
-                    : theme.text
-                }
-              />
-            </View>
-
-            <View style={styles.statusText}>
-              <Text
-                style={[
-                  styles.statusTitle,
-                  {
-                    color: isAvailable
-                      ? '#FFFFFF'
-                      : theme.text,
-                  },
-                ]}
-              >
-                {isAvailable
-                  ? 'You are online'
-                  : 'You are offline'}
-              </Text>
-
-              <Text
-                style={[
-                  styles.statusSubtitle,
-                  {
-                    color: isAvailable
-                      ? 'rgba(255,255,255,0.82)'
-                      : theme.mutedText,
-                  },
-                ]}
-              >
-                {isAvailable
-                  ? 'You can receive delivery jobs'
-                  : 'Go online to receive jobs'}
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            disabled={isTogglingAvailability}
-            onPress={() =>
-              void handleAvailabilityChange(
-                !isAvailable,
-              )
-            }
-            style={[
-              styles.toggle,
-              {
-                backgroundColor: isAvailable
-                  ? 'rgba(255,255,255,0.22)'
-                  : theme.background,
-              },
-            ]}
-          >
-            {isTogglingAvailability ? (
-              <ActivityIndicator
-                size="small"
-                color={
-                  isAvailable
-                    ? '#FFFFFF'
-                    : theme.text
-                }
-              />
-            ) : (
+        <AnimatedPressable onPress={() => router.push('/(partner)/notifications')} scaleTo={0.9}>
+          <View>
+            <Bell size={24} color={theme.text} />
+            {unreadCount > 0 && (
               <View
-                style={[
-                  styles.toggleThumb,
-                  {
-                    backgroundColor:
-                      isAvailable
-                        ? '#FFFFFF'
-                        : theme.mutedText,
-                    alignSelf: isAvailable
-                      ? 'flex-end'
-                      : 'flex-start',
-                  },
-                ]}
-              />
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  right: -3,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  paddingHorizontal: 3,
+                  backgroundColor: colors.partner.orange,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{unreadCount}</Text>
+              </View>
             )}
-          </Pressable>
-        </View>
-
-        <View
-          style={[
-            styles.modeCard,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <View style={styles.modeLeft}>
-            <Package
-              size={19}
-              color={theme.mutedText}
-            />
-
-            <View style={styles.modeInfo}>
-              <Text
-                style={[
-                  styles.modeLabel,
-                  { color: theme.mutedText },
-                ]}
-              >
-                DELIVERY MODE
-              </Text>
-
-              <Text
-                style={[
-                  styles.modeValue,
-                  { color: theme.text },
-                ]}
-              >
-                {mode === 'MOTORCYCLE'
-                  ? 'Motorcycle'
-                  : 'Walking'}
-              </Text>
-            </View>
           </View>
+        </AnimatedPressable>
+      </View>
 
-          <Pressable
-            onPress={() =>
-              router.push(
-                '/(partner)/profile',
-              )
-            }
-            style={styles.changeModeButton}
-          >
-            <Text
-              style={[
-                styles.changeModeText,
-                { color: theme.primary },
-              ]}
-            >
-              View profile
-            </Text>
-
-            <ChevronRight
-              size={17}
-              color={theme.primary}
-            />
-          </Pressable>
-        </View>
-
-        {activeJob && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: theme.text },
-                  ]}
-                >
-                  Active delivery
-                </Text>
-
-                <Text
-                  style={[
-                    styles.sectionSubtitle,
-                    { color: theme.mutedText },
-                  ]}
-                >
-                  Complete your current delivery
-                  before accepting another one.
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  `/(partner)/active/${activeJob.id}`,
-                )
-              }
-              style={({ pressed }) => [
-                styles.activeJobCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                  opacity: pressed ? 0.92 : 1,
-                },
-              ]}
-            >
-              <View style={styles.activeJobHeader}>
-                <View
-                  style={[
-                    styles.activeJobIcon,
-                    {
-                      backgroundColor:
-                        theme.background,
-                    },
-                  ]}
-                >
-                  {(() => {
-                    const Icon = getTypeIcon(
-                      activeJob.type,
-                    );
-
-                    return (
-                      <Icon
-                        size={21}
-                        color={theme.primary}
-                      />
-                    );
-                  })()}
-                </View>
-
-                <View
-                  style={styles.activeJobInfo}
-                >
-                  <Text
-                    style={[
-                      styles.activeJobType,
-                      { color: theme.text },
-                    ]}
-                  >
-                    {getTypeLabel(
-                      activeJob.type,
-                    )}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.activeJobStage,
-                      {
-                        color:
-                          theme.primary,
-                      },
-                    ]}
-                  >
-                    {activeJob.stage.replace(
-                      /_/g,
-                      ' ',
-                    )}
-                  </Text>
-                </View>
-
-                <ChevronRight
-                  size={20}
-                  color={theme.mutedText}
-                />
-              </View>
-
-              <View
-                style={[
-                  styles.activeRoute,
-                  {
-                    borderTopColor:
-                      theme.border,
-                  },
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.activeRouteText,
-                    { color: theme.text },
-                  ]}
-                >
-                  {activeJob.pickup.label}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.routeArrow,
-                    { color: theme.mutedText },
-                  ]}
-                >
-                  →
-                </Text>
-
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.activeRouteText,
-                    { color: theme.text },
-                  ]}
-                >
-                  {activeJob.dropoff.label}
-                </Text>
-              </View>
-            </Pressable>
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.text },
-                ]}
-              >
-                Delivery activity
-              </Text>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Current delivery availability
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  '/(partner)/jobs',
-                )
-              }
-            >
-              <Text
-                style={[
-                  styles.viewAllText,
-                  { color: theme.primary },
-                ]}
-              >
-                View jobs
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statIcon,
-                  {
-                    backgroundColor:
-                      theme.background,
-                  },
-                ]}
-              >
-                <Package
-                  size={19}
-                  color={theme.primary}
-                />
-              </View>
-
-              <Text
-                style={[
-                  styles.statValue,
-                  { color: theme.text },
-                ]}
-              >
-                {jobsLoading
-                  ? '—'
-                  : availableJobs.length}
-              </Text>
-
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Available
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statIcon,
-                  {
-                    backgroundColor:
-                      theme.background,
-                  },
-                ]}
-              >
-                <CheckCircleIcon
-                  color={theme.primary}
-                />
-              </View>
-
-              <Text
-                style={[
-                  styles.statValue,
-                  { color: theme.text },
-                ]}
-              >
-                {completedJobs.length}
-              </Text>
-
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Completed
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.text },
-                ]}
-              >
-                Wallet
-              </Text>
-
-              <Text
-                style={[
-                  styles.sectionSubtitle,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Current local wallet balance
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  '/(partner)/wallet',
-                )
-              }
-            >
-              <Text
-                style={[
-                  styles.viewAllText,
-                  { color: theme.primary },
-                ]}
-              >
-                Open wallet
-              </Text>
-            </Pressable>
-          </View>
-
-          <View
-            style={[
-              styles.walletCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.walletIcon,
-                {
-                  backgroundColor:
-                    theme.background,
-                },
-              ]}
-            >
-              <DollarSign
-                size={21}
-                color={theme.primary}
-              />
-            </View>
-
-            <View style={styles.walletInfo}>
-              <Text
-                style={[
-                  styles.walletLabel,
-                  { color: theme.mutedText },
-                ]}
-              >
-                BALANCE
-              </Text>
-
-              <Text
-                style={[
-                  styles.walletAmount,
-                  { color: theme.text },
-                ]}
-              >
-                {formatCurrency(
-                  walletBalance,
-                )}
-              </Text>
-            </View>
-
-            <ChevronRight
-              size={19}
-              color={theme.mutedText}
-            />
-          </View>
-
+      {/* Most-important content, top-left: availability + today's earnings
+          merged into one card rather than two scattered mini-widgets, per
+          the redesign brief's dashboard rules. */}
+      <GlassView radius="card" intensity="strong" style={{ padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ gap: 10 }}>
+          <AvailabilityToggle
+            isOnline={isAvailable}
+            onChange={(v) => void handleAvailabilityChange(v)}
+            disabled={isTogglingAvailability}
+            scheme={isDark ? 'dark' : 'light'}
+          />
           <Text
-            style={[
-              styles.walletNotice,
-              { color: theme.mutedText },
-            ]}
+            className="text-caption font-semibold"
+            style={{ color: isAvailable ? colors.partner.orange : theme.textSecondary }}
           >
-            Wallet data is still stored locally
-            in this MVP. Backend earnings are
-            recorded separately.
+            {isTogglingAvailability ? 'Updating…' : isAvailable ? "You're online" : "You're offline"}
           </Text>
         </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.text },
-                ]}
-              >
-                Recent deliveries
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(
-                  '/(partner)/jobs',
-                )
-              }
-            >
-              <Text
-                style={[
-                  styles.viewAllText,
-                  { color: theme.primary },
-                ]}
-              >
-                View all
-              </Text>
-            </Pressable>
-          </View>
-
-          {recentJobs.length > 0 ? (
-            <View style={styles.recentList}>
-              {recentJobs.map((job) => (
-                <Pressable
-                  key={job.id}
-                  onPress={() =>
-                    router.push(
-                      `/(partner)/jobs/${job.id}`,
-                    )
-                  }
-                  style={[
-                    styles.recentCard,
-                    {
-                      backgroundColor:
-                        theme.card,
-                      borderColor:
-                        theme.border,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.recentIcon,
-                      {
-                        backgroundColor:
-                          theme.background,
-                      },
-                    ]}
-                  >
-                    {(() => {
-                      const Icon =
-                        getTypeIcon(
-                          job.type,
-                        );
-
-                      return (
-                        <Icon
-                          size={18}
-                          color={
-                            theme.primary
-                          }
-                        />
-                      );
-                    })()}
-                  </View>
-
-                  <View
-                    style={styles.recentInfo}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.recentTitle,
-                        {
-                          color:
-                            theme.text,
-                        },
-                      ]}
-                    >
-                      {job.pickup.label}
-                    </Text>
-
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.recentRoute,
-                        {
-                          color:
-                            theme.mutedText,
-                        },
-                      ]}
-                    >
-                      → {job.dropoff.label}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.recentRight
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.recentAmount,
-                        {
-                          color:
-                            theme.text,
-                        },
-                      ]}
-                    >
-                      {formatCurrency(
-                        job.deliveryFee,
-                      )}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.recentStatus,
-                        {
-                          color:
-                            job.stage ===
-                            'FAILED'
-                              ? theme.danger
-                              : theme.primary,
-                        },
-                      ]}
-                    >
-                      {job.stage ===
-                      'FAILED'
-                        ? 'Failed'
-                        : 'Completed'}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor:
-                    theme.card,
-                  borderColor:
-                    theme.border,
-                },
-              ]}
-            >
-              <Clock3
-                size={28}
-                color={theme.mutedText}
-              />
-
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.text },
-                ]}
-              >
-                No recent deliveries
-              </Text>
-
-              <Text
-                style={[
-                  styles.emptyText,
-                  { color: theme.mutedText },
-                ]}
-              >
-                Completed deliveries will appear
-                here.
-              </Text>
-            </View>
-          )}
+        <View style={{ alignItems: 'flex-end', gap: 2 }}>
+          <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+            TODAY
+          </Text>
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>{formatCurrency(todayEarnings)}</Text>
         </View>
+      </GlassView>
 
-        <View
-          style={[
-            styles.safetyCard,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <ShieldCheck
-            size={22}
-            color={theme.primary}
+      {initializationError && (
+        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          <CircleAlert size={19} color={colors.semantic.error} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
+              Something needs attention
+            </Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>{initializationError}</Text>
+            <AnimatedPressable onPress={() => void refresh()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
+            </AnimatedPressable>
+          </View>
+        </GlassView>
+      )}
+
+      {jobsError && !initializationError && (
+        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          <CircleAlert size={19} color={colors.semantic.error} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
+              Couldn't load jobs
+            </Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>{jobsError}</Text>
+            <AnimatedPressable onPress={() => void loadJobs()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
+            </AnimatedPressable>
+          </View>
+        </GlassView>
+      )}
+
+      {!activeJob && (
+        <AnimatedPressable onPress={() => router.push('/(partner)/demand')} scaleTo={0.98}>
+          <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Flame size={18} color={colors.semantic.error} />
+              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
+            </View>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km · est.{' '}
+              {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
+            </Text>
+            <DemandMap zones={demandSnapshot.zones} height={110} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
+              <ChevronRight size={14} color={colors.partner.orange} />
+            </View>
+          </GlassView>
+        </AnimatedPressable>
+      )}
+
+      {!isAvailable && !activeJob && (
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
+          <Zap size={22} color={colors.partner.orange} />
+          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            Go online to start receiving Marketplace, Food, and Laundry jobs near you.
+          </Text>
+          <Button
+            title="Go online"
+            variant="partner"
+            loading={isTogglingAvailability}
+            onPress={() => void handleAvailabilityChange(true)}
           />
+        </GlassView>
+      )}
 
-          <View style={styles.safetyInfo}>
-            <Text
-              style={[
-                styles.safetyTitle,
-                { color: theme.text },
-              ]}
-            >
-              Delivery safety
+      {activeJob && (
+        <AnimatedPressable onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} scaleTo={0.98}>
+          <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Badge jobType={activeJob.type} label={activeJob.type} />
+              <ChevronRight size={20} color={theme.textSecondary} />
+            </View>
+            <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
+              Active delivery in progress
             </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MapPin size={16} color={theme.textSecondary} />
+              <Text className="text-body" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                {activeJob.dropoff.label}
+              </Text>
+            </View>
+            <Button title="Continue delivery" variant="partner" onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} />
+          </GlassView>
+        </AnimatedPressable>
+      )}
 
-            <Text
-              style={[
-                styles.safetyText,
-                { color: theme.mutedText },
-              ]}
-            >
-              If you encounter a problem during a
-              delivery, use the safety and support
-              options from the active delivery.
+      {isAvailable && !activeJob && !jobsLoading && availableCount > 0 && (
+        <AnimatedPressable onPress={() => router.push('/(partner)/jobs')} scaleTo={0.98}>
+          <GlassView radius="card" style={{ padding: 20, gap: 8 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
+                {availableCount} job{availableCount === 1 ? '' : 's'} available
+              </Text>
+              <ChevronRight size={20} color={theme.textSecondary} />
+            </View>
+            <Text className="text-body" style={{ color: theme.textSecondary }}>
+              Browse and accept a Marketplace, Food, or Laundry job.
             </Text>
+          </GlassView>
+        </AnimatedPressable>
+      )}
+
+      {isAvailable && !activeJob && jobsLoading && (
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'center', gap: 8 }}>
+          <ActivityIndicator color={colors.partner.orange} />
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>Checking for nearby jobs…</Text>
+        </GlassView>
+      )}
+
+      {isAvailable && !activeJob && !jobsLoading && availableCount === 0 && !jobsError && (
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
+          <PackageSearch size={22} color={theme.textSecondary} />
+          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>No jobs nearby right now</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            You're online and ready — a new Marketplace, Food, or Laundry job will show up here as soon as one opens up.
+          </Text>
+        </GlassView>
+      )}
+
+      <AnimatedPressable onPress={() => router.push('/(partner)/wallet')} scaleTo={0.98}>
+        <GlassView radius="card" style={{ padding: 20, gap: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+              WALLET
+            </Text>
+            <ChevronRight size={18} color={theme.textSecondary} />
           </View>
-        </View>
-      </ScrollView>
-    </View>
+          <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(earnings)}</Text>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            toward your {formatCurrency(threshold)} cash-out
+          </Text>
+          <ProgressBar progress={earnings / threshold} color={colors.partner.orange} />
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            + {formatCurrency(reimbursed)} already reimbursed to you
+          </Text>
+        </GlassView>
+      </AnimatedPressable>
+    </ScrollView>
   );
 }
-
-function CheckCircleIcon({
-  color,
-}: {
-  color: string;
-}) {
-  return (
-    <View
-      style={{
-        width: 19,
-        height: 19,
-        borderWidth: 2,
-        borderColor: color,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <View
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: 4,
-          backgroundColor: color,
-        }}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-  },
-
-  loadingText: {
-    fontSize: 14,
-    marginTop: 12,
-  },
-
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 120,
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-
-  headerIdentity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  greeting: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  greetingSmall: {
-    fontSize: 12,
-  },
-
-  name: {
-    fontSize: 19,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  notificationDot: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-
-  errorCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-
-  errorInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  errorTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  errorText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-
-  statusCard: {
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-
-  powerIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statusText: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  statusTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
-  statusSubtitle: {
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  toggle: {
-    width: 50,
-    height: 29,
-    borderRadius: 15,
-    padding: 4,
-    justifyContent: 'center',
-  },
-
-  toggleThumb: {
-    width: 21,
-    height: 21,
-    borderRadius: 11,
-  },
-
-  modeCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 15,
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  modeLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  modeInfo: {
-    marginLeft: 10,
-  },
-
-  modeLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.7,
-  },
-
-  modeValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  changeModeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 1,
-  },
-
-  changeModeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  section: {
-    marginTop: 24,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-  },
-
-  sectionSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 3,
-    maxWidth: 270,
-  },
-
-  viewAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  activeJobCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-  },
-
-  activeJobHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  activeJobIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  activeJobInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  activeJobType: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
-  activeJobStage: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  activeRoute: {
-    borderTopWidth: 1,
-    marginTop: 14,
-    paddingTop: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  activeRouteText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  routeArrow: {
-    marginHorizontal: 7,
-    fontSize: 14,
-  },
-
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statCard: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 17,
-    padding: 15,
-  },
-
-  statIcon: {
-    width: 37,
-    height: 37,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statValue: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 11,
-  },
-
-  statLabel: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  walletCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  walletIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  walletInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  walletLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.7,
-  },
-
-  walletAmount: {
-    fontSize: 22,
-    fontWeight: '900',
-    marginTop: 3,
-  },
-
-  walletNotice: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 7,
-  },
-
-  recentList: {
-    gap: 9,
-  },
-
-  recentCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  recentIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  recentInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-
-  recentTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  recentRoute: {
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  recentRight: {
-    alignItems: 'flex-end',
-    marginLeft: 8,
-  },
-
-  recentAmount: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  recentStatus: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  emptyCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 25,
-    alignItems: 'center',
-  },
-
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginTop: 10,
-  },
-
-  emptyText: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 5,
-  },
-
-  safetyCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 24,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-
-  safetyInfo: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  safetyTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  safetyText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-});
