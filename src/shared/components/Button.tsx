@@ -1,11 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors } from '@/src/theme';
+import { springs } from '@/src/shared/animation/constants';
 import { AnimatedPressable } from './AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import type { PressableProps } from 'react-native';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'gold' | 'laundry' | 'partner';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'gold' | 'laundry' | 'partner' | 'destructive';
 type Size = 'md' | 'lg' | 'sm';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
@@ -55,6 +65,27 @@ export function Button({
 
   const disabledBg = isDark ? colors.neutral[700] : colors.neutral[300];
 
+  // Loading state gets a slow opacity pulse (rather than a static block) so
+  // there's motion behind the spinner instead of a dead frozen button —
+  // the "streaming shimmer, not a blank spinner-only state" rule from the
+  // motion spec, kept to a simple pulse rather than a translating gradient
+  // sweep to stay predictable across every variant/size combination.
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (loading) {
+      pulse.value = withRepeat(withTiming(0.6, { duration: 650, easing: Easing.inOut(Easing.ease) }), -1, true);
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+    }
+    return () => cancelAnimation(pulse);
+  }, [loading, pulse]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: loading ? pulse.value : 1,
+  }));
+
   const variants: Record<Variant, VariantStyle> = {
     primary: isDisabled
       ? { flat: { backgroundColor: disabledBg }, text: 'text-neutral-600 dark:text-neutral-400 font-semibold', spinner: colors.onBrand }
@@ -79,6 +110,12 @@ export function Button({
     partner: isDisabled
       ? { flat: { backgroundColor: disabledBg }, text: 'text-neutral-600 dark:text-neutral-400 font-semibold', spinner: colors.onBrand }
       : { gradient: [colors.partner.orangeDark, colors.partner.orangeBright], text: 'text-white font-semibold', spinner: colors.onBrand, shadowColor: colors.partner.orange },
+    // Semantic red, always — for "Report failed delivery", "Cancel job",
+    // and any other destructive action. Never substitute a job-type or
+    // partner-orange color here, per the design system's Layer 3 rule.
+    destructive: isDisabled
+      ? { flat: { backgroundColor: disabledBg }, text: 'text-neutral-600 dark:text-neutral-400 font-semibold', spinner: colors.onBrand }
+      : { flat: { backgroundColor: colors.semantic.error }, text: 'text-white font-semibold', spinner: colors.onBrand, shadowColor: colors.semantic.error },
   };
 
   const v = variants[variant];
@@ -94,17 +131,19 @@ export function Button({
       accessibilityRole="button"
       disabled={isDisabled}
       scaleTo={0.96}
+      springConfig={springs.buttonPress}
       android_ripple={{ color: 'rgba(0,0,0,0.08)', borderless: false }}
       style={[{ borderRadius: RADIUS, overflow: 'hidden' }, style] as never}
       {...rest}
     >
-      <View
+      <Animated.View
         className={className}
         style={[
           alignStyle,
           sizeStyle[size],
           { borderRadius: RADIUS },
           fullWidth ? { width: '100%' as const } : null,
+          pulseStyle,
         ]}
       >
         {loading ? (
@@ -114,7 +153,7 @@ export function Button({
             {title}
           </Text>
         )}
-      </View>
+      </Animated.View>
     </AnimatedPressable>
   );
 

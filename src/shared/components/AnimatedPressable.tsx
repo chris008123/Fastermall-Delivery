@@ -14,6 +14,10 @@ cssInterop(AnimatedPressableBase, { className: 'style' });
 interface AnimatedPressableProps extends PressableProps {
   /** Scale value on press-in. Defaults to a subtle 0.96 (cards use 0.98, buttons 0.96). */
   scaleTo?: number;
+  /** Spring physics for the press animation. Defaults to `springs.snappy`;
+   * pass `springs.buttonPress` for the crisper, near-zero-overshoot feel
+   * the motion spec calls for on primary buttons specifically. */
+  springConfig?: typeof springs.snappy;
   // Reanimated's layout-animation prop types are stricter than the actual
   // range of values (`FadeInUp`, `FadeInUp.delay(80)`, etc.) that get
   // passed in practice — loosened here rather than importing Reanimated's
@@ -32,6 +36,7 @@ interface AnimatedPressableProps extends PressableProps {
  */
 export function AnimatedPressable({
   scaleTo = 0.96,
+  springConfig = springs.snappy,
   onPressIn,
   onPressOut,
   style,
@@ -46,12 +51,12 @@ export function AnimatedPressable({
   }));
 
   const handlePressIn = (e: GestureResponderEvent) => {
-    scale.value = withSpring(scaleTo, { ...springs.snappy, reduceMotion: ReduceMotion.System });
+    scale.value = withSpring(scaleTo, { ...springConfig, reduceMotion: ReduceMotion.System });
     onPressIn?.(e);
   };
 
   const handlePressOut = (e: GestureResponderEvent) => {
-    scale.value = withSpring(1, { ...springs.snappy, reduceMotion: ReduceMotion.System });
+    scale.value = withSpring(1, { ...springConfig, reduceMotion: ReduceMotion.System });
     onPressOut?.(e);
   };
 
