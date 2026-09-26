@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,9 +10,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
-import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
+import { CourierScene } from '@/src/shared/components/CourierScene';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
@@ -24,11 +26,18 @@ type Theme = {
   surface: string;
 };
 
+// Motion spec: "Screen entrance — Content fades/slides in in two beats
+// (illustration first, then text/form) — keep it brief." The illustration
+// plays immediately; the form follows ~120ms later.
+const FORM_ENTRANCE_DELAY = 120;
+
 export default function LoginScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
+  const insets = useSafeAreaInsets();
 
   const signIn = useAuthStore((s) => s.signIn);
+  const passwordRef = useRef<TextInput>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,104 +74,122 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-neutral-50 dark:bg-neutral-950"
+      style={{ flex: 1, backgroundColor: theme.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PartnerAuthHeroHeader
-        title="Sign in"
-        subtitle="Use the email and password from your partner account."
-      />
-
       <ScrollView
-        className="-mt-6 flex-1 rounded-t-[24px] bg-white dark:bg-neutral-900"
         contentContainerStyle={{
-          padding: 24,
+          paddingTop: insets.top + 24,
+          paddingHorizontal: 24,
           paddingBottom: 32,
           gap: 18,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <Field
-          label="Email address"
-          theme={theme}
-          icon={<Mail size={18} color={theme.textSecondary} />}
-        >
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="partner@example.com"
-            placeholderTextColor={theme.textSecondary}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            style={{
-              flex: 1,
-              fontSize: 16,
-              color: theme.text,
-            }}
-          />
-        </Field>
+        {/* Full-bleed hero illustration, generous whitespace around it
+            rather than squeezed against the form — per the redesign brief's
+            Login section. */}
+        <Animated.View entering={FadeIn.duration(400)} style={{ marginBottom: 4 }}>
+          <CourierScene scheme={isDark ? 'dark' : 'light'} height={168} />
+        </Animated.View>
 
-        <Field
-          label="Password"
-          theme={theme}
-          icon={<Lock size={18} color={theme.textSecondary} />}
-        >
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder={'••••••'}
-            placeholderTextColor={theme.textSecondary}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={{
-              flex: 1,
-              fontSize: 16,
-              color: theme.text,
-            }}
-          />
-        </Field>
-
-        {error && (
-          <Text
-            className="text-caption"
-            style={{ color: colors.semantic.error }}
-          >
-            {error}
-          </Text>
-        )}
-
-        <Button
-          title="Sign in"
-          variant="partner"
-          fullWidth
-          loading={loading}
-          disabled={!canSubmit}
-          onPress={onSubmit}
-        />
-
-        <AnimatedPressable
-          onPress={() => router.push('/(auth)/onboarding')}
-          scaleTo={0.98}
-          style={{ alignSelf: 'center' }}
-        >
-          <Text
-            className="text-caption font-medium"
-            style={{ color: theme.textSecondary }}
-          >
-            New partner?{' '}
-            <Text
-              style={{
-                color: colors.partner.orange,
-                fontFamily: 'Fredoka_600SemiBold',
-              }}
-            >
-              Get started
+        <Animated.View entering={FadeInUp.delay(FORM_ENTRANCE_DELAY).springify().damping(18).stiffness(180)} style={{ gap: 18 }}>
+          <View style={{ gap: 4 }}>
+            <Text className="text-h1 font-bold" style={{ color: theme.text }}>Sign in</Text>
+            <Text className="text-body" style={{ color: theme.textSecondary }}>
+              Use the email and password from your partner account.
             </Text>
-          </Text>
-        </AnimatedPressable>
+          </View>
+
+          <Field
+            label="Email address"
+            theme={theme}
+            icon={<Mail size={18} color={theme.textSecondary} />}
+          >
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="partner@example.com"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              style={{
+                flex: 1,
+                fontSize: 16,
+                color: theme.text,
+              }}
+            />
+          </Field>
+
+          <Field
+            label="Password"
+            theme={theme}
+            icon={<Lock size={18} color={theme.textSecondary} />}
+          >
+            <TextInput
+              ref={passwordRef}
+              value={password}
+              onChangeText={setPassword}
+              placeholder={'••••••'}
+              placeholderTextColor={theme.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="password"
+              returnKeyType="go"
+              onSubmitEditing={onSubmit}
+              style={{
+                flex: 1,
+                fontSize: 16,
+                color: theme.text,
+              }}
+            />
+          </Field>
+
+          {error && (
+            <Text
+              className="text-caption"
+              style={{ color: colors.semantic.error }}
+            >
+              {error}
+            </Text>
+          )}
+
+          <Button
+            title="Sign in"
+            variant="partner"
+            fullWidth
+            loading={loading}
+            disabled={!canSubmit}
+            onPress={onSubmit}
+          />
+
+          <AnimatedPressable
+            onPress={() => router.push('/(auth)/onboarding')}
+            scaleTo={0.98}
+            style={{ alignSelf: 'center' }}
+          >
+            <Text
+              className="text-caption font-medium"
+              style={{ color: theme.textSecondary }}
+            >
+              New partner?{' '}
+              <Text
+                style={{
+                  color: colors.partner.orange,
+                  fontFamily: 'Fredoka_600SemiBold',
+                }}
+              >
+                Get started
+              </Text>
+            </Text>
+          </AnimatedPressable>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
