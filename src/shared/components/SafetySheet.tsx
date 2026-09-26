@@ -45,7 +45,7 @@ export function SafetySheet({ visible, onClose }: SafetySheetProps) {
                 width: 56,
                 height: 56,
                 borderRadius: 28,
-                backgroundColor: 'rgba(214, 69, 69, 0.12)',
+                backgroundColor: `${colors.semantic.error}1F`,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}

@@ -155,8 +155,7 @@ export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, custome
 
               <Button
                 title="Mark delivery as failed"
-                variant="ghost"
-                textClassName="text-error font-semibold"
+                variant="destructive"
                 fullWidth
                 onPress={() => {
                   onConfirmFailed(selected.key);
