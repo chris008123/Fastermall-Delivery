@@ -27,14 +27,17 @@ export function GlassView({
   const borderRadius = radii[radius];
 
   const tint = isDark
-    ? intensity === 'strong' ? 'rgba(28, 28, 26, 0.72)' : 'rgba(28, 28, 26, 0.55)'
-    : intensity === 'strong' ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.6)';
+    ? intensity === 'strong' ? 'rgba(43, 39, 33, 0.85)' : 'rgba(43, 39, 33, 0.72)'
+    : intensity === 'strong' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.72)';
 
   const solidTint = isDark
-    ? intensity === 'strong' ? 'rgba(20, 20, 19, 0.94)' : 'rgba(20, 20, 19, 0.88)'
+    ? intensity === 'strong' ? 'rgba(23, 21, 18, 0.96)' : 'rgba(33, 30, 25, 0.92)'
     : intensity === 'strong' ? 'rgba(255, 255, 255, 0.96)' : 'rgba(255, 255, 255, 0.9)';
 
-  const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.5)';
+  // Tinted toward the mode's own text color (warm-white in dark, warm-black
+  // in light) rather than a flat gray or an always-white highlight edge —
+  // matches the border rule the rest of the design system now follows.
+  const borderColor = isDark ? 'rgba(247, 243, 236, 0.16)' : 'rgba(28, 26, 22, 0.14)';
 
   return (
     // Shadow lives on the outermost view (elevation/shadow props don't play
