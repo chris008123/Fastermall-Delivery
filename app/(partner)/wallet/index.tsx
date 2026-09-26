@@ -11,6 +11,7 @@ import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { useToast } from '@/src/shared/toast/ToastProvider';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
@@ -64,6 +65,7 @@ export default function WalletScreen() {
   const withdraw = useWalletStore((s) => s.withdraw);
   const withdrawInstant = useWalletStore((s) => s.withdrawInstant);
   const jobs = useJobsStore((s) => s.jobs);
+  const { show } = useToast();
 
   const [cashoutVisible, setCashoutVisible] = useState(false);
   const [fareEntry, setFareEntry] = useState<LedgerEntry | null>(null);
@@ -100,7 +102,7 @@ export default function WalletScreen() {
                 WORK EARNINGS
               </Text>
             </View>
-            <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(earnings)}</Text>
+            <Text className="text-display font-bold" style={{ color: theme.text, fontVariant: ['tabular-nums'] }}>{formatCurrency(earnings)}</Text>
             <ProgressBar progress={earnings / threshold} color={colors.partner.orange} />
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
               {canWithdraw
@@ -117,7 +119,15 @@ export default function WalletScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Button title="Scheduled payout" variant="secondary" disabled={!canWithdraw} onPress={withdraw} />
+                <Button
+                  title="Scheduled payout"
+                  variant="secondary"
+                  disabled={!canWithdraw}
+                  onPress={() => {
+                    withdraw();
+                    show(`${formatCurrency(earnings)} scheduled for ${payoutLabel}`, 'success');
+                  }}
+                />
               </View>
             </View>
           </GlassView>
@@ -143,10 +153,10 @@ export default function WalletScreen() {
           <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-                LAST 7 DAYS
+                EARNINGS
               </Text>
-              <Text className="text-body-lg font-bold" style={{ color: colors.partner.orange }}>
-                {formatCurrency(sumLastSevenDays(ledger))}
+              <Text className="text-body-lg font-bold" style={{ color: colors.partner.orange, fontVariant: ['tabular-nums'] }}>
+                {formatCurrency(sumLastSevenDays(ledger))} / 7d
               </Text>
             </View>
             <EarningsChart ledger={ledger} />
@@ -170,7 +180,7 @@ export default function WalletScreen() {
                 <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
                   REIMBURSED
                 </Text>
-                <Text className="text-h2 font-bold" style={{ color: colors.brand.teal }}>{formatCurrency(reimbursed)}</Text>
+                <Text className="text-h2 font-bold" style={{ color: colors.brand.teal, fontVariant: ['tabular-nums'] }}>{formatCurrency(reimbursed)}</Text>
               </View>
             </View>
             <Text className="text-caption" style={{ color: theme.textSecondary, maxWidth: 130, textAlign: 'right' }}>
@@ -209,8 +219,10 @@ export default function WalletScreen() {
             visible={cashoutVisible}
             onClose={() => setCashoutVisible(false)}
             onConfirm={() => {
+              const net = Math.max(earnings - instantFee, 0);
               withdrawInstant(instantFee);
               setCashoutVisible(false);
+              show(`${formatCurrency(net)} sent instantly`, 'success');
             }}
             balance={earnings}
             feeAmount={instantFee}
@@ -264,7 +276,7 @@ function LedgerRow({
           {meta.label}
         </Text>
       </View>
-      <Text className="text-body-lg font-semibold" style={{ color: amountColor }}>
+      <Text className="text-body-lg font-semibold" style={{ color: amountColor, fontVariant: ['tabular-nums'] }}>
         {positive ? '+' : ''}{formatCurrency(entry.amount)}
       </Text>
     </View>
