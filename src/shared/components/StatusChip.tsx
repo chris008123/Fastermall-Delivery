@@ -1,9 +1,14 @@
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 interface StatusChipProps {
   label: string;
-  /** A solid 6-digit hex color — shared by the dot, border, and text. */
+  /** A solid 6-digit hex color — shared by the dot/icon, border, and text. */
   tone: string;
+  /** Optional icon shown instead of the plain dot — for statuses (like
+   * document verification) where the icon itself carries meaning, not just
+   * the color. */
+  icon?: ReactNode;
 }
 
 /** Small outlined status pill — verified/pending/rejected/expiring-soon on
@@ -11,7 +16,7 @@ interface StatusChipProps {
  * filled with a primary CTA color, per the design system's rule that status
  * color and action color stay visually distinct. Ported from the Figma
  * redesign's primitive of the same name. */
-export function StatusChip({ label, tone }: StatusChipProps) {
+export function StatusChip({ label, tone, icon }: StatusChipProps) {
   return (
     <View
       style={{
@@ -28,7 +33,7 @@ export function StatusChip({ label, tone }: StatusChipProps) {
         paddingVertical: 5,
       }}
     >
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone }} />
+      {icon ?? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone }} />}
       <Text className="text-overline font-semibold" style={{ color: tone, letterSpacing: 0.8 }}>
         {label.toUpperCase()}
       </Text>

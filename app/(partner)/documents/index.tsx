@@ -15,6 +15,8 @@ import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Button } from '@/src/shared/components/Button';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { IconCircle } from '@/src/shared/components/IconCircle';
+import { StatusChip } from '@/src/shared/components/StatusChip';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/documentsStore';
 import { colors } from '@/src/theme';
@@ -28,13 +30,16 @@ const TYPE_ICON: Record<DocumentType, typeof CreditCard> = {
   SELFIE: Camera,
 };
 
-const STATUS_META: Record<DocumentStatus, { label: string; icon: typeof CheckCircle2; color: string; tint: string }> = {
-  VERIFIED: { label: 'Verified', icon: CheckCircle2, color: colors.semantic.success, tint: 'rgba(26, 156, 92, 0.12)' },
-  EXPIRING_SOON: { label: 'Expiring soon', icon: AlertTriangle, color: colors.semantic.warning, tint: 'rgba(224, 163, 0, 0.14)' },
-  EXPIRED: { label: 'Expired', icon: XCircle, color: colors.semantic.error, tint: 'rgba(214, 69, 69, 0.12)' },
-  REJECTED: { label: 'Rejected', icon: XCircle, color: colors.semantic.error, tint: 'rgba(214, 69, 69, 0.12)' },
-  PENDING: { label: 'Under review', icon: Clock, color: colors.semantic.info, tint: 'rgba(59, 130, 196, 0.12)' },
-  NOT_UPLOADED: { label: 'Not uploaded', icon: Clock, color: colors.neutral[500], tint: colors.neutral[100] },
+// Status chips read entirely from `color` now (StatusChip derives its own
+// border/dot tint from the one hex value) — no separate hardcoded tint per
+// status to drift out of sync with the semantic color tokens.
+const STATUS_META: Record<DocumentStatus, { label: string; icon: typeof CheckCircle2; color: string }> = {
+  VERIFIED: { label: 'Verified', icon: CheckCircle2, color: colors.semantic.success },
+  EXPIRING_SOON: { label: 'Expiring soon', icon: AlertTriangle, color: colors.semantic.warning },
+  EXPIRED: { label: 'Expired', icon: XCircle, color: colors.semantic.error },
+  REJECTED: { label: 'Rejected', icon: XCircle, color: colors.semantic.error },
+  PENDING: { label: 'Under review', icon: Clock, color: colors.semantic.info },
+  NOT_UPLOADED: { label: 'Not uploaded', icon: Clock, color: colors.neutral[500] },
 };
 
 export default function DocumentsScreen() {
@@ -147,18 +152,9 @@ function DocumentCard({
   return (
     <GlassView radius="card" style={{ padding: 16, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            backgroundColor: colors.partner.orangeTint,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <IconCircle tint={colors.partner.orange} size={44}>
           <Icon size={20} color={colors.partner.orange} />
-        </View>
+        </IconCircle>
         <View style={{ flex: 1 }}>
           <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{document.label}</Text>
           {expiryText && (
@@ -167,21 +163,7 @@ function DocumentCard({
         </View>
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-          alignSelf: 'flex-start',
-          backgroundColor: meta.tint,
-          borderRadius: 999,
-          paddingHorizontal: 10,
-          paddingVertical: 6,
-        }}
-      >
-        <StatusIcon size={14} color={meta.color} />
-        <Text className="text-caption font-semibold" style={{ color: meta.color }}>{meta.label}</Text>
-      </View>
+      <StatusChip label={meta.label} tone={meta.color} icon={<StatusIcon size={12} color={meta.color} />} />
 
       {needsAction && (
         <Button
