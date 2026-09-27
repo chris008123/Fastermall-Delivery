@@ -3,7 +3,7 @@ import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type NotificationPrefs } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
@@ -98,7 +98,7 @@ export default function NotificationSettingsScreen() {
               />
             }
           />
-          {i < rows.length - 1 && <SettingsRowDivider />}
+          {i < rows.length - 1 && <SettingsRowSpacer />}
         </View>
       ))}
     </GlassView>

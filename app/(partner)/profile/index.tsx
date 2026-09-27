@@ -7,6 +7,7 @@ import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { IconCircle } from '@/src/shared/components/IconCircle';
 import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -197,22 +198,13 @@ export default function ProfileScreen() {
 
       <AnimatedPressable onPress={() => router.push('/documents')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(26, 156, 92, 0.14)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <IconCircle tint={verification.isBlocked || verification.attentionCount > 0 ? colors.semantic.warning : colors.accent.green}>
             {verification.isBlocked || verification.attentionCount > 0 ? (
               <AlertTriangle size={18} color={colors.semantic.warning} />
             ) : (
               <FileCheck2 size={18} color={colors.accent.green} />
             )}
-          </View>
+          </IconCircle>
           <View style={{ flex: 1, gap: 2 }}>
             <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Documents</Text>
             <Text className="text-caption" style={{ color: theme.textSecondary }}>Manage your documents</Text>
@@ -230,18 +222,9 @@ export default function ProfileScreen() {
 
       <AnimatedPressable onPress={() => router.push('/settings')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(139, 92, 246, 0.14)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <IconCircle tint={colors.accent.purple}>
             <Settings size={18} color={colors.accent.purple} />
-          </View>
+          </IconCircle>
           <View style={{ flex: 1, gap: 2 }}>
             <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Settings</Text>
             <Text className="text-caption" style={{ color: theme.textSecondary }}>App preferences and account</Text>
@@ -252,18 +235,9 @@ export default function ProfileScreen() {
 
       <AnimatedPressable onPress={() => router.push('/support')} scaleTo={0.98}>
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(59, 130, 196, 0.14)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <IconCircle tint={colors.accent.blue}>
             <LifeBuoy size={18} color={colors.accent.blue} />
-          </View>
+          </IconCircle>
           <View style={{ flex: 1, gap: 2 }}>
             <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Support</Text>
             <Text className="text-caption" style={{ color: theme.textSecondary }}>Get help and contact us</Text>

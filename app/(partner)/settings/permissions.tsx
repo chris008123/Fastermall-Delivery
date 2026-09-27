@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type PermissionState, type PermissionStatus } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
@@ -28,6 +28,17 @@ const PERMISSION_ROWS: { key: keyof PermissionState; label: string; description:
   { key: 'camera', label: 'Camera', description: 'Proof-of-delivery and document photos', icon: Camera },
   { key: 'storage', label: 'Storage / photos', description: 'Attaching existing photos to documents', icon: HardDrive },
 ];
+
+// A distinct color per permission type, not one flat gray for the whole
+// list — per the redesign brief's "consistent icon-circle treatment across
+// every settings row, not just some."
+const PERMISSION_COLOR: Record<keyof PermissionState, string> = {
+  location: colors.laundry.blue,
+  backgroundLocation: colors.accent.purple,
+  notifications: colors.partner.orange,
+  camera: colors.accent.green,
+  storage: colors.brand.goldDark,
+};
 
 // This app has no expo-location / expo-notifications / expo-camera
 // dependency wired up yet, so statuses here reflect settingsStore's mocked
@@ -59,8 +70,8 @@ export default function PermissionsScreen() {
           <View key={key}>
             <SettingsRow
               icon={Icon}
-              iconColor={theme.textSecondary}
-              iconBg={theme.surfaceRaised}
+              iconColor={PERMISSION_COLOR[key]}
+              iconBg={`${PERMISSION_COLOR[key]}22`}
               label={label}
               description={description}
               right={
@@ -69,7 +80,7 @@ export default function PermissionsScreen() {
                 </Text>
               }
             />
-            {i < PERMISSION_ROWS.length - 1 && <SettingsRowDivider />}
+            {i < PERMISSION_ROWS.length - 1 && <SettingsRowSpacer />}
           </View>
         ))}
       </GlassView>

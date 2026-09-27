@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react-native';
 import type { ComponentType } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { AnimatedPressable } from './AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { colors } from '@/src/theme';
@@ -81,11 +81,10 @@ export function SettingsRow({
   );
 }
 
-/** Hairline divider between rows inside the same GlassView group, inset
- * past the icon column so it lines up with each row's text rather than
- * running the full card width. */
-export function SettingsRowDivider() {
-  const { isDark } = useResolvedTheme();
-  const theme = isDark ? colors.dark : colors.light;
-  return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginLeft: 46 }} />;
+/** Space between rows inside the same GlassView group — whitespace, not a
+ * divider line, per the redesign brief's explicit rule for lists (jobs,
+ * notifications, settings rows): "replace any remaining divider lines with
+ * whitespace or alternating-row tint instead." */
+export function SettingsRowSpacer() {
+  return <View style={{ height: 4 }} />;
 }

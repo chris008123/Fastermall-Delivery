@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type NavigationApp, type NavigationPrefs } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
@@ -105,7 +105,7 @@ export default function NavigationSettingsScreen() {
                   />
                 }
               />
-              {i < ROUTE_TOGGLES.length - 1 && <SettingsRowDivider />}
+              {i < ROUTE_TOGGLES.length - 1 && <SettingsRowSpacer />}
             </View>
           ))}
         </GlassView>

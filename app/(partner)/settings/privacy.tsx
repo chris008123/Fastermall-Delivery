@@ -4,7 +4,7 @@ import { Alert, Linking, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
@@ -72,7 +72,7 @@ export default function PrivacyScreen() {
             label="Privacy policy"
             onPress={() => openLegal('/privacy')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={ScrollText}
             iconColor={colors.accent.blue}
@@ -96,16 +96,16 @@ export default function PrivacyScreen() {
             description="Manage what location access the app has"
             onPress={() => router.push('/settings/permissions')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={Database}
-            iconColor={theme.textSecondary}
-            iconBg={theme.surfaceRaised}
+            iconColor={colors.accent.purple}
+            iconBg="rgba(139, 92, 246, 0.14)"
             label="Data usage"
             description="See what account data is stored"
             onPress={() => Alert.alert('Data usage', 'A detailed breakdown will be available once this is connected to a backend.')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={Download}
             iconColor={colors.accent.green}

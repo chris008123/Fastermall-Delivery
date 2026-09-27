@@ -4,7 +4,7 @@ import { Alert, Linking, Platform, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { colors } from '@/src/theme';
 
@@ -66,7 +66,7 @@ export default function AboutScreen() {
           label="Terms of service"
           onPress={() => openLegal('/terms')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={ScrollText}
           iconColor={colors.accent.blue}
@@ -74,11 +74,11 @@ export default function AboutScreen() {
           label="Privacy policy"
           onPress={() => openLegal('/privacy')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={Package}
-          iconColor={theme.textSecondary}
-          iconBg={theme.surfaceRaised}
+          iconColor={colors.brand.goldDark}
+          iconBg={`${colors.brand.gold}26`}
           label="Open-source licenses"
           onPress={() =>
             Alert.alert('Open-source licenses', 'A full third-party license list will be generated as part of the release build pipeline.')

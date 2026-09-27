@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
@@ -62,7 +62,7 @@ export default function SettingsScreen() {
           description="Name, mode, and vehicle details"
           onPress={() => router.push('/profile')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={ShieldCheck}
           iconColor={colors.accent.green}
@@ -71,7 +71,7 @@ export default function SettingsScreen() {
           description="Verification and compliance"
           onPress={() => router.push('/documents')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={Lock}
           iconColor={colors.accent.purple}
@@ -91,7 +91,7 @@ export default function SettingsScreen() {
           description="Job requests, payments, promotions"
           onPress={() => router.push('/settings/notifications')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={Package}
           iconColor={colors.brand.teal}
@@ -100,7 +100,7 @@ export default function SettingsScreen() {
           description="Auto-accept, radius, job categories"
           onPress={() => router.push('/settings/delivery-preferences')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={MapPinned}
           iconColor={colors.accent.blue}
@@ -109,7 +109,7 @@ export default function SettingsScreen() {
           description="Maps app and route preferences"
           onPress={() => router.push('/settings/navigation')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={Palette}
           iconColor={colors.accent.red}
@@ -129,11 +129,11 @@ export default function SettingsScreen() {
           description="What the app can access on your device"
           onPress={() => router.push('/settings/permissions')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={FileLock2}
-          iconColor={theme.textSecondary}
-          iconBg={theme.surfaceRaised}
+          iconColor={colors.semantic.info}
+          iconBg={`${colors.semantic.info}22`}
           label="Privacy & data"
           description="Policies, data usage, account deletion"
           onPress={() => router.push('/settings/privacy')}
@@ -149,11 +149,11 @@ export default function SettingsScreen() {
           description="FAQs and contacting Fastermall"
           onPress={() => router.push('/support')}
         />
-        <SettingsRowDivider />
+        <SettingsRowSpacer />
         <SettingsRow
           icon={Info}
-          iconColor={theme.textSecondary}
-          iconBg={theme.surfaceRaised}
+          iconColor={colors.brand.goldDark}
+          iconBg={`${colors.brand.gold}26`}
           label="About Fastermall"
           description="Version, licenses, and legal"
           onPress={() => router.push('/settings/about')}

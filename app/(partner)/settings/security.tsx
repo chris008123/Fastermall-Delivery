@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { SettingsRow, SettingsRowDivider } from '@/src/shared/components/SettingsRow';
+import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
@@ -52,7 +52,7 @@ export default function SecurityScreen() {
             description={partner.name}
             onPress={() => router.push('/profile')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={Phone}
             iconColor={colors.accent.blue}
@@ -61,7 +61,7 @@ export default function SecurityScreen() {
             description={phone ?? 'Not set'}
             onPress={() => notImplemented('Change phone number')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={Mail}
             iconColor={colors.accent.purple}
@@ -85,7 +85,7 @@ export default function SecurityScreen() {
             label="Change password / PIN"
             onPress={() => notImplemented('Change password / PIN')}
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={ShieldCheck}
             iconColor={colors.semantic.success}
@@ -101,11 +101,11 @@ export default function SecurityScreen() {
               />
             }
           />
-          <SettingsRowDivider />
+          <SettingsRowSpacer />
           <SettingsRow
             icon={Laptop2}
-            iconColor={theme.textSecondary}
-            iconBg={theme.surfaceRaised}
+            iconColor={colors.brand.goldDark}
+            iconBg={`${colors.brand.gold}26`}
             label="Trusted devices"
             description="Manage devices signed in to your account"
             onPress={() => notImplemented('Trusted devices')}
