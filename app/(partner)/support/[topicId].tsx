@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { IconCircle } from '@/src/shared/components/IconCircle';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { supportTopics } from '@/src/data/mockSupport';
 import { colors } from '@/src/theme';
@@ -86,18 +87,9 @@ export default function SupportTopicScreen() {
                 scaleTo={0.99}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
               >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: colors.brand.tealTint,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <IconCircle tint={colors.brand.teal}>
                   <Icon size={18} color={colors.brand.teal} />
-                </View>
+                </IconCircle>
                 <View style={{ flex: 1 }}>
                   <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{faq.question}</Text>
                   <Text className="text-caption" style={{ color: theme.textSecondary }}>{faq.subtitle}</Text>
