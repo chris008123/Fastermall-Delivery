@@ -1,5 +1,5 @@
 import { ArrowDownCircle, Banknote, Clock3, History, PiggyBank, RefreshCcw } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -62,10 +62,15 @@ export default function WalletScreen() {
 
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
+  const loadWallet = useWalletStore((s) => s.loadWallet);
   const withdraw = useWalletStore((s) => s.withdraw);
   const withdrawInstant = useWalletStore((s) => s.withdrawInstant);
   const jobs = useJobsStore((s) => s.jobs);
   const { show } = useToast();
+
+  useEffect(() => {
+    void loadWallet();
+  }, [loadWallet]);
 
   const [cashoutVisible, setCashoutVisible] = useState(false);
   const [fareEntry, setFareEntry] = useState<LedgerEntry | null>(null);

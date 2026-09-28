@@ -1,66 +1,136 @@
 import { create } from 'zustand';
-import { initialLedger } from '@/src/data/mockLedger';
+import { apiFetch } from '@/src/services/api';
 import type { LedgerEntry } from '@/src/types/wallet';
+
+interface BackendEarning {
+  id: string;
+  partnerId: string;
+  amount: string | number;
+  note: string | null;
+  createdAt: string;
+}
+
+interface EarningsResponse {
+  success: boolean;
+  data: {
+    total: number;
+    earnings: BackendEarning[];
+  };
+}
 
 interface WalletState {
   ledger: LedgerEntry[];
   withdrawalThreshold: number;
+  isLoading: boolean;
+  error: string | null;
+
+  loadWallet: () => Promise<void>;
+
   addEntry: (entry: Omit<LedgerEntry, 'id' | 'createdAt'>) => void;
-  /** Free, scheduled payout — the full balance, no fee, arrives on the
-   * next payout date. */
   withdraw: () => void;
-  /** Same balance, available right now instead of waiting for payout day,
-   * for a small fee that's disclosed before confirming. */
   withdrawInstant: (feeAmount: number) => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
-  ledger: initialLedger,
-  // Matches the GH₵50 threshold from the Food flow diagram — earnings
-  // only become cashable once they cross this line. Reimbursements are
-  // never gated by it: that money was always the partner's own.
+  ledger: [],
   withdrawalThreshold: 50,
+  isLoading: false,
+  error: null,
+
+  loadWallet: async () => {
+    set({
+      isLoading: true,
+      error: null,
+    });
+
+    try {
+      const response = await apiFetch<EarningsResponse>(
+        '/logistics/me/earnings',
+      );
+
+      const ledger: LedgerEntry[] = response.data.earnings.map((earning) => ({
+        id: earning.id,
+        type: 'EARNING',
+        amount: Number(earning.amount),
+        note: earning.note ?? 'Delivery earning',
+        createdAt: earning.createdAt,
+      }));
+
+      set({
+        ledger,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        isLoading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unable to load wallet data.',
+      });
+
+      throw error;
+    }
+  },
 
   addEntry: (entry) =>
     set((state) => ({
       ledger: [
-        { ...entry, id: `ldg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, createdAt: new Date().toISOString() },
+        {
+          ...entry,
+          id: `ldg-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 7)}`,
+          createdAt: new Date().toISOString(),
+        },
         ...state.ledger,
       ],
     })),
 
   withdraw: () => {
     const balance = selectEarningsBalance(get().ledger);
+
     if (balance < get().withdrawalThreshold) return;
-    get().addEntry({ type: 'WITHDRAWAL', amount: -balance, note: 'Cashed out to mobile money' });
+
+    get().addEntry({
+      type: 'WITHDRAWAL',
+      amount: -balance,
+      note: 'Cashed out to mobile money',
+    });
   },
 
   withdrawInstant: (feeAmount) => {
     const balance = selectEarningsBalance(get().ledger);
+
     if (balance < get().withdrawalThreshold) return;
-    // The full balance still leaves the "unlocked earnings" pool — the
-    // fee just reduces what actually lands in mobile money, same as any
-    // instant-transfer fee, so it's noted rather than double-counted.
+
     get().addEntry({
       type: 'WITHDRAWAL',
       amount: -balance,
-      note: `Instant cash out (GH₵ ${feeAmount.toFixed(2)} fee) to mobile money`,
+      note: `Instant cash out (GH₵ ${feeAmount.toFixed(
+        2,
+      )} fee) to mobile money`,
     });
   },
 }));
 
-/** Earnings credited minus whatever's already been withdrawn — the figure
- * that's compared against the GH₵50 threshold. */
 export function selectEarningsBalance(ledger: LedgerEntry[]) {
-  return ledger.reduce((sum, e) => {
-    if (e.type === 'EARNING') return sum + e.amount;
-    if (e.type === 'WITHDRAWAL') return sum + e.amount; // stored negative
+  return ledger.reduce((sum, entry) => {
+    if (entry.type === 'EARNING') {
+      return sum + entry.amount;
+    }
+
+    if (entry.type === 'WITHDRAWAL') {
+      return sum + entry.amount;
+    }
+
     return sum;
   }, 0);
 }
 
-/** Lifetime reimbursements — shown separately since this lane is always
- * available and never subject to the cash-out threshold. */
 export function selectReimbursedTotal(ledger: LedgerEntry[]) {
-  return ledger.filter((e) => e.type === 'REIMBURSEMENT').reduce((sum, e) => sum + e.amount, 0);
+  return ledger
+    .filter((entry) => entry.type === 'REIMBURSEMENT')
+    .reduce((sum, entry) => sum + entry.amount, 0);
 }

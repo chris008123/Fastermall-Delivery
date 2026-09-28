@@ -267,7 +267,7 @@ export default function ActiveDeliveryScreen() {
         </AnimatedPressable>
       </View>
 
-      <DeliveryMap job={job} />
+      {/* <DeliveryMap job={job} /> */}
 
       {navigationApp !== 'FASTERMALL_MAPS' && (
         <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>

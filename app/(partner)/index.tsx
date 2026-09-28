@@ -50,6 +50,7 @@ export default function PartnerHomeScreen() {
 
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
+  const loadWallet = useWalletStore((s) => s.loadWallet);
   const unreadCount = useNotificationsStore((s) => selectUnreadCount(s.notifications));
 
   const [isInitializing, setIsInitializing] = useState(true);
@@ -65,7 +66,11 @@ export default function PartnerHomeScreen() {
       setInitializationError(null);
 
       try {
-        await Promise.all([loadProfile(), loadJobs()]);
+        await Promise.all([
+          loadProfile(),
+          loadJobs(),
+          loadWallet(),
+        ]);
       } catch (error) {
         if (!mounted) return;
         setInitializationError(error instanceof Error ? error.message : 'Unable to load delivery data.');
@@ -79,14 +84,18 @@ export default function PartnerHomeScreen() {
     return () => {
       mounted = false;
     };
-  }, [loadProfile, loadJobs]);
+  }, [loadProfile, loadJobs, loadWallet]);
 
   const refresh = async () => {
     setRefreshing(true);
     setInitializationError(null);
 
     try {
-      await Promise.all([loadProfile(), loadJobs()]);
+      await Promise.all([
+        loadProfile(),
+        loadJobs(),
+        loadWallet(),
+      ]);
     } catch (error) {
       setInitializationError(error instanceof Error ? error.message : 'Unable to refresh delivery data.');
     } finally {

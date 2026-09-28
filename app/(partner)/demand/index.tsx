@@ -37,7 +37,7 @@ export default function DemandScreen() {
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Demand near you</Text>
       </View>
 
-      <DemandMap zones={demandSnapshot.zones} height={260} scrollEnabled />
+      {/* <DemandMap zones={demandSnapshot.zones} height={260} scrollEnabled /> */}
 
       <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
