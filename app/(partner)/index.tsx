@@ -249,7 +249,7 @@ export default function PartnerHomeScreen() {
               {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km · est.{' '}
               {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
             </Text>
-            <DemandMap zones={demandSnapshot.zones} height={110} />
+            {/* <DemandMap zones={demandSnapshot.zones} height={110} /> */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
               <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
               <ChevronRight size={14} color={colors.partner.orange} />

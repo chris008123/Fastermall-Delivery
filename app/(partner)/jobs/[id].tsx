@@ -126,8 +126,8 @@ export default function JobDetailScreen() {
         <View style={{ height: 1, backgroundColor: theme.border }} />
         <Row icon={<MapPin size={16} color={theme.textSecondary} />} label="Drop-off" title={job.dropoff.label} sub={`${job.dropoff.sub} \u00b7 ${job.customerName}`} theme={theme} />
       </GlassView>
-
-      <DeliveryMap job={job} showPartner={false} height={160} />
+      {/* <DeliveryMap job={job} showPartner={false} height={160} /> */}
+      
 
       <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>ITEMS</Text>
