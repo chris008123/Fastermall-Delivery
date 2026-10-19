@@ -82,7 +82,7 @@ interface JobsState {
 
   loadJobs: () => Promise<void>;
   acceptJob: (id: string) => Promise<void>;
-  advanceStage: (id: string) => Promise<void>;
+  advanceStage: (id: string, code?: string) => Promise<void>;
   failJob: (id: string, reason: FailureReason) => Promise<void>;
 }
 
@@ -265,11 +265,8 @@ function mapBackendStatusToStage(
 
     case 'DELIVERED':
       /*
-       * The backend considers DELIVERED the final delivery status.
-       * The frontend still has a short DELIVERED → COMPLETED step
-       * for its completion screen.
-       *
-       * When the app reloads after delivery, it becomes COMPLETED.
+       * The backend only sets DELIVERED after the customer's code is
+       * verified, so a backend DELIVERED delivery is already finished.
        */
       return 'COMPLETED';
 
@@ -348,7 +345,9 @@ function mapDeliveryToJob(
     customerName,
 
     /*
-     * Delivery codes are not currently implemented by the backend.
+     * The delivery code is never sent to the partner app. The customer
+     * reads it out at handover and the partner types it in; the backend
+     * checks it via POST /logistics/deliveries/:id/verify-code.
      */
     deliveryCode: '',
 
@@ -435,6 +434,35 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         jobMap.set(job.id, job);
       }
 
+      /*
+       * Two stages exist only in the app (the backend has no matching
+       * status): PAY_VENDOR and DELIVERED (code entry). A reload would
+       * otherwise throw the partner back a step, so keep the local
+       * stage while the backend is still on the step just before it.
+       */
+      for (const previous of get().jobs) {
+        const reloaded = jobMap.get(previous.id);
+
+        if (!reloaded) {
+          continue;
+        }
+
+        const keepPayVendor =
+          previous.stage === 'PAY_VENDOR' &&
+          reloaded.stage === 'EN_ROUTE_TO_PICKUP';
+
+        const keepCodeEntry =
+          previous.stage === 'DELIVERED' &&
+          reloaded.stage === 'EN_ROUTE_TO_CUSTOMER';
+
+        if (keepPayVendor || keepCodeEntry) {
+          jobMap.set(previous.id, {
+            ...reloaded,
+            stage: previous.stage,
+          });
+        }
+      }
+
       set({
         jobs: Array.from(jobMap.values()),
         isLoading: false,
@@ -497,7 +525,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     }
   },
 
-  advanceStage: async (id) => {
+  advanceStage: async (id, code) => {
     const job = get().jobs.find(
       (item) => item.id === id,
     );
@@ -596,22 +624,18 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         break;
 
       case 'EN_ROUTE_TO_CUSTOMER':
-        backendStatus = 'DELIVERED';
-        break;
-
-      case 'DELIVERED':
         /*
-         * DELIVERED is the final backend state.
-         * COMPLETED is only the frontend completion screen.
+         * "I've arrived at drop-off". The backend does not accept
+         * DELIVERED from the status endpoint (that caused the 400), so
+         * no request is made. The partner just moves to the code-entry
+         * screen; the backend stays on EN_ROUTE_TO_CUSTOMER.
          */
         set((state) => ({
           jobs: state.jobs.map((item) =>
             item.id === id
               ? {
                   ...item,
-                  stage: 'COMPLETED',
-                  completedAt:
-                    new Date().toISOString(),
+                  stage: 'DELIVERED',
                 }
               : item,
           ),
@@ -619,6 +643,62 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         }));
 
         return;
+
+      case 'DELIVERED': {
+        /*
+         * Handover. The backend marks the delivery and order DELIVERED
+         * and credits the partner only after the customer's 6-digit
+         * code is verified.
+         */
+        if (!code || !/^\d{6}$/.test(code)) {
+          const message = 'Enter the 6-digit delivery code.';
+
+          set({
+            error: message,
+          });
+
+          throw new Error(message);
+        }
+
+        try {
+          await apiFetch<BackendDelivery>(
+            `/logistics/deliveries/${id}/verify-code`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                code,
+              }),
+            },
+          );
+
+          set((state) => ({
+            jobs: state.jobs.map((item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    stage: 'COMPLETED',
+                    completedAt:
+                      new Date().toISOString(),
+                  }
+                : item,
+            ),
+            error: null,
+          }));
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Unable to confirm the delivery.';
+
+          set({
+            error: message,
+          });
+
+          throw error;
+        }
+
+        return;
+      }
 
       default:
         return;
@@ -640,26 +720,6 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       );
 
       const mode = usePartnerStore.getState().mode;
-
-      /*
-       * When the backend reaches DELIVERED, keep the local
-       * DELIVERED screen visible for one final confirmation step.
-       */
-      if (backendStatus === 'DELIVERED') {
-        set((state) => ({
-          jobs: state.jobs.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  stage: 'DELIVERED',
-                }
-              : item,
-          ),
-          error: null,
-        }));
-
-        return;
-      }
 
       const updatedJob = mapDeliveryToJob(
         response,

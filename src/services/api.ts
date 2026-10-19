@@ -21,6 +21,42 @@ type ApiOptions = RequestInit & {
   auth?: boolean;
 };
 
+/**
+ * Pulls a human-readable message out of a backend error body.
+ * Handles: { message: string }, { message: string[] }, { error: string },
+ * { error: { message: string | string[] } }, and plain-text bodies.
+ */
+function extractErrorMessage(data: unknown, status: number): string {
+  const fallback = `Request failed with status ${status}`;
+
+  if (typeof data === 'string' && data.trim()) {
+    return data;
+  }
+
+  if (typeof data !== 'object' || data === null) {
+    return fallback;
+  }
+
+  const body = data as { message?: unknown; error?: unknown };
+  const raw = body.message ?? body.error;
+
+  if (typeof raw === 'string') {
+    return raw;
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.join(', ');
+  }
+
+  if (raw && typeof raw === 'object') {
+    const inner = (raw as { message?: unknown }).message;
+    if (typeof inner === 'string') return inner;
+    if (Array.isArray(inner)) return inner.join(', ');
+  }
+
+  return fallback;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: ApiOptions = {},
@@ -58,15 +94,7 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    const message =
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof data.message === 'string'
-        ? data.message
-        : `Request failed with status ${response.status}`;
-
-    throw new Error(message);
+    throw new Error(extractErrorMessage(data, response.status));
   }
 
   return data as T;

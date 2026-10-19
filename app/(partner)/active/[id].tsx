@@ -122,7 +122,7 @@ export default function ActiveDeliveryScreen() {
     setIsAdvancing(true);
 
     try {
-      await advanceStage(job.id);
+      await advanceStage(job.id, code);
       if (job.stage === 'DELIVERED') setCode('');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update this delivery.';
@@ -359,11 +359,11 @@ function StepAction({
           <KeyRound size={16} color={accent} />
           <TextInput
             value={code}
-            onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 4))}
-            placeholder="4-digit code"
+            onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
+            placeholder="6-digit code"
             placeholderTextColor={theme.textSecondary}
             keyboardType="number-pad"
-            maxLength={4}
+            maxLength={6}
             editable={!busy}
             style={{
               flex: 1,
@@ -378,7 +378,7 @@ function StepAction({
             }}
           />
         </View>
-        <Button title={busy ? 'Confirming…' : label} variant={STEP_VARIANT[job.type]} loading={busy} disabled={code.length < 4} onPress={onAdvance} />
+        <Button title={busy ? 'Confirming…' : label} variant={STEP_VARIANT[job.type]} loading={busy} disabled={code.length < 6} onPress={onAdvance} />
       </View>
     );
   }
