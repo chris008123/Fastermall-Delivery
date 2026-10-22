@@ -1,42 +1,32 @@
 import { router } from 'expo-router';
-import {
-  Bell,
-  ChevronRight,
-  CircleAlert,
-  Flame,
-  MapPin,
-  PackageSearch,
-  Zap,
-} from 'lucide-react-native';
+import { Bell, ChevronRight, Flame, MapPin } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
-import { AvailabilityToggle } from '@/src/shared/components/AvailabilityToggle';
-import { Badge } from '@/src/shared/components/Badge';
-import { Button } from '@/src/shared/components/Button';
-import { DemandMap } from '@/src/shared/components/DemandMap';
-import { GlassView } from '@/src/shared/components/GlassView';
-import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
-import { ProgressBar } from '@/src/shared/components/ProgressBar';
-import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { Txt } from '@/src/ds/Txt';
+import { useTheme } from '@/src/ds/useTheme';
 import { demandSnapshot } from '@/src/data/mockDemand';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
-import { colors } from '@/src/theme';
 import { formatCurrency } from '@/src/utils/money';
+import { useNavClearance } from '@/src/ui/AppNav';
+import { Button } from '@/src/ui/Button';
+import { JobTag } from '@/src/ui/Tag';
+import { Notice } from '@/src/ui/Notice';
+import { Panel } from '@/src/ui/Panel';
+import { ProgressBar } from '@/src/ui/ProgressBar';
+import { SlideToggle } from '@/src/ui/SlideToggle';
 
-// Layout/visual language ported from the app's established GlassView design
-// system (matching the customer app's dashboard patterns) — data loading,
-// refresh, and error handling below are unchanged from the backend-connected
-// version: real `loadProfile()`/`loadJobs()` calls, retry-on-error, and an
-// availability toggle that rolls back on a failed backend PATCH.
+// Home. The one bold element is the slide-to-go-online control under
+// today's earnings; everything else stays flat and quiet. Data loading,
+// refresh, error handling and the availability rollback on a failed
+// backend PATCH are unchanged from the backend-connected version.
 export default function PartnerHomeScreen() {
   const insets = useSafeAreaInsets();
-  const { isDark } = useResolvedTheme();
-  const theme = isDark ? colors.dark : colors.light;
+  const { t } = useTheme();
+  const navClearance = useNavClearance();
 
   const name = usePartnerStore((s) => s.name);
   const isAvailable = usePartnerStore((s) => s.isAvailable);
@@ -136,225 +126,211 @@ export default function PartnerHomeScreen() {
 
   if (isInitializing) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background, gap: 12 }}>
-        <ActivityIndicator size="large" color={colors.partner.orange} />
-        <Text className="text-body" style={{ color: theme.textSecondary }}>
-          Loading your delivery dashboard...
-        </Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, gap: 12 }}>
+        <ActivityIndicator size="large" color={t.primary} />
+        <Txt variant="body" tone="secondary">
+          Loading your dashboard…
+        </Txt>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom) since this
-      // screen sits under a floating, absolutely-positioned nav instead of a
-      // native tab bar that used to reserve its own space automatically.
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
+      style={{ flex: 1, backgroundColor: t.bg }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 16 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={() => void refresh()}
-          tintColor={colors.partner.orange}
-          colors={[colors.partner.orange]}
+          tintColor={t.primary}
+          colors={[t.primary]}
         />
       }
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View>
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>Welcome back</Text>
-          <Text className="text-h1 font-bold" style={{ color: theme.text }}>{name || 'Delivery Partner'}</Text>
+        <View style={{ flex: 1 }}>
+          <Txt variant="caption" tone="secondary">
+            Welcome back
+          </Txt>
+          <Txt variant="display" numberOfLines={1}>
+            {name || 'Delivery Partner'}
+          </Txt>
         </View>
-        <AnimatedPressable onPress={() => router.push('/(partner)/notifications')} scaleTo={0.9}>
+        <Pressable
+          onPress={() => router.push('/(partner)/notifications')}
+          accessibilityRole="button"
+          accessibilityLabel={unreadCount > 0 ? `Alerts, ${unreadCount} unread` : 'Alerts'}
+          hitSlop={4}
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.5 : 1,
+          })}
+        >
           <View>
-            <Bell size={24} color={theme.text} />
+            <Bell size={24} color={t.ink} />
             {unreadCount > 0 && (
               <View
                 style={{
                   position: 'absolute',
-                  top: -3,
-                  right: -3,
+                  top: -5,
+                  right: -7,
                   minWidth: 16,
                   height: 16,
+                  paddingHorizontal: 4,
                   borderRadius: 8,
-                  paddingHorizontal: 3,
-                  backgroundColor: colors.partner.orange,
+                  backgroundColor: t.alert,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{unreadCount}</Text>
+                <Txt variant="micro" color={t.onAlert} style={{ fontSize: 10, lineHeight: 12 }}>
+                  {unreadCount > 9 ? '9+' : String(unreadCount)}
+                </Txt>
               </View>
             )}
           </View>
-        </AnimatedPressable>
+        </Pressable>
       </View>
 
-      {/* Most-important content, top-left: availability + today's earnings
-          merged into one card rather than two scattered mini-widgets, per
-          the redesign brief's dashboard rules. */}
-      <GlassView radius="card" intensity="strong" style={{ padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ gap: 10 }}>
-          <AvailabilityToggle
-            isOnline={isAvailable}
-            onChange={(v) => void handleAvailabilityChange(v)}
-            disabled={isTogglingAvailability}
-            scheme={isDark ? 'dark' : 'light'}
-          />
-          <Text
-            className="text-caption font-semibold"
-            style={{ color: isAvailable ? colors.partner.orange : theme.textSecondary }}
-          >
-            {isTogglingAvailability ? 'Updating…' : isAvailable ? "You're online" : "You're offline"}
-          </Text>
+      <View style={{ gap: 16, marginTop: 8 }}>
+        <View>
+          <Txt variant="caption" tone="secondary">
+            Earned today
+          </Txt>
+          <Txt variant="numeral" numberOfLines={1} adjustsFontSizeToFit>
+            {formatCurrency(todayEarnings)}
+          </Txt>
         </View>
-        <View style={{ alignItems: 'flex-end', gap: 2 }}>
-          <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-            TODAY
-          </Text>
-          <Text className="text-h1 font-bold" style={{ color: theme.text }}>{formatCurrency(todayEarnings)}</Text>
-        </View>
-      </GlassView>
+        <SlideToggle
+          isOnline={isAvailable}
+          onChange={(v) => void handleAvailabilityChange(v)}
+          busy={isTogglingAvailability}
+        />
+      </View>
 
       {initializationError && (
-        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <CircleAlert size={19} color={colors.semantic.error} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
-              Something needs attention
-            </Text>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>{initializationError}</Text>
-            <AnimatedPressable onPress={() => void refresh()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
-            </AnimatedPressable>
-          </View>
-        </GlassView>
+        <Notice
+          title="Something needs attention"
+          message={initializationError}
+          actionLabel="Try again"
+          onAction={() => void refresh()}
+        />
       )}
 
       {jobsError && !initializationError && (
-        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <CircleAlert size={19} color={colors.semantic.error} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
-              Couldn't load jobs
-            </Text>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>{jobsError}</Text>
-            <AnimatedPressable onPress={() => void loadJobs()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
-            </AnimatedPressable>
-          </View>
-        </GlassView>
-      )}
-
-      {!activeJob && (
-        <AnimatedPressable onPress={() => router.push('/(partner)/demand')} scaleTo={0.98}>
-          <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Flame size={18} color={colors.semantic.error} />
-              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
-            </View>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>
-              {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km · est.{' '}
-              {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
-            </Text>
-            {/* <DemandMap zones={demandSnapshot.zones} height={110} /> */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
-              <ChevronRight size={14} color={colors.partner.orange} />
-            </View>
-          </GlassView>
-        </AnimatedPressable>
-      )}
-
-      {!isAvailable && !activeJob && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
-          <Zap size={22} color={colors.partner.orange} />
-          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            Go online to start receiving Marketplace, Food, and Laundry jobs near you.
-          </Text>
-          <Button
-            title="Go online"
-            variant="partner"
-            loading={isTogglingAvailability}
-            onPress={() => void handleAvailabilityChange(true)}
-          />
-        </GlassView>
+        <Notice
+          title="Couldn't load jobs"
+          message={jobsError}
+          actionLabel="Try again"
+          onAction={() => void loadJobs()}
+        />
       )}
 
       {activeJob && (
-        <AnimatedPressable onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} scaleTo={0.98}>
-          <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Badge jobType={activeJob.type} label={activeJob.type} />
-              <ChevronRight size={20} color={theme.textSecondary} />
-            </View>
-            <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-              Active delivery in progress
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MapPin size={16} color={theme.textSecondary} />
-              <Text className="text-body" style={{ color: theme.textSecondary }} numberOfLines={1}>
-                {activeJob.dropoff.label}
-              </Text>
-            </View>
-            <Button title="Continue delivery" variant="partner" onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} />
-          </GlassView>
-        </AnimatedPressable>
-      )}
-
-      {isAvailable && !activeJob && !jobsLoading && availableCount > 0 && (
-        <AnimatedPressable onPress={() => router.push('/(partner)/jobs')} scaleTo={0.98}>
-          <GlassView radius="card" style={{ padding: 20, gap: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-                {availableCount} job{availableCount === 1 ? '' : 's'} available
-              </Text>
-              <ChevronRight size={20} color={theme.textSecondary} />
-            </View>
-            <Text className="text-body" style={{ color: theme.textSecondary }}>
-              Browse and accept a Marketplace, Food, or Laundry job.
-            </Text>
-          </GlassView>
-        </AnimatedPressable>
-      )}
-
-      {isAvailable && !activeJob && jobsLoading && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'center', gap: 8 }}>
-          <ActivityIndicator color={colors.partner.orange} />
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>Checking for nearby jobs…</Text>
-        </GlassView>
-      )}
-
-      {isAvailable && !activeJob && !jobsLoading && availableCount === 0 && !jobsError && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
-          <PackageSearch size={22} color={theme.textSecondary} />
-          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>No jobs nearby right now</Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            You're online and ready — a new Marketplace, Food, or Laundry job will show up here as soon as one opens up.
-          </Text>
-        </GlassView>
-      )}
-
-      <AnimatedPressable onPress={() => router.push('/(partner)/wallet')} scaleTo={0.98}>
-        <GlassView radius="card" style={{ padding: 20, gap: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-              WALLET
-            </Text>
-            <ChevronRight size={18} color={theme.textSecondary} />
+        <Panel onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} accessibilityLabel="Continue active delivery" style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <JobTag jobType={activeJob.type} />
+            <ChevronRight size={20} color={t.inkTertiary} />
           </View>
-          <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(earnings)}</Text>
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            toward your {formatCurrency(threshold)} cash-out
-          </Text>
-          <ProgressBar progress={earnings / threshold} color={colors.partner.orange} />
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            + {formatCurrency(reimbursed)} already reimbursed to you
-          </Text>
-        </GlassView>
-      </AnimatedPressable>
+          <Txt variant="title">Delivery in progress</Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <MapPin size={16} color={t.inkSecondary} />
+            <Txt variant="body" tone="secondary" numberOfLines={1} style={{ flex: 1 }}>
+              {activeJob.dropoff.label}
+            </Txt>
+          </View>
+          <Button
+            title="Continue delivery"
+            variant="job"
+            jobType={activeJob.type}
+            fullWidth
+            onPress={() => router.push(`/(partner)/active/${activeJob.id}`)}
+          />
+        </Panel>
+      )}
+
+      {!activeJob && !isAvailable && (
+        <Panel style={{ gap: 4 }}>
+          <Txt variant="heading">You're offline</Txt>
+          <Txt variant="body" tone="secondary">
+            Slide to go online and start receiving Marketplace, Food and Laundry jobs near you.
+          </Txt>
+        </Panel>
+      )}
+
+      {!activeJob && isAvailable && jobsLoading && (
+        <Panel style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <ActivityIndicator color={t.primary} />
+          <Txt variant="body" tone="secondary">
+            Checking for nearby jobs…
+          </Txt>
+        </Panel>
+      )}
+
+      {!activeJob && isAvailable && !jobsLoading && availableCount > 0 && (
+        <Panel
+          onPress={() => router.push('/(partner)/jobs')}
+          accessibilityLabel={`${availableCount} jobs available. Browse jobs`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
+        >
+          <Txt variant="display" tone="primary" style={{ fontVariant: ['tabular-nums'] }}>
+            {availableCount}
+          </Txt>
+          <View style={{ flex: 1 }}>
+            <Txt variant="bodyStrong">job{availableCount === 1 ? '' : 's'} available</Txt>
+            <Txt variant="caption" tone="secondary">
+              Browse and accept one
+            </Txt>
+          </View>
+          <ChevronRight size={20} color={t.inkTertiary} />
+        </Panel>
+      )}
+
+      {!activeJob && isAvailable && !jobsLoading && availableCount === 0 && !jobsError && (
+        <Panel style={{ gap: 4 }}>
+          <Txt variant="heading">No jobs nearby right now</Txt>
+          <Txt variant="body" tone="secondary">
+            You're online. New jobs will show up here as soon as one opens up.
+          </Txt>
+        </Panel>
+      )}
+
+      {!activeJob && (
+        <Panel onPress={() => router.push('/(partner)/demand')} accessibilityLabel="Demand near you" style={{ gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Flame size={18} color={t.alertInk} />
+            <Txt variant="heading" style={{ flex: 1 }}>
+              {demandSnapshot.headline}
+            </Txt>
+            <ChevronRight size={20} color={t.inkTertiary} />
+          </View>
+          <Txt variant="caption" tone="secondary">
+            {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km
+          </Txt>
+          <Txt variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
+            {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)} an hour
+          </Txt>
+          {/* The demand map preview stays disabled, as before. */}
+        </Panel>
+      )}
+
+      <Panel onPress={() => router.push('/(partner)/wallet')} accessibilityLabel="Wallet" style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Txt variant="heading">Wallet</Txt>
+          <ChevronRight size={20} color={t.inkTertiary} />
+        </View>
+        <Txt variant="display" style={{ fontVariant: ['tabular-nums'] }}>
+          {formatCurrency(earnings)}
+        </Txt>
+        <ProgressBar progress={threshold > 0 ? earnings / threshold : 0} />
+        <Txt variant="caption" tone="secondary">
+          toward your {formatCurrency(threshold)} cash-out · {formatCurrency(reimbursed)} reimbursed so far
+        </Txt>
+      </Panel>
     </ScrollView>
   );
 }
