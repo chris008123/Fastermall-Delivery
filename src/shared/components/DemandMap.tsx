@@ -1,13 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
-import { colors, radii } from '@/src/theme';
+import { radii } from '@/src/ds/tokens';
+import { useTheme } from '@/src/ds/useTheme';
 import type { DemandZone } from '@/src/types/demand';
-
-const LEVEL_COLOR: Record<DemandZone['level'], string> = {
-  HIGH: colors.semantic.error,
-  MEDIUM: colors.semantic.warning,
-  LOW: colors.semantic.info,
-};
 
 const LEVEL_RADIUS_M: Record<DemandZone['level'], number> = {
   HIGH: 380,
@@ -22,6 +17,12 @@ interface DemandMapProps {
 }
 
 export function DemandMap({ zones, height = 200, scrollEnabled = false }: DemandMapProps) {
+  const { t } = useTheme();
+  const LEVEL_COLOR: Record<DemandZone['level'], string> = {
+    HIGH: t.alert,
+    MEDIUM: t.warn,
+    LOW: t.info,
+  };
   const lats = zones.map((z) => z.coordinate.latitude);
   const lngs = zones.map((z) => z.coordinate.longitude);
   const region = {
@@ -32,7 +33,7 @@ export function DemandMap({ zones, height = 200, scrollEnabled = false }: Demand
   };
 
   return (
-    <View style={{ height, borderRadius: radii.card, overflow: 'hidden' }}>
+    <View style={{ height, borderRadius: radii.md, overflow: 'hidden' }}>
       <MapView
         style={StyleSheet.absoluteFill}
         initialRegion={region}
