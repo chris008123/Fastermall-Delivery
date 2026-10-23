@@ -1,6 +1,20 @@
+import { useEffect } from 'react';
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { colors } from '@/src/theme';
 import type { ColorScheme } from '@/src/theme/colors';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+// One dash period of the route's "2 9" pattern.
+const DASH_PERIOD = 11;
 
 interface CourierSceneProps {
   scheme: ColorScheme;
@@ -10,12 +24,27 @@ interface CourierSceneProps {
 /** Flat-style hero illustration for the Login screen — a scooter courier
  * carrying a package along a dashed route line, in the partner-orange +
  * job-type palette. Ported from the Figma redesign's `CourierScene` (a web
- * SVG) into react-native-svg with the same viewBox and paths. */
+ * SVG) into react-native-svg with the same viewBox and paths. The route
+ * dots drift toward the drop-off pin, unless the phone is set to reduce
+ * motion. */
 export function CourierScene({ scheme, height = 180 }: CourierSceneProps) {
   const theme = colors[scheme];
   const marketplace = colors.jobType.MARKETPLACE;
   const laundry = colors.jobType.LAUNDRY;
   const food = colors.jobType.FOOD;
+
+  const reduceMotion = useReducedMotion();
+  const offset = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      offset.value = 0;
+      return;
+    }
+    offset.value = withRepeat(withTiming(-DASH_PERIOD, { duration: 900, easing: Easing.linear }), -1, false);
+  }, [reduceMotion, offset]);
+
+  const routeProps = useAnimatedProps(() => ({ strokeDashoffset: offset.value }));
 
   return (
     <Svg viewBox="0 0 320 220" width="100%" height={height}>
@@ -27,7 +56,7 @@ export function CourierScene({ scheme, height = 180 }: CourierSceneProps) {
       </Defs>
       <Rect x={0} y={0} width={320} height={220} rx={26} fill="url(#sky)" />
       {/* route line */}
-      <Path
+      <AnimatedPath
         d="M20 176 C90 176 90 86 160 86 S250 44 300 44"
         fill="none"
         stroke={colors.partner.orange}
@@ -35,6 +64,7 @@ export function CourierScene({ scheme, height = 180 }: CourierSceneProps) {
         strokeLinecap="round"
         strokeDasharray="2 9"
         opacity={0.8}
+        animatedProps={routeProps}
       />
       <Circle cx={300} cy={44} r={9} fill={colors.partner.orange} />
       <Circle cx={300} cy={44} r={3.4} fill="#fff" />

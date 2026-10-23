@@ -1,13 +1,12 @@
 import * as Linking from 'expo-linking';
-import { AlertOctagon, ChevronLeft, MapPinOff, Phone, Store, UserX, Wrench } from 'lucide-react-native';
+import { AlertOctagon, ChevronLeft, MapPinOff, Phone, Store, UserX, Wrench, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { Modal, Pressable, Text, View } from 'react-native';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { Button } from '@/src/shared/components/Button';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { colors } from '@/src/theme';
 import type { FailureReason } from '@/src/types/job';
-import { Button } from '@/src/ui/Button';
-import { Group, ListRow } from '@/src/ui/List';
-import { Sheet } from '@/src/ui/Sheet';
 
 interface ReasonMeta {
   key: FailureReason;
@@ -71,11 +70,9 @@ interface FailedDeliverySheetProps {
   customerName: string;
 }
 
-/** Two steps: pick what went wrong, then see what to try before giving up.
- * Never a dead end — every reason leads to a concrete next move, and
- * marking the delivery as failed is the last, clearly separated action. */
 export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, customerName }: FailedDeliverySheetProps) {
-  const { t } = useTheme();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const [selected, setSelected] = useState<ReasonMeta | null>(null);
 
   const reset = () => {
@@ -84,68 +81,92 @@ export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, custome
   };
 
   return (
-    <Sheet visible={visible} onClose={reset} title={selected ? selected.label : "Can't complete the delivery?"}>
-      {!selected ? (
-        <View style={{ gap: 12, paddingTop: 4 }}>
-          <Txt variant="body" tone="secondary">
-            What went wrong?
-          </Txt>
-          <Group>
-            {REASONS.map((r) => (
-              <ListRow key={r.key} icon={r.icon} label={r.label} onPress={() => setSelected(r)} />
-            ))}
-          </Group>
-          <Button title="Cancel" variant="quiet" fullWidth onPress={reset} />
-        </View>
-      ) : (
-        <View style={{ gap: 12, paddingTop: 4 }}>
-          <Pressable
-            onPress={() => setSelected(null)}
-            accessibilityRole="button"
-            accessibilityLabel="Back to reasons"
-            hitSlop={8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 32, alignSelf: 'flex-start' }}
-          >
-            <ChevronLeft size={18} color={t.inkSecondary} />
-            <Txt variant="label" tone="secondary">
-              Back
-            </Txt>
-          </Pressable>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={reset}>
+      <Pressable onPress={reset} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: theme.surface,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            padding: 24,
+            paddingBottom: 36,
+            gap: 14,
+            maxHeight: '85%',
+          }}
+        >
+          {!selected ? (
+            <>
+              <Text className="text-h1 font-bold" style={{ color: theme.text }}>Can't complete delivery?</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary, marginBottom: 4 }}>
+                What's wrong?
+              </Text>
+              {REASONS.map((r) => (
+                <AnimatedPressable key={r.key} onPress={() => setSelected(r)} scaleTo={0.98}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: 14,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: theme.border,
+                    }}
+                  >
+                    <r.icon size={18} color={theme.textSecondary} />
+                    <Text className="text-body-lg font-medium" style={{ color: theme.text, flex: 1 }}>{r.label}</Text>
+                  </View>
+                </AnimatedPressable>
+              ))}
+              <AnimatedPressable onPress={reset} scaleTo={0.98} style={{ alignItems: 'center', paddingTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <X size={16} color={theme.textSecondary} />
+                  <Text className="text-body-lg font-medium" style={{ color: theme.textSecondary }}>Cancel</Text>
+                </View>
+              </AnimatedPressable>
+            </>
+          ) : (
+            <>
+              <AnimatedPressable onPress={() => setSelected(null)} scaleTo={0.9} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <ChevronLeft size={18} color={theme.textSecondary} />
+                <Text className="text-caption font-semibold" style={{ color: theme.textSecondary }}>Back</Text>
+              </AnimatedPressable>
 
-          <Txt variant="body" tone="secondary">
-            {selected.guidance}
-          </Txt>
+              <Text className="text-h1 font-bold" style={{ color: theme.text }}>{selected.label}</Text>
+              <Text className="text-body" style={{ color: theme.textSecondary }}>{selected.guidance}</Text>
 
-          {selected.showCallCustomer && (
-            <Button
-              title={`Call ${customerName}`}
-              variant="secondary"
-              fullWidth
-              icon={<Phone size={18} color={t.ink} />}
-              onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
-            />
+              {selected.showCallCustomer && (
+                <Button
+                  title={`Call ${customerName}`}
+                  variant="secondary"
+                  fullWidth
+                  onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
+                />
+              )}
+              <Button
+                title="Contact Support"
+                variant="secondary"
+                fullWidth
+                onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
+              />
+
+              <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />
+
+              <Button
+                title="Mark delivery as failed"
+                variant="destructive"
+                fullWidth
+                onPress={() => {
+                  onConfirmFailed(selected.key);
+                  setSelected(null);
+                }}
+              />
+            </>
           )}
-          <Button
-            title="Contact support"
-            variant="secondary"
-            fullWidth
-            onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
-          />
-
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.line, marginVertical: 4 }} />
-
-          <Button
-            title="Mark delivery as failed"
-            variant="destructive"
-            fullWidth
-            onPress={() => {
-              onConfirmFailed(selected.key);
-              setSelected(null);
-            }}
-          />
-        </View>
-      )}
-    </Sheet>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
