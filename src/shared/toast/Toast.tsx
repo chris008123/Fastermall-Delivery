@@ -1,5 +1,5 @@
 import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { lift, radii } from '@/src/ds/tokens';
 import { Txt } from '@/src/ds/Txt';
@@ -10,10 +10,12 @@ import type { ToastTone } from './ToastProvider';
 interface ToastProps {
   message: string;
   tone: ToastTone;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 // Slides up and fades; sits just above whichever nav style is active.
-export function Toast({ message, tone }: ToastProps) {
+export function Toast({ message, tone, actionLabel, onAction }: ToastProps) {
   const { t } = useTheme();
   const clearance = useNavClearance();
 
@@ -29,7 +31,7 @@ export function Toast({ message, tone }: ToastProps) {
     <Animated.View
       entering={FadeInDown.springify().damping(18).stiffness(220)}
       exiting={FadeOutDown.duration(200)}
-      pointerEvents="none"
+      pointerEvents="box-none"
       accessibilityLiveRegion="polite"
       style={{
         position: 'absolute',
@@ -41,6 +43,7 @@ export function Toast({ message, tone }: ToastProps) {
       }}
     >
       <View
+        pointerEvents={onAction ? 'auto' : 'none'}
         style={[
           {
             flexDirection: 'row',
@@ -59,9 +62,21 @@ export function Toast({ message, tone }: ToastProps) {
         ]}
       >
         <Icon size={20} color={color} />
-        <Txt variant="body" style={{ flexShrink: 1 }}>
+        <Txt variant="body" style={{ flexShrink: 1, flexGrow: 1 }}>
           {message}
         </Txt>
+        {actionLabel && onAction ? (
+          <Pressable
+            onPress={onAction}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={{ minHeight: 44, justifyContent: 'center', marginVertical: -12, marginRight: -4 }}
+          >
+            <Txt variant="label" tone="primary">
+              {actionLabel}
+            </Txt>
+          </Pressable>
+        ) : null}
       </View>
     </Animated.View>
   );
