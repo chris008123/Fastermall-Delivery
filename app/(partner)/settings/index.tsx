@@ -97,7 +97,7 @@ export default function SettingsScreen() {
           iconColor={colors.brand.teal}
           iconBg={colors.brand.tealTint}
           label="Delivery preferences"
-          description="Auto-accept, radius, job categories"
+          description="Auto-accept, radius, distance"
           onPress={() => router.push('/settings/delivery-preferences')}
         />
         <SettingsRowSpacer />

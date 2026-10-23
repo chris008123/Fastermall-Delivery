@@ -404,13 +404,21 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
       const mode = usePartnerStore.getState().mode;
 
-      const availableJobs = availableDeliveries.map((delivery) =>
-        mapDeliveryToJob(
-          delivery,
-          mode,
-          true,
-        ),
-      );
+      /*
+       * Partners only work FOOD deliveries. Marketplace and laundry
+       * deliveries are handled by admins, so they are never listed here.
+       * The backend enforces the same rule; this keeps the app consistent
+       * even if an older backend still returns them.
+       */
+      const availableJobs = availableDeliveries
+        .filter((delivery) => getJobType(delivery) === 'FOOD')
+        .map((delivery) =>
+          mapDeliveryToJob(
+            delivery,
+            mode,
+            true,
+          ),
+        );
 
       const historyJobs = myDeliveries.map((delivery) =>
         mapDeliveryToJob(

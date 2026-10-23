@@ -100,7 +100,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     autoAccept: false,
     radiusKm: 5,
     maxDistanceKm: 15,
-    categories: ['MARKETPLACE', 'FOOD', 'LAUNDRY'],
+    categories: ['FOOD'],
   },
   setDeliveryPref: (key, value) =>
     set((s) => ({ deliveryPrefs: { ...s.deliveryPrefs, [key]: value } })),
