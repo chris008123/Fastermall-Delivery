@@ -1,4 +1,4 @@
-import { CircleAlert, Info, TriangleAlert } from 'lucide-react-native';
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import { radii } from '@/src/ds/tokens';
 import { Txt } from '@/src/ds/Txt';
@@ -7,7 +7,7 @@ import { useTheme } from '@/src/ds/useTheme';
 interface NoticeProps {
   title: string;
   message?: string;
-  tone?: 'alert' | 'warn' | 'info';
+  tone?: 'alert' | 'warn' | 'info' | 'go';
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -21,6 +21,7 @@ export function Notice({ title, message, tone = 'alert', actionLabel, onAction }
     alert: { ink: t.alertInk, tint: t.alertTint, Icon: CircleAlert },
     warn: { ink: t.warnInk, tint: t.warnTint, Icon: TriangleAlert },
     info: { ink: t.infoInk, tint: t.infoTint, Icon: Info },
+    go: { ink: t.goInk, tint: t.goTint, Icon: CircleCheck },
   }[tone];
 
   return (
