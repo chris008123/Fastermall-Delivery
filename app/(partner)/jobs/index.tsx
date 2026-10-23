@@ -29,15 +29,7 @@ import { formatCurrency } from '@/src/utils/money';
 const POLL_INTERVAL_MS = 30_000;
 
 type JobsView = 'available' | 'history';
-type TypeFilter = 'ALL' | Job['type'];
 type SortOption = 'HIGHEST_PAY' | 'CLOSEST' | 'SHORTEST';
-
-const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  { value: 'MARKETPLACE', label: 'Marketplace' },
-  { value: 'FOOD', label: 'Food' },
-  { value: 'LAUNDRY', label: 'Laundry' },
-];
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'HIGHEST_PAY', label: 'Highest pay' },
@@ -59,7 +51,6 @@ export default function JobsScreen() {
   const theme = isDark ? colors.dark : colors.light;
 
   const [view, setView] = useState<JobsView>('available');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [sortBy, setSortBy] = useState<SortOption>('HIGHEST_PAY');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -134,10 +125,10 @@ export default function JobsScreen() {
   const openJobs = useMemo(
     () =>
       sortJobs(
-        jobs.filter((j) => j.stage === 'AVAILABLE' && (typeFilter === 'ALL' || j.type === typeFilter)),
+        jobs.filter((j) => j.stage === 'AVAILABLE' && j.type === 'FOOD'),
         sortBy,
       ),
-    [jobs, typeFilter, sortBy],
+    [jobs, sortBy],
   );
 
   const history = useMemo(
@@ -244,11 +235,6 @@ export default function JobsScreen() {
           {segmented}
           {errorBanner}
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-            {TYPE_FILTERS.map(({ value, label }) => (
-              <FilterChip key={value} label={`${label} ${typeCounts[value]}`} active={typeFilter === value} onPress={() => setTypeFilter(value)} theme={theme} />
-            ))}
-          </View>
           <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 10 }}>
             SORT BY
           </Text>

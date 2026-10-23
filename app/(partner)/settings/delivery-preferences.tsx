@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Bike, Check, Minus, Package, Plus, ShoppingBag, Soup, WashingMachine } from 'lucide-react-native';
+import { Bike, Check, Minus, Package, Plus, Soup } from 'lucide-react-native';
 import { ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -8,14 +8,8 @@ import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { usePartnerStore } from '@/src/stores/partnerStore';
-import { useSettingsStore, type JobCategory } from '@/src/stores/settingsStore';
+import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
-
-const CATEGORY_OPTIONS: { value: JobCategory; label: string; icon: typeof ShoppingBag }[] = [
-  { value: 'MARKETPLACE', label: 'Marketplace', icon: ShoppingBag },
-  { value: 'FOOD', label: 'Food', icon: Soup },
-  { value: 'LAUNDRY', label: 'Laundry', icon: WashingMachine },
-];
 
 const RADIUS_MIN = 1;
 const RADIUS_MAX = 20;
@@ -29,7 +23,6 @@ export default function DeliveryPreferencesScreen() {
   const partner = usePartnerStore();
   const deliveryPrefs = useSettingsStore((s) => s.deliveryPrefs);
   const setDeliveryPref = useSettingsStore((s) => s.setDeliveryPref);
-  const toggleDeliveryCategory = useSettingsStore((s) => s.toggleDeliveryCategory);
 
   return (
     <ScrollView
@@ -90,55 +83,16 @@ export default function DeliveryPreferencesScreen() {
 
       <View style={{ gap: 8 }}>
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginLeft: 4 }}>
-          AVAILABLE DELIVERY CATEGORIES
+          DELIVERY CATEGORIES
         </Text>
-        <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {CATEGORY_OPTIONS.map(({ value, label, icon: Icon }) => {
-              const active = deliveryPrefs.categories.includes(value);
-              return (
-                <AnimatedPressable key={value} onPress={() => toggleDeliveryCategory(value)} scaleTo={0.97} style={{ flex: 1 }}>
-                  <View
-                    style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingVertical: 14,
-                      borderRadius: 16,
-                      borderWidth: 1.5,
-                      borderColor: active ? colors.partner.orange : theme.border,
-                      backgroundColor: active ? colors.partner.orangeTint : 'transparent',
-                    }}
-                  >
-                    {active && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          top: -8,
-                          right: -8,
-                          width: 20,
-                          height: 20,
-                          borderRadius: 10,
-                          backgroundColor: colors.partner.orange,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Check size={12} color={colors.onBrand} strokeWidth={3} />
-                      </View>
-                    )}
-                    <Icon size={20} color={active ? colors.partner.orange : theme.textSecondary} />
-                    <Text className="text-caption font-semibold" style={{ color: active ? colors.partner.orange : theme.textSecondary }}>
-                      {label}
-                    </Text>
-                  </View>
-                </AnimatedPressable>
-              );
-            })}
+        <GlassView radius="card" style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Soup size={20} color={colors.partner.orange} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Food deliveries</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              You're offered food orders only. Marketplace and laundry orders are handled by Fastermall.
+            </Text>
           </View>
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            You'll only be offered jobs from the categories selected above. At least one must stay on.
-          </Text>
         </GlassView>
       </View>
 
