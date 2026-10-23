@@ -6,6 +6,8 @@ interface NotificationsState {
   notifications: AppNotification[];
   addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
   markAllRead: () => void;
+  /** Mark one alert read or unread, e.g. to keep an important one flagged. */
+  setRead: (id: string, read: boolean) => void;
 }
 
 export const useNotificationsStore = create<NotificationsState>((set) => ({
@@ -21,6 +23,9 @@ export const useNotificationsStore = create<NotificationsState>((set) => ({
 
   markAllRead: () =>
     set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) })),
+
+  setRead: (id, read) =>
+    set((state) => ({ notifications: state.notifications.map((n) => (n.id === id ? { ...n, read } : n)) })),
 }));
 
 export function selectUnreadCount(notifications: AppNotification[]) {
