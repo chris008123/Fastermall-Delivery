@@ -2,6 +2,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { Bell, Home, Package, User, Wallet } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { haptics } from '@/src/ds/haptics';
 import { lift } from '@/src/ds/tokens';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
@@ -171,6 +172,7 @@ export function AppNav() {
   const insets = useSafeAreaInsets();
   const { t } = useTheme();
   const navStyle = useNavStyleStore((s) => s.navStyle);
+  const navAlign = useNavStyleStore((s) => s.navAlign);
   const notifications = useNotificationsStore((s) => s.notifications);
   const unreadCount = selectUnreadCount(notifications);
 
@@ -195,7 +197,10 @@ export function AppNav() {
         active={item.key === activeSection}
         badge={item.key === 'notifications' ? unreadCount : 0}
         navStyle={navStyle}
-        onPress={() => router.push(item.href as never)}
+        onPress={() => {
+          if (item.key !== activeSection) haptics.select();
+          router.push(item.href as never);
+        }}
       />
     </View>
   ));
@@ -204,7 +209,14 @@ export function AppNav() {
     return (
       <View
         pointerEvents="box-none"
-        style={{ position: 'absolute', left: 0, right: 0, bottom: insets.bottom + g.offset, alignItems: 'center' }}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: insets.bottom + g.offset,
+          paddingHorizontal: navAlign === 'center' ? 0 : 16,
+          alignItems: navAlign === 'start' ? 'flex-start' : navAlign === 'end' ? 'flex-end' : 'center',
+        }}
       >
         <View
           style={[

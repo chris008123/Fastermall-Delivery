@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 import { demandSnapshot } from '@/src/data/mockDemand';
+import { useInteractionStore } from '@/src/stores/interactionStore';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
@@ -27,6 +28,7 @@ export default function PartnerHomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTheme();
   const navClearance = useNavClearance();
+  const offlineByTap = useInteractionStore((s) => s.offlineByTap);
 
   const name = usePartnerStore((s) => s.name);
   const isAvailable = usePartnerStore((s) => s.isAvailable);
@@ -209,6 +211,7 @@ export default function PartnerHomeScreen() {
           isOnline={isAvailable}
           onChange={(v) => void handleAvailabilityChange(v)}
           busy={isTogglingAvailability}
+          offlineByTap={offlineByTap}
         />
       </View>
 

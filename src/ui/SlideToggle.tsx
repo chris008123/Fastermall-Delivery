@@ -12,6 +12,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { haptics } from '@/src/ds/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 
@@ -25,13 +26,15 @@ interface SlideToggleProps {
   onChange: (value: boolean) => void;
   /** True while the change is being saved — the thumb shows a spinner. */
   busy?: boolean;
+  /** When true, a single tap while online goes offline (going online still needs a slide). */
+  offlineByTap?: boolean;
 }
 
 /** The availability control. A deliberate slide instead of a tap target,
  * so a rider can't go offline by brushing the screen on a bumpy road.
  * A plain tap nudges the thumb to show what to do; screen readers get a
  * normal activate action instead of the gesture. */
-export function SlideToggle({ isOnline, onChange, busy }: SlideToggleProps) {
+export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideToggleProps) {
   const { t } = useTheme();
   const [width, setWidth] = useState(0);
   const travel = Math.max(0, width - THUMB - PAD * 2);
@@ -63,6 +66,7 @@ export function SlideToggle({ isOnline, onChange, busy }: SlideToggleProps) {
       const done = isOnline ? x.value <= travelSv.value * 0.3 : x.value >= travelSv.value * 0.7;
       if (done) {
         x.value = withSpring(isOnline ? 0 : travelSv.value, SPRING);
+        runOnJS(haptics.success)();
         runOnJS(onChange)(!isOnline);
       } else {
         x.value = withSpring(isOnline ? travelSv.value : 0, SPRING);
@@ -72,6 +76,12 @@ export function SlideToggle({ isOnline, onChange, busy }: SlideToggleProps) {
   const tap = Gesture.Tap()
     .enabled(enabled)
     .onEnd(() => {
+      if (isOnline && offlineByTap) {
+        runOnJS(haptics.success)();
+        runOnJS(onChange)(false);
+        return;
+      }
+      runOnJS(haptics.light)();
       const nudge = isOnline ? travelSv.value - 40 : 40;
       const rest = isOnline ? travelSv.value : 0;
       x.value = withSequence(withTiming(nudge, { duration: 140 }), withSpring(rest, SPRING));
@@ -134,7 +144,7 @@ export function SlideToggle({ isOnline, onChange, busy }: SlideToggleProps) {
           ]}
         >
           <Txt variant="bodyStrong" color={t.onGo}>
-            You're online
+            {offlineByTap ? 'Online · tap to go offline' : "You're online"}
           </Txt>
         </Animated.View>
         <Animated.View
