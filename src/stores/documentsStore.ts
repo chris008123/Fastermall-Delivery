@@ -8,16 +8,18 @@ interface DocumentsState {
    * flips the document to PENDING and, after a short delay, VERIFIED
    * with a fresh 2-year expiry — the same "flow is real, verification is
    * a stand-in" philosophy as the mock delivery handover code. */
-  reuploadDocument: (id: string) => void;
+  reuploadDocument: (id: string, fileUri?: string) => void;
 }
 
 export const useDocumentsStore = create<DocumentsState>((set) => ({
   documents: mockDocuments,
 
-  reuploadDocument: (id) => {
+  reuploadDocument: (id, fileUri) => {
     set((state) => ({
       documents: state.documents.map((doc) =>
-        doc.id === id ? { ...doc, status: 'PENDING', uploadedAt: new Date().toISOString() } : doc
+        doc.id === id
+          ? { ...doc, status: 'PENDING', uploadedAt: new Date().toISOString(), fileUri: fileUri ?? doc.fileUri }
+          : doc
       ),
     }));
 

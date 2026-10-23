@@ -24,4 +24,6 @@ export interface PartnerDocument {
   expiresAt?: string;
   uploadedAt?: string;
   rejectionReason?: string;
+  /** Local photo the partner attached on the last upload. */
+  fileUri?: string;
 }

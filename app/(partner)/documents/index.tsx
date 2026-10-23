@@ -1,14 +1,19 @@
 import { Car, Camera, CircleAlert, CircleCheck, Clock, CreditCard, FileText, TriangleAlert } from 'lucide-react-native';
-import { ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { Image, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { haptics } from '@/src/ds/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
+import { useToast } from '@/src/shared/toast/ToastProvider';
 import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/documentsStore';
 import type { DocumentStatus, DocumentType, PartnerDocument } from '@/src/types/document';
 import { daysUntil, formatDate } from '@/src/utils/date';
+import { pickDocumentImage, type PickSource } from '@/src/utils/documentPicker';
 import { Button } from '@/src/ui/Button';
 import { Notice } from '@/src/ui/Notice';
 import { Panel } from '@/src/ui/Panel';
+import { Sheet } from '@/src/ui/Sheet';
 import { ScreenHeader } from '@/src/ui/ScreenHeader';
 import { Tag } from '@/src/ui/Tag';
 
@@ -92,6 +97,9 @@ function StatusBanner({ summary }: { summary: ReturnType<typeof selectVerificati
 function DocumentCard({ document }: { document: PartnerDocument }) {
   const { t } = useTheme();
   const reupload = useDocumentsStore((s) => s.reuploadDocument);
+  const { show } = useToast();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
   const Icon = TYPE_ICON[document.type];
   const meta = STATUS_META[document.status];
   const StatusIcon = meta.icon;
@@ -106,6 +114,29 @@ function DocumentCard({ document }: { document: PartnerDocument }) {
     neutral: t.inkSecondary,
   }[meta.tone];
 
+  const addPhoto = async (source: PickSource) => {
+    if (picking) return;
+    setPicking(true);
+    try {
+      const result = await pickDocumentImage(source, { front: document.type === 'SELFIE' });
+      if (result.status === 'denied') {
+        setSheetOpen(false);
+        show("Camera access is off. Turn it on in your phone's settings, or choose from your gallery.", 'warning');
+        return;
+      }
+      if (result.status === 'picked') {
+        setSheetOpen(false);
+        reupload(document.id, result.uri);
+        haptics.success();
+        show('Sent for review', 'success');
+      }
+    } catch {
+      show("Couldn't open that. Please try again.", 'error');
+    } finally {
+      setPicking(false);
+    }
+  };
+
   const expiryText = (() => {
     if (!document.expiresAt) return null;
     if (document.status === 'EXPIRED') return `Expired ${formatDate(document.expiresAt)}`;
@@ -116,7 +147,15 @@ function DocumentCard({ document }: { document: PartnerDocument }) {
   return (
     <Panel style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Icon size={22} color={t.inkSecondary} />
+        {document.fileUri ? (
+          <Image
+            source={{ uri: document.fileUri }}
+            accessibilityLabel={`Photo you uploaded for ${document.label}`}
+            style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: t.sunken }}
+          />
+        ) : (
+          <Icon size={22} color={t.inkSecondary} />
+        )}
         <View style={{ flex: 1 }}>
           <Txt variant="bodyStrong">{document.label}</Txt>
           {expiryText && (
@@ -138,17 +177,36 @@ function DocumentCard({ document }: { document: PartnerDocument }) {
         <Button
           title={document.status === 'NOT_UPLOADED' ? 'Upload document' : 'Renew document'}
           fullWidth
-          onPress={() => reupload(document.id)}
+          onPress={() => setSheetOpen(true)}
         />
       )}
       {document.status === 'EXPIRING_SOON' && (
-        <Button title="Renew early" variant="secondary" fullWidth onPress={() => reupload(document.id)} />
+        <Button title="Renew early" variant="secondary" fullWidth onPress={() => setSheetOpen(true)} />
       )}
       {isPending && (
         <Txt variant="caption" tone="secondary">
           We're reviewing your document, usually within 24–48 hours.
         </Txt>
       )}
+
+      <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title={document.label}>
+        <View style={{ gap: 12, paddingTop: 4 }}>
+          <Txt variant="body" tone="secondary">
+            {document.type === 'SELFIE'
+              ? 'Take a clear photo of your face in good light, with no hat or sunglasses.'
+              : 'Place the document flat in good light, with all four corners and every word readable.'}
+          </Txt>
+          <Button title="Take a photo" size="lg" fullWidth loading={picking} onPress={() => void addPhoto('camera')} />
+          <Button
+            title="Choose from gallery"
+            variant="secondary"
+            fullWidth
+            disabled={picking}
+            onPress={() => void addPhoto('library')}
+          />
+          <Button title="Cancel" variant="quiet" fullWidth onPress={() => setSheetOpen(false)} />
+        </View>
+      </Sheet>
     </Panel>
   );
 }
