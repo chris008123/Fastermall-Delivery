@@ -55,7 +55,7 @@ export function PayoutDestinationForm({ initialNumber, initialNetwork, onSave, o
           paddingHorizontal: 14,
           fontSize: 18,
           letterSpacing: 1,
-          fontFamily: 'Archivo_600SemiBold',
+          fontFamily: 'Fredoka_600SemiBold',
         }}
       />
       {number.length > 0 && !valid ? (

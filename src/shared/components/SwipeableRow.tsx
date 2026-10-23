@@ -1,7 +1,7 @@
 import { Trash2 } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -11,10 +11,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { haptics } from '@/src/ds/haptics';
-import { radii } from '@/src/ds/tokens';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { haptics } from '@/src/shared/utils/haptics';
+import { colors } from '@/src/theme';
+import { radii } from '@/src/theme/radii';
 
 interface SwipeableRowProps {
   children: ReactNode;
@@ -29,15 +28,15 @@ interface SwipeableRowProps {
 const THRESHOLD = -88;
 
 /**
- * Swipe-left-to-dismiss with a colored reveal that grows as you swipe and
- * confirms on release. Purely a client-side reveal/hide gesture — the
- * actual removal (`onDismiss`) is left entirely to the caller. Screen
- * readers get a "dismiss" action instead of the gesture. Keep spacing
- * between rows outside this component (a separator, not a margin on the
- * child), or the reveal will show through the gap.
+ * Swipe-left-to-dismiss with a background reveal that zooms in as you swipe
+ * and confirms on release — per the motion spec's rule for swipeable rows
+ * (notifications, job cards): "background zoom/shift on swipe, confirm on
+ * release". Purely a client-side reveal/hide gesture — the actual removal
+ * (`onDismiss`) is left entirely to the caller. Screen readers get a
+ * "dismiss" action instead of the gesture. Keep spacing between rows outside
+ * this component, or the reveal shows through the gap.
  */
 export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onActivate, extraActions }: SwipeableRowProps) {
-  const { t } = useTheme();
   const translateX = useSharedValue(0);
   const [removed, setRemoved] = useState(false);
 
@@ -86,8 +85,8 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onA
         style={[
           StyleSheet.absoluteFill,
           {
-            backgroundColor: t.alert,
-            borderRadius: radii.md,
+            backgroundColor: colors.semantic.error,
+            borderRadius: radii.card,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-end',
@@ -97,10 +96,8 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onA
           backgroundStyle,
         ]}
       >
-        <Trash2 size={18} color={t.onAlert} />
-        <Txt variant="label" color={t.onAlert}>
-          {actionLabel}
-        </Txt>
+        <Trash2 size={18} color="#ffffff" />
+        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{actionLabel}</Text>
       </Animated.View>
       <GestureDetector gesture={pan}>
         <Animated.View
@@ -111,9 +108,10 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onA
             ...(extraActions ?? []).map((a) => ({ name: a.name, label: a.label })),
           ]}
           onAccessibilityAction={(e) => {
-            if (e.nativeEvent.actionName === 'dismiss') onDismiss();
-            if (e.nativeEvent.actionName === 'activate') onActivate?.();
-            extraActions?.find((a) => a.name === e.nativeEvent.actionName)?.onPress();
+            const name = e.nativeEvent.actionName;
+            if (name === 'dismiss') onDismiss();
+            if (name === 'activate') onActivate?.();
+            extraActions?.find((a) => a.name === name)?.onPress();
           }}
           style={rowStyle}
         >

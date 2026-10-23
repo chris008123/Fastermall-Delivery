@@ -1,82 +1,68 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
-import { lift, radii } from '@/src/ds/tokens';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
-import { useNavClearance } from '@/src/ui/AppNav';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { useNavClearance } from '@/src/shared/components/AppNav';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { colors } from '@/src/theme';
 import type { ToastTone } from './ToastProvider';
 
 interface ToastProps {
   message: string;
   tone: ToastTone;
+  /** Optional single action, e.g. Undo. */
   actionLabel?: string;
   onAction?: () => void;
 }
 
-// Slides up and fades; sits just above whichever nav style is active.
+// Motion spec: "Toast notification, slide-up + fade" — a plain
+// entering/exiting layout animation on Animated.View, same vocabulary as
+// the rest of the app's Reanimated usage. Sits above whichever nav style
+// the partner picked, and only takes touches when it carries an action.
 export function Toast({ message, tone, actionLabel, onAction }: ToastProps) {
-  const { t } = useTheme();
   const clearance = useNavClearance();
-
-  const toneMap = {
-    success: { color: t.goInk, Icon: CircleCheck },
-    error: { color: t.alertInk, Icon: CircleAlert },
-    warning: { color: t.warnInk, Icon: TriangleAlert },
-    info: { color: t.infoInk, Icon: Info },
-  } as const;
-  const { color, Icon } = toneMap[tone];
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
+  const toneColor = colors.semantic[tone];
 
   return (
     <Animated.View
       entering={FadeInDown.springify().damping(18).stiffness(220)}
       exiting={FadeOutDown.duration(200)}
       pointerEvents="box-none"
-      accessibilityLiveRegion="polite"
       style={{
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: clearance - 8,
+        bottom: clearance - 12,
         alignItems: 'center',
         paddingHorizontal: 20,
       }}
     >
-      <View
-        pointerEvents={onAction ? 'auto' : 'none'}
-        style={[
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-            width: '100%',
-            maxWidth: 440,
-            paddingVertical: 14,
-            paddingHorizontal: 16,
-            borderRadius: radii.md,
-            backgroundColor: t.surface,
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: t.lineStrong,
-          },
-          lift,
-        ]}
-      >
-        <Icon size={20} color={color} />
-        <Txt variant="body" style={{ flexShrink: 1, flexGrow: 1 }}>
-          {message}
-        </Txt>
-        {actionLabel && onAction ? (
-          <Pressable
-            onPress={onAction}
-            accessibilityRole="button"
-            hitSlop={8}
-            style={{ minHeight: 44, justifyContent: 'center', marginVertical: -12, marginRight: -4 }}
-          >
-            <Txt variant="label" tone="primary">
-              {actionLabel}
-            </Txt>
-          </Pressable>
-        ) : null}
+      <View pointerEvents={onAction ? 'auto' : 'none'} style={{ maxWidth: 440, width: '100%' }}>
+        <GlassView
+          radius="card"
+          intensity="strong"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 16 }}
+        >
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toneColor }} />
+          <Text className="text-body font-medium" style={{ color: theme.text, flexShrink: 1, flexGrow: 1 }}>
+            {message}
+          </Text>
+          {actionLabel && onAction ? (
+            <AnimatedPressable
+              onPress={onAction}
+              scaleTo={0.95}
+              accessibilityRole="button"
+              accessibilityLabel={actionLabel}
+              hitSlop={10}
+            >
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>
+                {actionLabel}
+              </Text>
+            </AnimatedPressable>
+          ) : null}
+        </GlassView>
       </View>
     </Animated.View>
   );

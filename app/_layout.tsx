@@ -1,13 +1,6 @@
 import '../global.css';
 
 import {
-  Archivo_400Regular,
-  Archivo_500Medium,
-  Archivo_600SemiBold,
-  Archivo_700Bold,
-  Archivo_800ExtraBold,
-} from '@expo-google-fonts/archivo';
-import {
   Fredoka_400Regular,
   Fredoka_500Medium,
   Fredoka_600SemiBold,
@@ -22,10 +15,10 @@ import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { darkPalette, lightPalette } from '@/src/ds/tokens';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { ToastProvider } from '@/src/shared/toast/ToastProvider';
 import { useAuthStore } from '@/src/stores/authStore';
+import { colors } from '@/src/theme';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -41,11 +34,6 @@ export default function RootLayout() {
     Fredoka_500Medium,
     Fredoka_600SemiBold,
     Fredoka_700Bold,
-    Archivo_400Regular,
-    Archivo_500Medium,
-    Archivo_600SemiBold,
-    Archivo_700Bold,
-    Archivo_800ExtraBold,
   });
 
   const { isDark } = useResolvedTheme();
@@ -134,8 +122,8 @@ export default function RootLayout() {
                 headerShown: false,
                 contentStyle: {
                   backgroundColor: isDark
-                    ? darkPalette.bg
-                    : lightPalette.bg,
+                    ? colors.dark.background
+                    : colors.light.background,
                 },
               }}
             >
