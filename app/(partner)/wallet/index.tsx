@@ -1,7 +1,7 @@
 import { ArrowDownCircle, Banknote, ChevronRight, RefreshCcw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, View } from 'react-native';
-import { haptics } from '@/src/ds/haptics';
+import { haptics } from '@/src/shared/utils/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 import { EarningsChart, sumLastSevenDays } from '@/src/shared/components/EarningsChart';
@@ -13,7 +13,7 @@ import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/
 import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
 import { nextPayoutDate } from '@/src/utils/date';
 import { formatCurrency } from '@/src/utils/money';
-import { useNavClearance } from '@/src/ui/AppNav';
+import { useNavClearance } from '@/src/shared/components/AppNav';
 import { Button } from '@/src/ui/Button';
 import { Panel } from '@/src/ui/Panel';
 import { ProgressBar } from '@/src/ui/ProgressBar';
@@ -138,7 +138,7 @@ export default function WalletScreen() {
                 />
               </View>
               <Txt variant="caption" tone="secondary">
-                Next automatic payout: <Txt variant="caption" style={{ fontFamily: 'Archivo_700Bold' }}>{payoutLabel}</Txt>. Free, no fee.
+                Next automatic payout: <Txt variant="caption" style={{ fontFamily: 'Fredoka_700Bold' }}>{payoutLabel}</Txt>. Free, no fee.
               </Txt>
             </View>
 

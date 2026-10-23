@@ -1,17 +1,18 @@
 import { router } from 'expo-router';
-import { Bell, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
+import { Bell, BellOff, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, SectionList, View } from 'react-native';
-import { haptics } from '@/src/ds/haptics';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { SectionList, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
 import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
+import { haptics } from '@/src/shared/utils/haptics';
 import { useNotificationsStore } from '@/src/stores/notificationsStore';
+import { colors } from '@/src/theme';
 import type { AppNotification, NotificationType } from '@/src/types/notification';
-import { useNavClearance } from '@/src/ui/AppNav';
-import { Panel } from '@/src/ui/Panel';
-import { ScreenHeader } from '@/src/ui/ScreenHeader';
 
 const TYPE_ICON: Record<NotificationType, typeof Bell> = {
   JOB: Briefcase,
@@ -31,7 +32,7 @@ function targetFor(n: AppNotification): string | undefined {
 }
 
 // Presentation-only grouping over whatever the store already holds — no
-// store changes. Grouped by recency.
+// store changes. Per the redesign brief: "grouped by recency".
 function groupByRecency(notifications: AppNotification[]) {
   const today: AppNotification[] = [];
   const thisWeek: AppNotification[] = [];
@@ -54,8 +55,9 @@ function groupByRecency(notifications: AppNotification[]) {
 }
 
 export default function NotificationsScreen() {
-  const { t } = useTheme();
-  const navClearance = useNavClearance();
+  const insets = useSafeAreaInsets();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
 
   const notifications = useNotificationsStore((s) => s.notifications);
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
@@ -68,9 +70,7 @@ export default function NotificationsScreen() {
   const [unreadAtOpen] = useState(
     () => new Set(useNotificationsStore.getState().notifications.filter((n) => !n.read).map((n) => n.id)),
   );
-
-  // Alerts the partner flagged as unread during this visit, so the edge
-  // shows straight away (the store's `read` flag only matters next time).
+  // Alerts the partner flipped read/unread during this visit.
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
 
   // Client-side-only hide list, not a store mutation — swiping a
@@ -84,33 +84,31 @@ export default function NotificationsScreen() {
     markAllRead();
   }, [markAllRead]);
 
+  const isUnread = (id: string) => (unreadAtOpen.has(id) ? !flaggedIds.has(id) : flaggedIds.has(id));
+
+  const undoDismiss = (ids: string[]) =>
+    setDismissedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+
   const dismiss = (id: string) => {
     setDismissedIds((prev) => new Set(prev).add(id));
-    show('Alert dismissed', 'info', {
-      action: {
-        label: 'Undo',
-        onPress: () =>
-          setDismissedIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          }),
-      },
-    });
+    show('Alert dismissed', 'info', { action: { label: 'Undo', onPress: () => undoDismiss([id]) } });
   };
 
   const toggleUnread = (id: string) => {
-    const isUnread = unreadAtOpen.has(id) ? !flaggedIds.has(id) : flaggedIds.has(id);
+    const wasUnread = isUnread(id);
     haptics.light();
-    // unreadAtOpen alerts start flagged-by-default; flaggedIds holds any flips.
     setFlaggedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-    setRead(id, isUnread);
-    show(isUnread ? 'Marked as read' : 'Marked as unread', 'info');
+    setRead(id, wasUnread);
+    show(wasUnread ? 'Marked as read' : 'Marked as unread', 'info');
   };
 
   const visible = notifications.filter((n) => !dismissedIds.has(n.id));
@@ -121,63 +119,60 @@ export default function NotificationsScreen() {
     if (ids.length === 0) return;
     setDismissedIds((prev) => new Set([...prev, ...ids]));
     show(ids.length === 1 ? 'Alert cleared' : `${ids.length} alerts cleared`, 'info', {
-      action: {
-        label: 'Undo',
-        onPress: () =>
-          setDismissedIds((prev) => {
-            const next = new Set(prev);
-            ids.forEach((id) => next.delete(id));
-            return next;
-          }),
-      },
+      action: { label: 'Undo', onPress: () => undoDismiss(ids) },
     });
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScreenHeader
-        title="Alerts"
-        subtitle={sections.length > 0 ? 'Swipe left to dismiss. Hold to mark as unread.' : undefined}
-        right={
-          visible.length > 0 ? (
-            <Pressable
-              onPress={clearAll}
-              accessibilityRole="button"
-              accessibilityLabel="Clear all alerts"
-              hitSlop={8}
-              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
-            >
-              <Txt variant="label" tone="primary">
-                Clear all
-              </Txt>
-            </Pressable>
-          ) : undefined
-        }
-      />
-      <SectionList<AppNotification>
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: navClearance }}
-        sections={sections}
-        keyExtractor={(n) => n.id}
-        stickySectionHeadersEnabled={false}
-        ListEmptyComponent={
-          <Panel style={{ gap: 4 }}>
-            <Txt variant="heading">You're all caught up</Txt>
-            <Txt variant="body" tone="secondary">
-              Job requests, payment updates and account notices will show up here.
-            </Txt>
-          </Panel>
-        }
-        renderSectionHeader={({ section }) => (
-          <Txt variant="label" tone="secondary" style={{ marginTop: 12, marginBottom: 8 }}>
-            {section.title}
-          </Txt>
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        renderItem={({ item }) => {
-          const target = targetFor(item);
-          const open = target ? () => router.push(target as never) : undefined;
-          const unread = unreadAtOpen.has(item.id) ? !flaggedIds.has(item.id) : flaggedIds.has(item.id);
-          return (
+    <SectionList<AppNotification>
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 10 }}
+      sections={sections}
+      keyExtractor={(n) => n.id}
+      stickySectionHeadersEnabled={false}
+      ListHeaderComponent={
+        <View style={{ marginBottom: 4, gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text className="text-h1 font-bold" style={{ color: theme.text }}>Notifications</Text>
+            {visible.length > 0 ? (
+              <AnimatedPressable
+                onPress={clearAll}
+                scaleTo={0.95}
+                accessibilityRole="button"
+                accessibilityLabel="Clear all notifications"
+                hitSlop={10}
+              >
+                <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Clear all</Text>
+              </AnimatedPressable>
+            ) : null}
+          </View>
+          {visible.length > 0 ? (
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Swipe left to dismiss. Hold to mark as unread.
+            </Text>
+          ) : null}
+        </View>
+      }
+      ListEmptyComponent={
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
+          <BellOff size={20} color={theme.textSecondary} />
+          <Text className="text-body" style={{ color: theme.textSecondary }}>Nothing here yet.</Text>
+        </GlassView>
+      }
+      renderSectionHeader={({ section }) => (
+        <Text
+          className="text-overline font-semibold"
+          style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 8, marginBottom: 6 }}
+        >
+          {section.title.toUpperCase()}
+        </Text>
+      )}
+      renderItem={({ item }) => {
+        const target = targetFor(item);
+        const open = target ? () => router.push(target as never) : undefined;
+        const unread = isUnread(item.id);
+        return (
+          <View style={{ marginBottom: 10 }}>
             <SwipeableRow
               onDismiss={() => dismiss(item.id)}
               onActivate={open}
@@ -187,58 +182,66 @@ export default function NotificationsScreen() {
             >
               <NotificationRow
                 notification={item}
+                theme={theme}
                 unread={unread}
                 onPress={open}
                 onLongPress={() => toggleUnread(item.id)}
               />
             </SwipeableRow>
-          );
-        }}
-      />
-    </View>
+          </View>
+        );
+      }}
+    />
   );
 }
 
 function NotificationRow({
   notification,
+  theme,
   unread,
   onPress,
   onLongPress,
 }: {
   notification: AppNotification;
+  theme: { text: string; textSecondary: string };
   unread: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
 }) {
-  const { t } = useTheme();
   const Icon = TYPE_ICON[notification.type];
-  const accent =
-    notification.type === 'PAYMENT' ? t.goInk : notification.type === 'JOB' ? t.primary : t.inkSecondary;
+  const accent = notification.type === 'PAYMENT' ? colors.partner.orange : notification.type === 'JOB' ? colors.brand.teal : theme.textSecondary;
 
   return (
-    <Panel padding={0} onPress={onPress} onLongPress={onLongPress} accessibilityLabel={notification.title} style={{ overflow: 'hidden' }}>
+    <AnimatedPressable onPress={onPress} onLongPress={onLongPress} scaleTo={0.98} accessibilityLabel={notification.title}>
+    <GlassView radius="card" shadow={false} style={{ padding: 0, overflow: 'hidden' }}>
       <View style={{ flexDirection: 'row' }}>
-        {/* Unread is a quiet left edge, not a loud dot. */}
-        <View style={{ width: unread ? 3 : 0, backgroundColor: t.primary }} />
-        <View style={{ flex: 1, flexDirection: 'row', gap: 12, padding: 16 }}>
-          <Icon size={20} color={accent} style={{ marginTop: 2 }} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Txt variant="bodyStrong">{notification.title}</Txt>
-            <Txt variant="body" tone="secondary">
-              {notification.body}
-            </Txt>
-            <Txt variant="caption" tone="tertiary" style={{ marginTop: 2 }}>
-              {new Date(notification.createdAt).toLocaleString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </Txt>
+        {/* Unread reads as a subtle left accent, not a loud dot — per the
+            redesign brief's explicit "not a loud dot flood" note. */}
+        <View style={{ width: unread ? 3 : 0, backgroundColor: colors.partner.orange }} />
+        <View style={{ flex: 1, flexDirection: 'row', gap: 12, padding: 16, opacity: unread ? 1 : 0.75 }}>
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: `${accent}1a`,
+            }}
+          >
+            <Icon size={16} color={accent} />
           </View>
-          {onPress ? <ChevronRight size={18} color={t.inkTertiary} style={{ alignSelf: 'center' }} /> : null}
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{notification.title}</Text>
+            <Text className="text-body" style={{ color: theme.textSecondary }}>{notification.body}</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary, marginTop: 2 }}>
+              {new Date(notification.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </Text>
+          </View>
+          {onPress ? <ChevronRight size={18} color={theme.textSecondary} style={{ alignSelf: 'center' }} /> : null}
         </View>
       </View>
-    </Panel>
+    </GlassView>
+    </AnimatedPressable>
   );
 }

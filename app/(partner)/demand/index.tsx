@@ -1,14 +1,20 @@
 import { Flame } from 'lucide-react-native';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '@/src/shared/components/BackButton';
+import { DemandMap } from '@/src/shared/components/DemandMap';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { demandSnapshot } from '@/src/data/mockDemand';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { colors } from '@/src/theme';
 import type { DemandZone } from '@/src/types/demand';
 import { formatCurrency } from '@/src/utils/money';
-import { Panel } from '@/src/ui/Panel';
-import { ProgressBar } from '@/src/ui/ProgressBar';
-import { ScreenHeader } from '@/src/ui/ScreenHeader';
+
+const LEVEL_COLOR: Record<DemandZone['level'], string> = {
+  HIGH: colors.semantic.error,
+  MEDIUM: colors.semantic.warning,
+  LOW: colors.semantic.info,
+};
 
 const LEVEL_LABEL: Record<DemandZone['level'], string> = {
   HIGH: 'High demand',
@@ -18,72 +24,52 @@ const LEVEL_LABEL: Record<DemandZone['level'], string> = {
 
 export default function DemandScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useTheme();
-
-  const levelColor: Record<DemandZone['level'], string> = {
-    HIGH: t.alert,
-    MEDIUM: t.warn,
-    LOW: t.info,
-  };
-
-  const zones = [...demandSnapshot.zones].sort((a, b) => b.nearbyOrders - a.nearbyOrders);
-  const maxOrders = Math.max(1, ...zones.map((z) => z.nearbyOrders));
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScreenHeader title="Demand near you" back />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 32, gap: 24 }}>
-        {/* The demand map stays disabled, as before. */}
-        {/* <DemandMap zones={demandSnapshot.zones} height={260} scrollEnabled /> */}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <BackButton />
+        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Demand near you</Text>
+      </View>
 
-        <View style={{ gap: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Flame size={18} color={t.alertInk} />
-            <Txt variant="heading">{demandSnapshot.headline}</Txt>
-          </View>
-          <Txt variant="caption" tone="secondary">
-            {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km
-          </Txt>
-          <Txt variant="display" style={{ marginTop: 6, fontVariant: ['tabular-nums'] }}>
-            {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}
-          </Txt>
-          <Txt variant="caption" tone="secondary">
-            an hour, estimated for right now
-          </Txt>
-        </View>
+      {/* <DemandMap zones={demandSnapshot.zones} height={260} scrollEnabled /> */}
 
-        <View style={{ gap: 8 }}>
-          <Txt variant="heading" style={{ paddingHorizontal: 4 }}>
-            By area
-          </Txt>
-          <Panel padding={0}>
-            {zones.map((zone, i) => (
-              <View
-                key={zone.id}
-                style={{
-                  padding: 16,
-                  gap: 8,
-                  borderTopWidth: i === 0 ? 0 : 1,
-                  borderTopColor: t.line,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                  <Txt variant="bodyStrong" style={{ flex: 1 }} numberOfLines={1}>
-                    {zone.name}
-                  </Txt>
-                  <Txt variant="body" style={{ fontVariant: ['tabular-nums'] }}>
-                    {zone.nearbyOrders} order{zone.nearbyOrders === 1 ? '' : 's'}
-                  </Txt>
-                </View>
-                <ProgressBar progress={zone.nearbyOrders / maxOrders} color={levelColor[zone.level]} />
-                <Txt variant="caption" tone="secondary">
-                  {LEVEL_LABEL[zone.level]}
-                </Txt>
-              </View>
-            ))}
-          </Panel>
+      <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Flame size={18} color={colors.semantic.error} />
+          <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
         </View>
-      </ScrollView>
-    </View>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>
+          {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km
+        </Text>
+        <Text className="text-display font-bold" style={{ color: colors.partner.orange, marginTop: 4 }}>
+          {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
+        </Text>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>estimated earning potential right now</Text>
+      </GlassView>
+
+      <View style={{ gap: 10 }}>
+        <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+          BY AREA
+        </Text>
+        {demandSnapshot.zones.map((zone) => (
+          <GlassView key={zone.id} radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: LEVEL_COLOR[zone.level] }} />
+            <View style={{ flex: 1 }}>
+              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{zone.name}</Text>
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>{LEVEL_LABEL[zone.level]}</Text>
+            </View>
+            <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+              {zone.nearbyOrders} order{zone.nearbyOrders === 1 ? '' : 's'}
+            </Text>
+          </GlassView>
+        ))}
+      </View>
+    </ScrollView>
   );
 }

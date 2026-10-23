@@ -1,45 +1,39 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { CircleCheck, Navigation, PackageX, ShieldAlert, TriangleAlert } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle2, KeyRound, LifeBuoy, Navigation, PackageX, ShieldAlert } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { haptics } from '@/src/ds/haptics';
-import { radii } from '@/src/ds/tokens';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { BackButton } from '@/src/shared/components/BackButton';
+import { Badge } from '@/src/shared/components/Badge';
+import { Button } from '@/src/shared/components/Button';
+import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
 import { FailedDeliverySheet, FAILURE_REASONS } from '@/src/shared/components/FailedDeliverySheet';
+import { GlassView } from '@/src/shared/components/GlassView';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
 import { SafetySheet } from '@/src/shared/components/SafetySheet';
+import { SlideToConfirm } from '@/src/shared/components/SlideToConfirm';
 import { StarRating } from '@/src/shared/components/StarRating';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { haptics } from '@/src/shared/utils/haptics';
 import { pipelineFor, useJobsStore } from '@/src/stores/jobsStore';
 import { useSettingsStore } from '@/src/stores/settingsStore';
-import type { FailureReason, Job, JobStage } from '@/src/types/job';
+import { colors } from '@/src/theme';
+import type { FailureReason, Job, JobStage, JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
 import { openNavigation } from '@/src/utils/navigation';
-import { Button } from '@/src/ui/Button';
-import { Notice } from '@/src/ui/Notice';
-import { SlideToConfirm } from '@/src/ui/SlideToConfirm';
-import { Panel } from '@/src/ui/Panel';
-import { ScreenHeader } from '@/src/ui/ScreenHeader';
-import { JobTag } from '@/src/ui/Tag';
 
-// The screen a partner uses under the most pressure, so it's built around
-// two things: what's happening now (large, top) and the one action that
-// moves the delivery forward (pinned at the bottom, in thumb reach). The
-// full route sits between them for context. `advanceStage()` and
-// `failJob()` are the real backend-connected mutations — both awaited,
-// with their own loading flags and an inline + Alert error on failure,
-// unchanged from the previous version of this screen.
+// Layout ported from the app's GlassView design system, same merge pattern
+// as the rest of the Jobs flow: `advanceStage()`/`failJob()` are the real
+// backend-connected mutations — both awaited, with their own loading flags
+// and an inline + Alert error surfaced on failure, restored from the
+// version of this screen that predates the visual redesign.
+
+const STEP_VARIANT: Record<JobType, 'primary' | 'gold' | 'laundry'> = {
+  MARKETPLACE: 'primary',
+  FOOD: 'gold',
+  LAUNDRY: 'laundry',
+};
 
 const STAGE_COPY: Record<JobStage, { label: string; sublabel?: (job: Job) => string; action?: string }> = {
   AVAILABLE: { label: 'Available' },
@@ -56,7 +50,8 @@ const STAGE_COPY: Record<JobStage, { label: string; sublabel?: (job: Job) => str
 export default function ActiveDeliveryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { t, job: jobColors } = useTheme();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const [code, setCode] = useState('');
 
   const job = useJobsStore((s) => s.jobs.find((j) => j.id === id));
@@ -87,37 +82,33 @@ export default function ActiveDeliveryScreen() {
     return pipeline.map((stage, index) => ({
       key: stage,
       label: STAGE_COPY[stage].label,
+      sublabel: STAGE_COPY[stage].sublabel?.(job),
       status: index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'upcoming',
     }));
   }, [job]);
 
   if (!job) {
     return (
-      <View style={{ flex: 1, backgroundColor: t.bg }}>
-        <ScreenHeader title="Delivery" back />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-          {isLoading ? (
-            <>
-              <ActivityIndicator size="large" color={t.primary} />
-              <Txt variant="body" tone="secondary">
-                Loading delivery…
-              </Txt>
-            </>
-          ) : (
-            <>
-              <PackageX size={32} color={t.inkSecondary} />
-              <Txt variant="body" tone="secondary" style={{ textAlign: 'center' }}>
-                This delivery isn't available anymore.
-              </Txt>
-              <Button title="Back to jobs" variant="secondary" onPress={() => router.replace('/(partner)/jobs')} />
-            </>
-          )}
-        </View>
+      <View style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
+        {isLoading ? (
+          <>
+            <ActivityIndicator size="large" color={colors.partner.orange} />
+            <Text className="text-body" style={{ color: theme.textSecondary }}>Loading delivery...</Text>
+          </>
+        ) : (
+          <>
+            <PackageX size={32} color={theme.textSecondary} />
+            <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+              This delivery isn't available anymore.
+            </Text>
+            <Button title="Back to jobs" variant="ghost" onPress={() => router.replace('/(partner)/jobs')} />
+          </>
+        )}
       </View>
     );
   }
 
-  const jc = jobColors(job.type);
+  const accent = colors.jobType[job.type].dark;
   const pipeline = pipelineFor(job.type);
   const pickedUpIndex = pipeline.indexOf('PICKED_UP');
   const currentIndex = pipeline.indexOf(job.stage);
@@ -165,207 +156,172 @@ export default function ActiveDeliveryScreen() {
 
   if (job.stage === 'COMPLETED') {
     return (
-      <ScrollView
-        style={{ flex: 1, backgroundColor: t.bg }}
-        contentContainerStyle={{ paddingTop: insets.top + 40, paddingHorizontal: 20, paddingBottom: insets.bottom + 24, gap: 24 }}
-      >
-        <View style={{ alignItems: 'center', gap: 8 }}>
-          <CircleCheck size={56} color={t.goInk} />
-          <Txt variant="display" style={{ textAlign: 'center' }}>
-            Delivery completed
-          </Txt>
-          <Txt variant="body" tone="secondary" style={{ textAlign: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 24, paddingHorizontal: 20, gap: 16 }}>
+        <View style={{ alignItems: 'center', gap: 12, paddingVertical: 24 }}>
+          <CheckCircle2 size={48} color={colors.semantic.success} />
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>Delivery completed</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
             {job.customerName} confirmed the handover.
-          </Txt>
+          </Text>
           {job.rating != null && (
-            <View style={{ alignItems: 'center', gap: 4, marginTop: 8 }}>
-              <StarRating rating={job.rating} size={22} mutedColor={t.lineStrong} />
-              <Txt variant="caption" tone="secondary">
-                Rated {job.rating} star{job.rating === 1 ? '' : 's'}
-              </Txt>
+            <View style={{ alignItems: 'center', gap: 4, marginTop: 4 }}>
+              <StarRating rating={job.rating} size={20} />
+              <Text className="text-caption" style={{ color: theme.textSecondary }}>
+                {job.customerName} rated this delivery {job.rating} star{job.rating === 1 ? '' : 's'}
+              </Text>
             </View>
           )}
         </View>
 
-        <View style={{ alignItems: 'center' }}>
-          <Txt variant="caption" tone="secondary">
-            You earned
-          </Txt>
-          <Txt variant="numeral" numberOfLines={1} adjustsFontSizeToFit>
-            {formatCurrency(job.deliveryFee)}
-          </Txt>
-        </View>
+        <GlassView radius="card" style={{ padding: 18, gap: 10 }}>
+          {job.vendorPayoutAmount != null && (
+            <SummaryRow label="Reimbursed to you" amount={job.vendorPayoutAmount} theme={theme} />
+          )}
+          <SummaryRow label="Delivery earning" amount={job.deliveryFee} theme={theme} />
+        </GlassView>
 
-        {job.vendorPayoutAmount != null && (
-          <Panel style={{ gap: 4 }}>
-            <SummaryRow label="Reimbursed to you" amount={job.vendorPayoutAmount} />
-          </Panel>
-        )}
-
-        <Button title="Back to jobs" size="lg" fullWidth onPress={() => router.replace('/(partner)/jobs')} />
-      </ScrollView>
+        <Button title="Back to jobs" variant="partner" fullWidth onPress={() => router.replace('/(partner)/jobs')} />
+      </View>
     );
   }
 
   if (job.stage === 'FAILED') {
     const reasonMeta = FAILURE_REASONS.find((r) => r.key === job.failureReason);
     return (
-      <ScrollView
-        style={{ flex: 1, backgroundColor: t.bg }}
-        contentContainerStyle={{ paddingTop: insets.top + 40, paddingHorizontal: 20, paddingBottom: insets.bottom + 24, gap: 24 }}
-      >
-        <View style={{ alignItems: 'center', gap: 8 }}>
-          <TriangleAlert size={56} color={t.alertInk} />
-          <Txt variant="display" style={{ textAlign: 'center' }}>
-            Couldn't complete this delivery
-          </Txt>
-          <Txt variant="body" tone="secondary" style={{ textAlign: 'center' }}>
-            {reasonMeta ? `${reasonMeta.label}. ` : 'This delivery was marked as failed. '}
-            Support has been notified and will follow up if anything more is needed.
-          </Txt>
+      <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 24, paddingHorizontal: 20, gap: 16 }}>
+        <View style={{ alignItems: 'center', gap: 12, paddingVertical: 24 }}>
+          <AlertTriangle size={48} color={colors.semantic.error} />
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>Delivery couldn't be completed</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            {reasonMeta ? reasonMeta.label : 'This delivery was marked as failed.'} Support has been notified and
+            will follow up if anything further is needed.
+          </Text>
         </View>
 
         {job.vendorPayoutAmount != null && (
-          <Panel style={{ gap: 8 }}>
-            <SummaryRow label="Reimbursed to you" amount={job.vendorPayoutAmount} />
-            <Txt variant="caption" tone="secondary">
-              You don't earn the delivery fee when a job can't be completed, but the vendor cost you already paid
-              has been returned to you.
-            </Txt>
-          </Panel>
+          <GlassView radius="card" style={{ padding: 18, gap: 10 }}>
+            <SummaryRow label="Reimbursed to you" amount={job.vendorPayoutAmount} theme={theme} />
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              The delivery fee for this job wasn't earned since it couldn't be completed — the vendor cost you
+              already covered has still been returned to you.
+            </Text>
+          </GlassView>
         )}
 
-        <Button title="Back to jobs" size="lg" fullWidth onPress={() => router.replace('/(partner)/jobs')} />
-      </ScrollView>
+        <Button title="Back to jobs" variant="partner" fullWidth onPress={() => router.replace('/(partner)/jobs')} />
+      </View>
     );
   }
 
-  const stageCopy = STAGE_COPY[job.stage];
-  const stepNumber = Math.max(currentIndex, 0) + 1;
-
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: t.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
     >
-      {/* Leaving this screen only pops navigation — the job stays active in
-          the store, so the back arrow is safe. */}
-      <ScreenHeader
-        title="Delivery"
-        back
-        right={
-          <Pressable
-            onPress={() => setSafetyVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Safety"
-            style={({ pressed }) => ({
-              minHeight: 44,
+      {/* Nav is hidden on this screen (task-focused, one-way workflow).
+          This is purely a navigation pop — the job stays active in the
+          store regardless of leaving this screen, so it's safe. */}
+      <BackButton />
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Badge jobType={job.type} label={job.type} />
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>{job.customerName}</Text>
+      </View>
+
+      {/* Persistent but unobtrusive — reachable from any stage of an
+          active delivery, not tucked behind a menu. */}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <AnimatedPressable onPress={() => setSafetyVisible(true)} scaleTo={0.97}>
+          <View
+            style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
               paddingHorizontal: 14,
-              borderRadius: 12,
-              backgroundColor: t.alertTint,
-              opacity: pressed ? 0.6 : 1,
-            })}
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: `${colors.semantic.error}1A`,
+            }}
           >
-            <ShieldAlert size={18} color={t.alertInk} />
-            <Txt variant="label" tone="alert">
-              Safety
-            </Txt>
-          </Pressable>
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ gap: 8 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <JobTag jobType={job.type} />
-            <Txt variant="caption" tone="secondary" style={{ fontVariant: ['tabular-nums'] }}>
-              Step {stepNumber} of {pipeline.length}
-            </Txt>
+            <ShieldAlert size={14} color={colors.semantic.error} />
+            <Text className="text-caption font-semibold" style={{ color: colors.semantic.error }}>Safety</Text>
           </View>
-          <Txt variant="display" accessibilityRole="header">
-            {stageCopy.label}
-          </Txt>
-          {stageCopy.sublabel ? (
-            <Txt variant="body" tone="secondary">
-              {stageCopy.sublabel(job)}
-            </Txt>
-          ) : null}
-          <Txt variant="caption" tone="secondary">
-            {job.customerName}
-          </Txt>
-        </View>
+        </AnimatedPressable>
 
-        {/* The live map stays disabled, as before. */}
-        {/* <DeliveryMap job={job} /> */}
-
-        {navigationApp !== 'FASTERMALL_MAPS' && (
-          <Button
-            title={`Navigate with ${navigationApp === 'GOOGLE_MAPS' ? 'Google Maps' : 'Waze'}`}
-            variant="secondary"
-            fullWidth
-            icon={<Navigation size={18} color={t.ink} />}
-            onPress={() => openNavigation(navigationApp, navTarget)}
-          />
-        )}
-
-        <Panel>
-          <RouteStepper steps={steps} accentColor={jc.solid} />
-        </Panel>
-
-        {screenError && <Notice title="Couldn't update this delivery" message={screenError} />}
-
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Pressable
-            onPress={() => router.push('/(partner)/support/DELIVERY')}
-            accessibilityRole="button"
-            hitSlop={8}
-            style={{ minHeight: 44, justifyContent: 'center' }}
+        {/* Goes straight to the Delivery problems topic — not the main
+            Support menu — so a partner mid-job never has to dig through
+            unrelated topics to reach a relevant answer. */}
+        <AnimatedPressable onPress={() => router.push('/(partner)/support/DELIVERY')} scaleTo={0.97}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 999,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
           >
-            <Txt variant="label" tone="primary">
-              Get help
-            </Txt>
-          </Pressable>
-          <Pressable
-            onPress={() => setFailedSheetVisible(true)}
-            disabled={isBusy}
-            accessibilityRole="button"
-            hitSlop={8}
-            style={{ minHeight: 44, justifyContent: 'center', opacity: isBusy ? 0.5 : 1 }}
-          >
-            <Txt variant="label" tone="secondary">
-              Can't complete this delivery?
-            </Txt>
-          </Pressable>
-        </View>
-      </ScrollView>
-
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: insets.bottom + 12,
-          gap: 10,
-          backgroundColor: t.bg,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: t.line,
-        }}
-      >
-        <StepAction
-          stage={job.stage}
-          job={job}
-          code={code}
-          setCode={setCode}
-          accent={jc.solid}
-          busy={isBusy}
-          onAdvance={() => void handleAdvance()}
-        />
+            <LifeBuoy size={14} color={theme.textSecondary} />
+            <Text className="text-caption font-semibold" style={{ color: theme.textSecondary }}>Help</Text>
+          </View>
+        </AnimatedPressable>
       </View>
+
+      {/* <DeliveryMap job={job} /> */}
+
+      {navigationApp !== 'FASTERMALL_MAPS' && (
+        <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingVertical: 12,
+              borderRadius: 14,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            }}
+          >
+            <Navigation size={16} color={accent} />
+            <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+              Navigate with {navigationApp === 'GOOGLE_MAPS' ? 'Google Maps' : 'Waze'}
+            </Text>
+          </View>
+        </AnimatedPressable>
+      )}
+
+      <GlassView radius="card" style={{ padding: 20 }}>
+        <RouteStepper
+          steps={steps}
+          accentColor={accent}
+          renderAction={(step) => (
+            <StepAction
+              stage={step.key as JobStage}
+              job={job}
+              code={code}
+              setCode={setCode}
+              accent={accent}
+              busy={isBusy}
+              onAdvance={() => void handleAdvance()}
+            />
+          )}
+        />
+      </GlassView>
+
+      {screenError && (
+        <Text className="text-caption" style={{ color: colors.semantic.error, textAlign: 'center' }}>{screenError}</Text>
+      )}
+
+      <AnimatedPressable onPress={() => setFailedSheetVisible(true)} scaleTo={0.98} disabled={isBusy}>
+        <Text className="text-caption font-semibold" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+          Can't complete this delivery?
+        </Text>
+      </AnimatedPressable>
 
       <SafetySheet visible={safetyVisible} onClose={() => setSafetyVisible(false)} />
       <FailedDeliverySheet
@@ -374,12 +330,10 @@ export default function ActiveDeliveryScreen() {
         customerName={job.customerName}
         onConfirmFailed={(reason) => void handleFailure(reason)}
       />
-    </KeyboardAvoidingView>
+    </ScrollView>
   );
 }
 
-/** The one action that moves the delivery forward, pinned to the bottom.
- * At handover it adds the customer's 6-digit code above the button. */
 function StepAction({
   stage,
   job,
@@ -397,92 +351,59 @@ function StepAction({
   busy: boolean;
   onAdvance: () => void;
 }) {
-  const { t, job: jobColors } = useTheme();
-  const [focused, setFocused] = useState(false);
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const label = STAGE_COPY[stage].action ?? 'Continue';
 
   if (stage === 'DELIVERED') {
     return (
-      <>
-        <TextInput
-          value={code}
-          onChangeText={(v) => {
-            // Pasting a whole message ("Your code is 123456") keeps just the code.
-            const run = v.length > 6 ? v.match(/\d{6}/) : null;
-            setCode(run ? run[0] : v.replace(/[^0-9]/g, '').slice(0, 6));
-          }}
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
-          placeholder="• • • • • •"
-          placeholderTextColor={t.inkTertiary}
-          keyboardType="number-pad"
-          editable={!busy}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          accessibilityLabel={`Delivery code from ${job.customerName}`}
-          style={{
-            height: 64,
-            borderRadius: radii.md,
-            borderWidth: 2,
-            borderColor: focused ? accent : t.lineStrong,
-            backgroundColor: t.surface,
-            color: t.ink,
-            textAlign: 'center',
-            fontSize: 28,
-            letterSpacing: 10,
-            fontFamily: 'Archivo_700Bold',
-          }}
-        />
-        <Button
-          title={busy ? 'Confirming…' : label}
-          variant="job"
-          jobType={job.type}
-          size="lg"
-          fullWidth
-          loading={busy}
-          disabled={code.length < 6}
-          onPress={onAdvance}
-        />
-      </>
+      <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <KeyRound size={16} color={accent} />
+          <TextInput
+            value={code}
+            onChangeText={(v) => {
+              // Pasting a whole message ("Your code is 123456") keeps just the code.
+              const run = v.length > 6 ? v.match(/\d{6}/) : null;
+              setCode(run ? run[0] : v.replace(/[^0-9]/g, '').slice(0, 6));
+            }}
+            textContentType="oneTimeCode"
+            autoComplete="sms-otp"
+            placeholder="6-digit code"
+            placeholderTextColor={theme.textSecondary}
+            keyboardType="number-pad"
+            editable={!busy}
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: accent,
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              fontSize: 16,
+              letterSpacing: 4,
+              color: theme.text,
+            }}
+          />
+        </View>
+        <Button title={busy ? 'Confirming…' : label} variant={STEP_VARIANT[job.type]} loading={busy} disabled={code.length < 6} onPress={onAdvance} />
+      </View>
     );
   }
 
   if (stage === 'PAY_VENDOR') {
     // You're paying from your own money, so this one takes a deliberate slide.
-    const jc = jobColors(job.type);
-    return (
-      <SlideToConfirm
-        label="Slide to mark as paid"
-        onConfirm={onAdvance}
-        busy={busy}
-        accent={jc.solid}
-        onAccent={jc.onSolid}
-      />
-    );
+    return <SlideToConfirm label="Slide to mark as paid" onConfirm={onAdvance} busy={busy} accent={accent} />;
   }
 
-  return (
-    <Button
-      title={busy ? 'Updating…' : label}
-      variant="job"
-      jobType={job.type}
-      size="lg"
-      fullWidth
-      loading={busy}
-      onPress={onAdvance}
-    />
-  );
+  return <Button title={busy ? 'Updating…' : label} variant={STEP_VARIANT[job.type]} loading={busy} onPress={onAdvance} />;
 }
 
-function SummaryRow({ label, amount }: { label: string; amount: number }) {
+function SummaryRow({ label, amount, theme }: { label: string; amount: number; theme: { text: string; textSecondary: string } }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-      <Txt variant="body" tone="secondary">
-        {label}
-      </Txt>
-      <Txt variant="heading" style={{ fontVariant: ['tabular-nums'] }}>
-        {formatCurrency(amount)}
-      </Txt>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <Text className="text-body" style={{ color: theme.textSecondary }}>{label}</Text>
+      <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{formatCurrency(amount)}</Text>
     </View>
   );
 }
