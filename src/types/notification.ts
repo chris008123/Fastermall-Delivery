@@ -7,4 +7,6 @@ export interface AppNotification {
   body: string;
   createdAt: string;
   read: boolean;
+  /** Where tapping this alert goes. Defaults by type: jobs and payments open their tab. */
+  href?: string;
 }

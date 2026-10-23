@@ -20,6 +20,8 @@ interface SwipeableRowProps {
   children: ReactNode;
   onDismiss: () => void;
   actionLabel?: string;
+  /** What a screen reader's activate (double-tap) does, when the row's content is pressable. */
+  onActivate?: () => void;
 }
 
 const THRESHOLD = -88;
@@ -32,7 +34,7 @@ const THRESHOLD = -88;
  * between rows outside this component (a separator, not a margin on the
  * child), or the reveal will show through the gap.
  */
-export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss' }: SwipeableRowProps) {
+export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onActivate }: SwipeableRowProps) {
   const { t } = useTheme();
   const translateX = useSharedValue(0);
   const [removed, setRemoved] = useState(false);
@@ -101,9 +103,13 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss' }: S
       <GestureDetector gesture={pan}>
         <Animated.View
           accessible
-          accessibilityActions={[{ name: 'dismiss', label: actionLabel }]}
+          accessibilityActions={[
+            ...(onActivate ? [{ name: 'activate' }] : []),
+            { name: 'dismiss', label: actionLabel },
+          ]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'dismiss') onDismiss();
+            if (e.nativeEvent.actionName === 'activate') onActivate?.();
           }}
           style={rowStyle}
         >

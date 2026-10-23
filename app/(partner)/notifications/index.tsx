@@ -1,9 +1,11 @@
-import { Bell, Briefcase, Wallet } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Bell, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { SectionList, View } from 'react-native';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
+import { useToast } from '@/src/shared/toast/ToastProvider';
 import { useNotificationsStore } from '@/src/stores/notificationsStore';
 import type { AppNotification, NotificationType } from '@/src/types/notification';
 import { useNavClearance } from '@/src/ui/AppNav';
@@ -17,6 +19,15 @@ const TYPE_ICON: Record<NotificationType, typeof Bell> = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Where tapping an alert goes: jobs and payments open their tab; system
+ * notices have nowhere to go unless they carry their own link. */
+function targetFor(n: AppNotification): string | undefined {
+  if (n.href) return n.href;
+  if (n.type === 'JOB') return '/(partner)/jobs';
+  if (n.type === 'PAYMENT') return '/(partner)/wallet';
+  return undefined;
+}
 
 // Presentation-only grouping over whatever the store already holds — no
 // store changes. Grouped by recency.
@@ -47,6 +58,7 @@ export default function NotificationsScreen() {
 
   const notifications = useNotificationsStore((s) => s.notifications);
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const { show } = useToast();
 
   // What was unread when this screen opened. Opening the list marks
   // everything read, so without this the unread edge would vanish the
@@ -65,6 +77,21 @@ export default function NotificationsScreen() {
   useEffect(() => {
     markAllRead();
   }, [markAllRead]);
+
+  const dismiss = (id: string) => {
+    setDismissedIds((prev) => new Set(prev).add(id));
+    show('Alert dismissed', 'info', {
+      action: {
+        label: 'Undo',
+        onPress: () =>
+          setDismissedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          }),
+      },
+    });
+  };
 
   const visible = notifications.filter((n) => !dismissedIds.has(n.id));
   const sections = groupByRecency(visible);
@@ -91,24 +118,36 @@ export default function NotificationsScreen() {
           </Txt>
         )}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        renderItem={({ item }) => (
-          <SwipeableRow onDismiss={() => setDismissedIds((prev) => new Set(prev).add(item.id))}>
-            <NotificationRow notification={item} unread={unreadAtOpen.has(item.id)} />
-          </SwipeableRow>
-        )}
+        renderItem={({ item }) => {
+          const target = targetFor(item);
+          const open = target ? () => router.push(target as never) : undefined;
+          return (
+            <SwipeableRow onDismiss={() => dismiss(item.id)} onActivate={open}>
+              <NotificationRow notification={item} unread={unreadAtOpen.has(item.id)} onPress={open} />
+            </SwipeableRow>
+          );
+        }}
       />
     </View>
   );
 }
 
-function NotificationRow({ notification, unread }: { notification: AppNotification; unread: boolean }) {
+function NotificationRow({
+  notification,
+  unread,
+  onPress,
+}: {
+  notification: AppNotification;
+  unread: boolean;
+  onPress?: () => void;
+}) {
   const { t } = useTheme();
   const Icon = TYPE_ICON[notification.type];
   const accent =
     notification.type === 'PAYMENT' ? t.goInk : notification.type === 'JOB' ? t.primary : t.inkSecondary;
 
   return (
-    <Panel padding={0} style={{ overflow: 'hidden' }}>
+    <Panel padding={0} onPress={onPress} accessibilityLabel={notification.title} style={{ overflow: 'hidden' }}>
       <View style={{ flexDirection: 'row' }}>
         {/* Unread is a quiet left edge, not a loud dot. */}
         <View style={{ width: unread ? 3 : 0, backgroundColor: t.primary }} />
@@ -128,6 +167,7 @@ function NotificationRow({ notification, unread }: { notification: AppNotificati
               })}
             </Txt>
           </View>
+          {onPress ? <ChevronRight size={18} color={t.inkTertiary} style={{ alignSelf: 'center' }} /> : null}
         </View>
       </View>
     </Panel>
