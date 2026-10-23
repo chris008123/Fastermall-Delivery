@@ -1,13 +1,16 @@
-import { Laptop, Moon, Sun } from 'lucide-react-native';
+import { Laptop, Moon, Power, Sun, Vibrate } from 'lucide-react-native';
 import type { ComponentType } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radii } from '@/src/ds/tokens';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
-import { useNavStyleStore, type NavStyle } from '@/src/stores/navStyleStore';
+import { useInteractionStore } from '@/src/stores/interactionStore';
+import { useNavStyleStore, type NavAlign, type NavStyle } from '@/src/stores/navStyleStore';
 import { useSettingsStore, type ThemeMode } from '@/src/stores/settingsStore';
+import { Group, ListRow } from '@/src/ui/List';
 import { ScreenHeader } from '@/src/ui/ScreenHeader';
+import { Segmented } from '@/src/ui/Segmented';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string; icon: ComponentType<{ size?: number; color?: string }> }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -19,6 +22,12 @@ const NAV_OPTIONS: { value: NavStyle; label: string; description: string }[] = [
   { value: 'docked', label: 'Docked', description: 'Full-width bar with labels. The easiest to read at a glance.' },
   { value: 'compact', label: 'Compact', description: 'Icons only, in a slimmer bar. Leaves more room for content.' },
   { value: 'floating', label: 'Floating', description: 'A detached bar that sits over the screen.' },
+];
+
+const ALIGN_OPTIONS: { value: NavAlign; label: string }[] = [
+  { value: 'start', label: 'Left' },
+  { value: 'center', label: 'Centre' },
+  { value: 'end', label: 'Right' },
 ];
 
 /** A tiny schematic of the screen with the nav drawn in the chosen style. */
@@ -87,6 +96,12 @@ export default function AppearanceScreen() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const navStyle = useNavStyleStore((s) => s.navStyle);
   const setNavStyle = useNavStyleStore((s) => s.setNavStyle);
+  const navAlign = useNavStyleStore((s) => s.navAlign);
+  const setNavAlign = useNavStyleStore((s) => s.setNavAlign);
+  const hapticsEnabled = useInteractionStore((s) => s.hapticsEnabled);
+  const setHapticsEnabled = useInteractionStore((s) => s.setHapticsEnabled);
+  const offlineByTap = useInteractionStore((s) => s.offlineByTap);
+  const setOfflineByTap = useInteractionStore((s) => s.setOfflineByTap);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -183,10 +198,47 @@ export default function AppearanceScreen() {
               );
             })}
           </View>
+          {navStyle === 'floating' ? (
+            <View style={{ gap: 6 }}>
+              <Txt variant="label" tone="secondary">
+                Position
+              </Txt>
+              <Segmented options={ALIGN_OPTIONS} value={navAlign} onChange={setNavAlign} accessibilityLabel="Floating bar position" />
+            </View>
+          ) : null}
           <Txt variant="caption" tone="secondary">
-            Your choice is saved on this device.
+            Your choices are saved on this device.
           </Txt>
         </View>
+
+        <Group title="Controls">
+          <ListRow
+            icon={Vibrate}
+            label="Vibration feedback"
+            description="A small buzz when you go online, accept a job or switch tabs."
+            right={
+              <Switch
+                value={hapticsEnabled}
+                onValueChange={setHapticsEnabled}
+                trackColor={{ false: t.lineStrong, true: t.primary }}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+          <ListRow
+            icon={Power}
+            label="Go offline with a tap"
+            description="Going online always takes a slide, so it can't happen by accident."
+            right={
+              <Switch
+                value={offlineByTap}
+                onValueChange={setOfflineByTap}
+                trackColor={{ false: t.lineStrong, true: t.primary }}
+                thumbColor="#FFFFFF"
+              />
+            }
+          />
+        </Group>
       </ScrollView>
     </View>
   );
