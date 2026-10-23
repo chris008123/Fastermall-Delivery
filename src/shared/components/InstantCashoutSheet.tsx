@@ -1,18 +1,12 @@
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { radii } from '@/src/ds/tokens';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
-import {
-  isValidMomoNumber,
-  maskMomoNumber,
-  usePayoutStore,
-  type MomoNetwork,
-} from '@/src/stores/payoutStore';
+import { PayoutDestinationForm } from '@/src/shared/components/PayoutDestinationForm';
+import { maskMomoNumber, usePayoutStore } from '@/src/stores/payoutStore';
 import { formatCurrency } from '@/src/utils/money';
 import { Button } from '@/src/ui/Button';
-import { Segmented } from '@/src/ui/Segmented';
 import { Sheet } from '@/src/ui/Sheet';
 
 interface InstantCashoutSheetProps {
@@ -23,12 +17,6 @@ interface InstantCashoutSheetProps {
   feeAmount: number;
   nextPayoutLabel: string;
 }
-
-const NETWORKS: { value: MomoNetwork; label: string }[] = [
-  { value: 'MTN', label: 'MTN' },
-  { value: 'Telecel', label: 'Telecel' },
-  { value: 'AirtelTigo', label: 'AirtelTigo' },
-];
 
 /** Confirms an instant cash-out: what you have, what the fee takes, what
  * lands in your account and where it's going, with the free scheduled
@@ -49,23 +37,17 @@ export function InstantCashoutSheet({
   const setDestination = usePayoutStore((s) => s.setDestination);
 
   const [editing, setEditing] = useState(!savedNumber);
-  const [number, setNumber] = useState(savedNumber ?? '');
-  const [network, setNetwork] = useState<MomoNetwork>(savedNetwork);
   const [feeInfoOpen, setFeeInfoOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setEditing(!savedNumber);
-      setNumber(savedNumber ?? '');
-      setNetwork(savedNetwork);
       setFeeInfoOpen(false);
     }
     // Only reset when the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const numberValid = isValidMomoNumber(number);
   const canConfirm = !!savedNumber && !editing;
 
   return (
@@ -102,55 +84,16 @@ export function InstantCashoutSheet({
         {editing ? (
           <View style={{ gap: 10 }}>
             <Txt variant="heading">{savedNumber ? 'Change where it goes' : 'Where should we send it?'}</Txt>
-            <Segmented options={NETWORKS} value={network} onChange={setNetwork} accessibilityLabel="Mobile money network" />
-            <TextInput
-              value={number}
-              onChangeText={(v) => setNumber(v.replace(/\D/g, '').slice(0, 10))}
-              placeholder="024 123 4567"
-              placeholderTextColor={t.inkTertiary}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-              autoComplete="tel"
-              maxLength={10}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              accessibilityLabel="Mobile money number"
-              style={{
-                height: 52,
-                borderRadius: radii.md,
-                borderWidth: 2,
-                borderColor: focused ? t.primary : t.lineStrong,
-                backgroundColor: t.surface,
-                color: t.ink,
-                paddingHorizontal: 14,
-                fontSize: 18,
-                letterSpacing: 1,
-                fontFamily: 'Archivo_600SemiBold',
+            <PayoutDestinationForm
+              key={`${savedNumber ?? ''}-${savedNetwork}`}
+              initialNumber={savedNumber}
+              initialNetwork={savedNetwork}
+              onSave={(network, number) => {
+                setDestination(network, number);
+                setEditing(false);
               }}
+              onCancel={savedNumber ? () => setEditing(false) : undefined}
             />
-            {number.length > 0 && !numberValid ? (
-              <Txt variant="caption" tone="alert">
-                Enter the 10-digit number, starting with 0.
-              </Txt>
-            ) : null}
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {savedNumber ? (
-                <View style={{ flex: 1 }}>
-                  <Button title="Cancel" variant="secondary" fullWidth onPress={() => setEditing(false)} />
-                </View>
-              ) : null}
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Save number"
-                  fullWidth
-                  disabled={!numberValid}
-                  onPress={() => {
-                    setDestination(network, number);
-                    setEditing(false);
-                  }}
-                />
-              </View>
-            </View>
           </View>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

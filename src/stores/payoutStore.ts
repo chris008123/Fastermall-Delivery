@@ -9,6 +9,7 @@ interface PayoutState {
   number: string | null;
   network: MomoNetwork;
   setDestination: (network: MomoNetwork, number: string) => void;
+  clearDestination: () => void;
 }
 
 /** Local-only for now: the number is kept on this device and used for the
@@ -20,6 +21,7 @@ export const usePayoutStore = create<PayoutState>()(
       number: null,
       network: 'MTN',
       setDestination: (network, number) => set({ network, number }),
+      clearDestination: () => set({ number: null }),
     }),
     {
       name: 'fastermall-partner-payout',
