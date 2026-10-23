@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,7 +8,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { Txt } from '@/src/ds/Txt';
+import { useTheme } from '@/src/ds/useTheme';
 
 export type RouteStepStatus = 'done' | 'current' | 'upcoming';
 
@@ -22,41 +23,50 @@ export interface RouteStep {
 interface RouteStepperProps {
   steps: RouteStep[];
   accentColor: string;
-  /** Rendered under a step's text, only for the one step that's `current` —
-   * this is where each screen plugs in the actual button/input for that stage. */
+  /** Rendered under the current step's text, if a screen wants to plug an
+   * action in there. The active-delivery screen pins its action to the
+   * bottom of the screen instead, so it doesn't use this. */
   renderAction?: (step: RouteStep) => ReactNode;
 }
 
 const DOT_SIZE = 14;
 const LINE_WIDTH = 3;
 
+const STATUS_WORD: Record<RouteStepStatus, string> = {
+  done: 'done',
+  current: 'current step',
+  upcoming: 'upcoming',
+};
+
 /**
  * The Pickup & Handover flow is a literal physical journey (pickup → maybe
  * pay the vendor → collect → travel → hand over), so it's rendered as a
- * route: a vertical line the partner moves down, not a generic numbered
- * list or a progress percentage. The line itself fills in as ground is
- * covered, and the current stop pulses so it's readable at a glance.
+ * route: a vertical line the partner moves down. The line fills in as
+ * ground is covered and the current stop pulses so it reads at a glance.
  */
 export function RouteStepper({ steps, accentColor, renderAction }: RouteStepperProps) {
-  const { isDark } = useResolvedTheme();
-  const mutedLine = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(28,28,26,0.12)';
-  const mutedDot = isDark ? 'rgba(255,255,255,0.24)' : 'rgba(28,28,26,0.2)';
+  const { t } = useTheme();
 
   return (
     <View>
       {steps.map((step, index) => {
         const isLast = index === steps.length - 1;
         return (
-          <View key={step.key} style={{ flexDirection: 'row' }}>
+          <View
+            key={step.key}
+            accessible
+            accessibilityLabel={`${step.label}, ${STATUS_WORD[step.status]}`}
+            style={{ flexDirection: 'row' }}
+          >
             <View style={{ width: DOT_SIZE + 4, alignItems: 'center' }}>
-              <StepDot status={step.status} accentColor={accentColor} mutedDot={mutedDot} />
+              <StepDot status={step.status} accentColor={accentColor} mutedDot={t.lineStrong} />
               {!isLast && (
                 <View
                   style={{
                     width: LINE_WIDTH,
                     flex: 1,
                     minHeight: 24,
-                    backgroundColor: step.status === 'done' ? accentColor : mutedLine,
+                    backgroundColor: step.status === 'done' ? accentColor : t.line,
                     marginTop: 2,
                     borderRadius: LINE_WIDTH / 2,
                   }}
@@ -128,24 +138,19 @@ function StepDot({
 }
 
 function StepContent({ step, renderAction }: { step: RouteStep; renderAction?: (step: RouteStep) => ReactNode }) {
-  const { isDark } = useResolvedTheme();
-  const text = isDark ? '#f7f7f6' : '#1c1c1a';
-  const textSecondary = isDark ? '#a3a39c' : '#7a7a72';
-  const muted = step.status === 'upcoming';
-
   return (
-    <View style={{ gap: 4 }}>
-      <Text
-        className={step.status === 'current' ? 'text-card-title font-semibold' : 'text-body-lg font-medium'}
-        style={{ color: muted ? textSecondary : text }}
+    <View style={{ gap: 2 }}>
+      <Txt
+        variant={step.status === 'current' ? 'heading' : 'body'}
+        tone={step.status === 'current' ? 'ink' : step.status === 'done' ? 'secondary' : 'tertiary'}
       >
         {step.label}
-      </Text>
-      {step.sublabel && (
-        <Text className="text-caption" style={{ color: textSecondary }}>
+      </Txt>
+      {step.sublabel && step.status === 'current' ? (
+        <Txt variant="caption" tone="secondary">
           {step.sublabel}
-        </Text>
-      )}
+        </Txt>
+      ) : null}
       {step.status === 'current' && renderAction && <View style={{ marginTop: 10 }}>{renderAction(step)}</View>}
     </View>
   );

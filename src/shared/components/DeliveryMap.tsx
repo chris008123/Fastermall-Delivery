@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getPartnerPosition } from '@/src/utils/geo';
-import { radii } from '@/src/theme';
-import { colors } from '@/src/theme';
+import { radii } from '@/src/ds/tokens';
+import { useTheme } from '@/src/ds/useTheme';
 import type { Coordinate, Job } from '@/src/types/job';
 
 interface DeliveryMapProps {
@@ -36,7 +36,8 @@ function computeRegion(points: Coordinate[]) {
  * and the stepper can never disagree about where the partner is.
  */
 export function DeliveryMap({ job, showPartner = true, height = 200 }: DeliveryMapProps) {
-  const accent = colors.jobType[job.type].dark;
+  const { t, job: jobColors } = useTheme();
+  const accent = jobColors(job.type).solid;
   const points = showPartner
     ? [job.startCoordinate, job.pickup.coordinate, job.dropoff.coordinate]
     : [job.pickup.coordinate, job.dropoff.coordinate];
@@ -44,7 +45,7 @@ export function DeliveryMap({ job, showPartner = true, height = 200 }: DeliveryM
   const partnerPosition = showPartner ? getPartnerPosition(job) : null;
 
   return (
-    <View style={{ height, borderRadius: radii.card, overflow: 'hidden' }}>
+    <View style={{ height, borderRadius: radii.md, overflow: 'hidden' }}>
       <MapView
         style={StyleSheet.absoluteFill}
         initialRegion={region}
@@ -56,7 +57,7 @@ export function DeliveryMap({ job, showPartner = true, height = 200 }: DeliveryM
         {showPartner && (
           <Polyline
             coordinates={[job.startCoordinate, job.pickup.coordinate]}
-            strokeColor={colors.neutral[400]}
+            strokeColor={t.lineStrong}
             strokeWidth={3}
             lineDashPattern={[6, 6]}
           />
@@ -68,7 +69,7 @@ export function DeliveryMap({ job, showPartner = true, height = 200 }: DeliveryM
         />
 
         <Marker coordinate={job.pickup.coordinate} title="Pickup" description={job.pickup.label} pinColor={accent} />
-        <Marker coordinate={job.dropoff.coordinate} title="Drop-off" description={job.dropoff.label} pinColor={colors.neutral[600]} />
+        <Marker coordinate={job.dropoff.coordinate} title="Drop-off" description={job.dropoff.label} pinColor={t.ink} />
 
         {partnerPosition && (
           <Marker coordinate={partnerPosition} title="You" anchor={{ x: 0.5, y: 0.5 }}>
