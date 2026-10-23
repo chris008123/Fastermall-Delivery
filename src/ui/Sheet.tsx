@@ -1,6 +1,6 @@
 import { X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radii } from '@/src/ds/tokens';
 import { Txt } from '@/src/ds/Txt';
@@ -26,6 +26,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
         accessibilityLabel="Close"
         style={{ flex: 1, backgroundColor: t.scrim, justifyContent: 'flex-end' }}
       >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
           style={{
@@ -64,10 +65,11 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
               </Pressable>
             </View>
           ) : null}
-          <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+          <ScrollView bounces={false} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flexShrink: 1 }}>
             {children}
           </ScrollView>
         </Pressable>
+        </KeyboardAvoidingView>
       </Pressable>
     </Modal>
   );
