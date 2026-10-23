@@ -10,6 +10,7 @@ interface PanelProps {
   tone?: 'surface' | 'sunken';
   /** Makes the whole panel pressable; it darkens slightly while held. */
   onPress?: () => void;
+  disabled?: boolean;
   accessibilityLabel?: string;
   style?: ViewStyle;
 }
@@ -21,6 +22,7 @@ export function Panel({
   padding = 16,
   tone = 'surface',
   onPress,
+  disabled,
   accessibilityLabel,
   style,
 }: PanelProps) {
@@ -41,6 +43,8 @@ export function Panel({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
+      accessibilityState={{ disabled: !!disabled }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [base(pressed), style]}
