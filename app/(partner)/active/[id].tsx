@@ -28,6 +28,7 @@ import { formatCurrency } from '@/src/utils/money';
 import { openNavigation } from '@/src/utils/navigation';
 import { Button } from '@/src/ui/Button';
 import { Notice } from '@/src/ui/Notice';
+import { SlideToConfirm } from '@/src/ui/SlideToConfirm';
 import { Panel } from '@/src/ui/Panel';
 import { ScreenHeader } from '@/src/ui/ScreenHeader';
 import { JobTag } from '@/src/ui/Tag';
@@ -396,7 +397,7 @@ function StepAction({
   busy: boolean;
   onAdvance: () => void;
 }) {
-  const { t } = useTheme();
+  const { t, job: jobColors } = useTheme();
   const [focused, setFocused] = useState(false);
   const label = STAGE_COPY[stage].action ?? 'Continue';
 
@@ -405,11 +406,16 @@ function StepAction({
       <>
         <TextInput
           value={code}
-          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
+          onChangeText={(v) => {
+            // Pasting a whole message ("Your code is 123456") keeps just the code.
+            const run = v.length > 6 ? v.match(/\d{6}/) : null;
+            setCode(run ? run[0] : v.replace(/[^0-9]/g, '').slice(0, 6));
+          }}
+          textContentType="oneTimeCode"
+          autoComplete="sms-otp"
           placeholder="• • • • • •"
           placeholderTextColor={t.inkTertiary}
           keyboardType="number-pad"
-          maxLength={6}
           editable={!busy}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -438,6 +444,20 @@ function StepAction({
           onPress={onAdvance}
         />
       </>
+    );
+  }
+
+  if (stage === 'PAY_VENDOR') {
+    // You're paying from your own money, so this one takes a deliberate slide.
+    const jc = jobColors(job.type);
+    return (
+      <SlideToConfirm
+        label="Slide to mark as paid"
+        onConfirm={onAdvance}
+        busy={busy}
+        accent={jc.solid}
+        onAccent={jc.onSolid}
+      />
     );
   }
 
