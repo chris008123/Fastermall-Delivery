@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Bike, Footprints } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, AppState, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { haptics } from '@/src/ds/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
@@ -25,6 +25,9 @@ import { JobTag, Tag } from '@/src/ui/Tag';
 // type shows as a left edge in its identity color and a tag, never a
 // wash across the card. Addresses stay on one line, fare is right-aligned,
 // and cards shade back when the partner already has an active job.
+
+// How often the Jobs tab checks for new work while it's open and the partner is online.
+const POLL_INTERVAL_MS = 30_000;
 
 type JobsView = 'available' | 'history';
 type TypeFilter = 'ALL' | Job['type'];
@@ -84,6 +87,19 @@ export default function JobsScreen() {
       );
     });
   }, [loadJobs]);
+
+  // While this tab is open and the partner is online, check for new work
+  // every 30 seconds (paused when the app isn't in the foreground). The
+  // "New" tag and toast below fire off whatever this brings in.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAvailable) return undefined;
+      const timer = setInterval(() => {
+        if (AppState.currentState === 'active') void loadJobs();
+      }, POLL_INTERVAL_MS);
+      return () => clearInterval(timer);
+    }, [isAvailable, loadJobs]),
+  );
 
   useEffect(() => {
     const seen = seenRef.current;
@@ -170,7 +186,9 @@ export default function JobsScreen() {
     );
   }
 
-  if (view === 'available' && isLoading && jobs.length === 0) {
+  // Only the first load takes over the screen; the 30s background checks
+  // update the list quietly.
+  if (view === 'available' && isLoading && jobs.length === 0 && seenRef.current === null) {
     return frame(
       <Panel style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <ActivityIndicator color={t.primary} />
