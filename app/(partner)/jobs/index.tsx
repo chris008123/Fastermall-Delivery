@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { Bike, Footprints } from 'lucide-react-native';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { haptics } from '@/src/ds/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 import { StarRating } from '@/src/shared/components/StarRating';
+import { useToast } from '@/src/shared/toast/ToastProvider';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import type { Job } from '@/src/types/job';
@@ -68,10 +70,31 @@ export default function JobsScreen() {
   const isLoading = useJobsStore((s) => s.isLoading);
   const error = useJobsStore((s) => s.error);
   const loadJobs = useJobsStore((s) => s.loadJobs);
+  const { show } = useToast();
+
+  // Jobs that showed up after this screen first loaded. They get a "New"
+  // tag and one haptic + toast, so a refresh that brings in work is obvious.
+  const seenRef = useRef<Set<string> | null>(null);
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    void loadJobs();
+    void loadJobs().finally(() => {
+      seenRef.current = new Set(
+        useJobsStore.getState().jobs.filter((j) => j.stage === 'AVAILABLE').map((j) => j.id),
+      );
+    });
   }, [loadJobs]);
+
+  useEffect(() => {
+    const seen = seenRef.current;
+    if (!seen) return;
+    const fresh = jobs.filter((j) => j.stage === 'AVAILABLE' && !seen.has(j.id)).map((j) => j.id);
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => seen.add(id));
+    setNewIds((prev) => new Set([...prev, ...fresh]));
+    haptics.light();
+    show(`${fresh.length} new job${fresh.length === 1 ? '' : 's'} available`, 'info');
+  }, [jobs, show]);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -86,6 +109,16 @@ export default function JobsScreen() {
     () => jobs.some((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED'),
     [jobs],
   );
+
+  const typeCounts = useMemo(() => {
+    const available = jobs.filter((j) => j.stage === 'AVAILABLE');
+    return {
+      ALL: available.length,
+      MARKETPLACE: available.filter((j) => j.type === 'MARKETPLACE').length,
+      FOOD: available.filter((j) => j.type === 'FOOD').length,
+      LAUNDRY: available.filter((j) => j.type === 'LAUNDRY').length,
+    } satisfies Record<TypeFilter, number>;
+  }, [jobs]);
 
   const openJobs = useMemo(
     () =>
@@ -195,7 +228,12 @@ export default function JobsScreen() {
               contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
             >
               {TYPE_FILTERS.map(({ value, label }) => (
-                <Chip key={value} label={label} selected={typeFilter === value} onPress={() => setTypeFilter(value)} />
+                <Chip
+                  key={value}
+                  label={`${label} ${typeCounts[value]}`}
+                  selected={typeFilter === value}
+                  onPress={() => setTypeFilter(value)}
+                />
               ))}
             </ScrollView>
             <View style={{ gap: 6 }}>
@@ -218,7 +256,9 @@ export default function JobsScreen() {
           </Panel>
         }
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        renderItem={({ item }) => <JobCard job={item} disabled={hasActiveJob} onPress={() => openJob(item.id)} />}
+        renderItem={({ item }) => (
+          <JobCard job={item} disabled={hasActiveJob} isNew={newIds.has(item.id)} onPress={() => openJob(item.id)} />
+        )}
       />
     </View>
   );
@@ -234,7 +274,7 @@ function CardFrame({ accent, children }: { accent: string; children: ReactNode }
   );
 }
 
-function JobCard({ job, disabled, onPress }: { job: Job; disabled: boolean; onPress: () => void }) {
+function JobCard({ job, disabled, isNew, onPress }: { job: Job; disabled: boolean; isNew: boolean; onPress: () => void }) {
   const { t, job: jobColors } = useTheme();
   const colors = jobColors(job.type);
   const ModeIcon = job.partnerMode === 'MOTORCYCLE' ? Bike : Footprints;
@@ -249,7 +289,10 @@ function JobCard({ job, disabled, onPress }: { job: Job; disabled: boolean; onPr
     >
       <CardFrame accent={colors.solid}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <JobTag jobType={job.type} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <JobTag jobType={job.type} />
+            {isNew ? <Tag label="New" tone="go" dot /> : null}
+          </View>
           <Txt variant="heading" style={{ fontVariant: ['tabular-nums'] }}>
             {formatCurrency(job.deliveryFee)}
           </Txt>
