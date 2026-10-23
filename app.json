@@ -31,6 +31,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fastermall Partner needs your photos so you can upload your verification documents.",
+          "cameraPermission": "Fastermall Partner needs your camera so you can take photos of your verification documents."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
