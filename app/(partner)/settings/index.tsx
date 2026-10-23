@@ -12,6 +12,7 @@ import {
   Palette,
   ShieldCheck,
   User,
+  Wallet,
 } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,6 +71,15 @@ export default function SettingsScreen() {
           label="Documents"
           description="Verification and compliance"
           onPress={() => router.push('/documents')}
+        />
+        <SettingsRowSpacer />
+        <SettingsRow
+          icon={Wallet}
+          iconColor={colors.brand.teal}
+          iconBg={colors.brand.tealTint}
+          label="Payout details"
+          description="Where instant cash-outs are sent"
+          onPress={() => router.push('/settings/payout')}
         />
         <SettingsRowSpacer />
         <SettingsRow
