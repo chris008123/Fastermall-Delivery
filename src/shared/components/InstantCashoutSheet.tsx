@@ -1,10 +1,9 @@
-import { Zap } from 'lucide-react-native';
-import { Modal, Pressable, Text, View } from 'react-native';
-import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
-import { Button } from '@/src/shared/components/Button';
-import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { colors } from '@/src/theme';
+import { StyleSheet, View } from 'react-native';
+import { Txt } from '@/src/ds/Txt';
+import { useTheme } from '@/src/ds/useTheme';
 import { formatCurrency } from '@/src/utils/money';
+import { Button } from '@/src/ui/Button';
+import { Sheet } from '@/src/ui/Sheet';
 
 interface InstantCashoutSheetProps {
   visible: boolean;
@@ -15,6 +14,9 @@ interface InstantCashoutSheetProps {
   nextPayoutLabel: string;
 }
 
+/** Confirms an instant cash-out: what you have, what the fee takes, and
+ * what lands in your account, with the free scheduled payout offered as
+ * the alternative so paying the fee is always a choice. */
 export function InstantCashoutSheet({
   visible,
   onClose,
@@ -23,85 +25,41 @@ export function InstantCashoutSheet({
   feeAmount,
   nextPayoutLabel,
 }: InstantCashoutSheetProps) {
-  const { isDark } = useResolvedTheme();
-  const theme = isDark ? colors.dark : colors.light;
+  const { t } = useTheme();
   const net = Math.max(balance - feeAmount, 0);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: theme.surface,
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            padding: 24,
-            paddingBottom: 36,
-            gap: 16,
-          }}
-        >
-          <View style={{ alignItems: 'center', gap: 10 }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.partner.orangeTint,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Zap size={26} color={colors.partner.orange} />
-            </View>
-            <Text className="text-h1 font-bold" style={{ color: theme.text }}>Cash out instantly?</Text>
-          </View>
+    <Sheet visible={visible} onClose={onClose} title="Cash out instantly?">
+      <View style={{ gap: 16, paddingTop: 4 }}>
+        <View style={{ gap: 10 }}>
+          <Row label="Available balance" value={formatCurrency(balance)} />
+          <Row label="Instant transfer fee" value={`− ${formatCurrency(feeAmount)}`} muted />
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.lineStrong, marginVertical: 2 }} />
+          <Row label="You'll receive now" value={formatCurrency(net)} strong />
+        </View>
 
-          <View style={{ gap: 10 }}>
-            <SheetRow label="Available balance" value={formatCurrency(balance)} theme={theme} />
-            <SheetRow label="Instant transfer fee" value={`− ${formatCurrency(feeAmount)}`} theme={theme} muted />
-            <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 2 }} />
-            <SheetRow label="You'll receive now" value={formatCurrency(net)} theme={theme} bold />
-          </View>
+        <Txt variant="caption" tone="secondary">
+          Or skip the fee and get the full {formatCurrency(balance)} on your next scheduled payout, {nextPayoutLabel}.
+        </Txt>
 
-          <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>
-            Or skip the fee and get the full {formatCurrency(balance)} on your next scheduled payout,{' '}
-            {nextPayoutLabel}.
-          </Text>
-
-          <Button title="Cash out now" variant="partner" fullWidth onPress={onConfirm} />
-          <AnimatedPressable onPress={onClose} scaleTo={0.98} style={{ alignItems: 'center' }}>
-            <Text className="text-body-lg font-medium" style={{ color: theme.textSecondary }}>
-              Wait for scheduled payout
-            </Text>
-          </AnimatedPressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        <View style={{ gap: 8 }}>
+          <Button title="Cash out now" size="lg" fullWidth onPress={onConfirm} />
+          <Button title="Wait for scheduled payout" variant="quiet" fullWidth onPress={onClose} />
+        </View>
+      </View>
+    </Sheet>
   );
 }
 
-function SheetRow({
-  label,
-  value,
-  theme,
-  bold,
-  muted,
-}: {
-  label: string;
-  value: string;
-  theme: { text: string; textSecondary: string };
-  bold?: boolean;
-  muted?: boolean;
-}) {
+function Row({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text className={bold ? 'text-body-lg font-bold' : 'text-body'} style={{ color: muted ? theme.textSecondary : theme.text }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+      <Txt variant={strong ? 'heading' : 'body'} tone={muted ? 'secondary' : 'ink'}>
         {label}
-      </Text>
-      <Text className={bold ? 'text-body-lg font-bold' : 'text-body font-medium'} style={{ color: muted ? theme.textSecondary : theme.text }}>
+      </Txt>
+      <Txt variant={strong ? 'heading' : 'bodyStrong'} tone={muted ? 'secondary' : 'ink'} style={{ fontVariant: ['tabular-nums'] }}>
         {value}
-      </Text>
+      </Txt>
     </View>
   );
 }

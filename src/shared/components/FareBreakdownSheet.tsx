@@ -1,11 +1,10 @@
-import { X } from 'lucide-react-native';
-import { Modal, Pressable, Text, View } from 'react-native';
-import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
-import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { colors } from '@/src/theme';
+import { StyleSheet, View } from 'react-native';
+import { Txt } from '@/src/ds/Txt';
+import { useTheme } from '@/src/ds/useTheme';
 import type { Job } from '@/src/types/job';
 import { computeFareBreakdown } from '@/src/utils/fare';
 import { formatCurrency } from '@/src/utils/money';
+import { Sheet } from '@/src/ui/Sheet';
 
 interface FareBreakdownSheetProps {
   visible: boolean;
@@ -13,78 +12,44 @@ interface FareBreakdownSheetProps {
   job: Job | null;
 }
 
+/** How one delivery's earning was worked out: base, distance, time, any
+ * bonus, then the total. */
 export function FareBreakdownSheet({ visible, onClose, job }: FareBreakdownSheetProps) {
-  const { isDark } = useResolvedTheme();
-  const theme = isDark ? colors.dark : colors.light;
+  const { t } = useTheme();
 
   if (!job) return null;
   const fare = computeFareBreakdown(job);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: theme.surface,
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            padding: 24,
-            paddingBottom: 36,
-            gap: 14,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text className="text-h1 font-bold" style={{ color: theme.text }}>Delivery earnings</Text>
-            <AnimatedPressable onPress={onClose} scaleTo={0.9}>
-              <X size={22} color={theme.textSecondary} />
-            </AnimatedPressable>
-          </View>
-          <Text className="text-caption" style={{ color: theme.textSecondary }} numberOfLines={1}>
-            {job.pickup.label} → {job.dropoff.label}
-          </Text>
+    <Sheet visible={visible} onClose={onClose} title="Delivery earnings">
+      <View style={{ gap: 14, paddingTop: 4 }}>
+        <Txt variant="caption" tone="secondary" numberOfLines={1}>
+          {job.pickup.label} → {job.dropoff.label}
+        </Txt>
 
-          <View style={{ gap: 10, marginTop: 6 }}>
-            <FareRow label="Base fare" amount={fare.baseFare} theme={theme} />
-            <FareRow label={`Distance (${job.distanceKm.toFixed(1)} km)`} amount={fare.distanceAmount} theme={theme} />
-            <FareRow label={`Time (${job.etaMinutes} min)`} amount={fare.timeAmount} theme={theme} />
-            {fare.bonus > 0 && <FareRow label="Bonus" amount={fare.bonus} theme={theme} highlight />}
-            <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />
-            <FareRow label="Total" amount={fare.total} theme={theme} bold />
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        <View style={{ gap: 10 }}>
+          <FareRow label="Base fare" amount={fare.baseFare} />
+          <FareRow label={`Distance (${job.distanceKm.toFixed(1)} km)`} amount={fare.distanceAmount} />
+          <FareRow label={`Time (${job.etaMinutes} min)`} amount={fare.timeAmount} />
+          {fare.bonus > 0 && <FareRow label="Bonus" amount={fare.bonus} good />}
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.lineStrong, marginVertical: 4 }} />
+          <FareRow label="Total" amount={fare.total} strong />
+        </View>
+      </View>
+    </Sheet>
   );
 }
 
-function FareRow({
-  label,
-  amount,
-  theme,
-  bold,
-  highlight,
-}: {
-  label: string;
-  amount: number;
-  theme: { text: string; textSecondary: string };
-  bold?: boolean;
-  highlight?: boolean;
-}) {
+function FareRow({ label, amount, strong, good }: { label: string; amount: number; strong?: boolean; good?: boolean }) {
+  const variant = strong ? 'heading' : 'body';
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text
-        className={bold ? 'text-body-lg font-bold' : 'text-body'}
-        style={{ color: highlight ? colors.partner.orange : theme.text }}
-      >
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+      <Txt variant={variant} tone={good ? 'go' : strong ? 'ink' : 'secondary'} style={{ flexShrink: 1 }}>
         {label}
-      </Text>
-      <Text
-        className={bold ? 'text-body-lg font-bold' : 'text-body font-medium'}
-        style={{ color: highlight ? colors.partner.orange : theme.text }}
-      >
+      </Txt>
+      <Txt variant={strong ? 'heading' : 'bodyStrong'} tone={good ? 'go' : 'ink'} style={{ fontVariant: ['tabular-nums'] }}>
         {formatCurrency(amount)}
-      </Text>
+      </Txt>
     </View>
   );
 }
