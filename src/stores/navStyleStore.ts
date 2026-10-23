@@ -19,7 +19,7 @@ interface NavStyleState {
 export const useNavStyleStore = create<NavStyleState>()(
   persist(
     (set) => ({
-      navStyle: 'docked',
+      navStyle: 'floating',
       setNavStyle: (navStyle) => set({ navStyle }),
       navAlign: 'center',
       setNavAlign: (navAlign) => set({ navAlign }),

@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { haptics } from '@/src/ds/haptics';
+import { haptics } from '@/src/shared/utils/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 
