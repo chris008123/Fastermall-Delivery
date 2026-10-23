@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { Bell, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { SectionList, View } from 'react-native';
+import { Pressable, SectionList, View } from 'react-native';
+import { haptics } from '@/src/ds/haptics';
 import { Txt } from '@/src/ds/Txt';
 import { useTheme } from '@/src/ds/useTheme';
 import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
@@ -58,6 +59,7 @@ export default function NotificationsScreen() {
 
   const notifications = useNotificationsStore((s) => s.notifications);
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const setRead = useNotificationsStore((s) => s.setRead);
   const { show } = useToast();
 
   // What was unread when this screen opened. Opening the list marks
@@ -66,6 +68,10 @@ export default function NotificationsScreen() {
   const [unreadAtOpen] = useState(
     () => new Set(useNotificationsStore.getState().notifications.filter((n) => !n.read).map((n) => n.id)),
   );
+
+  // Alerts the partner flagged as unread during this visit, so the edge
+  // shows straight away (the store's `read` flag only matters next time).
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
 
   // Client-side-only hide list, not a store mutation — swiping a
   // notification away hides it for this session without touching the
@@ -93,12 +99,61 @@ export default function NotificationsScreen() {
     });
   };
 
+  const toggleUnread = (id: string) => {
+    const isUnread = unreadAtOpen.has(id) ? !flaggedIds.has(id) : flaggedIds.has(id);
+    haptics.light();
+    // unreadAtOpen alerts start flagged-by-default; flaggedIds holds any flips.
+    setFlaggedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setRead(id, isUnread);
+    show(isUnread ? 'Marked as read' : 'Marked as unread', 'info');
+  };
+
   const visible = notifications.filter((n) => !dismissedIds.has(n.id));
   const sections = groupByRecency(visible);
 
+  const clearAll = () => {
+    const ids = visible.map((n) => n.id);
+    if (ids.length === 0) return;
+    setDismissedIds((prev) => new Set([...prev, ...ids]));
+    show(ids.length === 1 ? 'Alert cleared' : `${ids.length} alerts cleared`, 'info', {
+      action: {
+        label: 'Undo',
+        onPress: () =>
+          setDismissedIds((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+          }),
+      },
+    });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScreenHeader title="Alerts" subtitle={sections.length > 0 ? 'Swipe left to dismiss' : undefined} />
+      <ScreenHeader
+        title="Alerts"
+        subtitle={sections.length > 0 ? 'Swipe left to dismiss. Hold to mark as unread.' : undefined}
+        right={
+          visible.length > 0 ? (
+            <Pressable
+              onPress={clearAll}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all alerts"
+              hitSlop={8}
+              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}
+            >
+              <Txt variant="label" tone="primary">
+                Clear all
+              </Txt>
+            </Pressable>
+          ) : undefined
+        }
+      />
       <SectionList<AppNotification>
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: navClearance }}
         sections={sections}
@@ -121,9 +176,21 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => {
           const target = targetFor(item);
           const open = target ? () => router.push(target as never) : undefined;
+          const unread = unreadAtOpen.has(item.id) ? !flaggedIds.has(item.id) : flaggedIds.has(item.id);
           return (
-            <SwipeableRow onDismiss={() => dismiss(item.id)} onActivate={open}>
-              <NotificationRow notification={item} unread={unreadAtOpen.has(item.id)} onPress={open} />
+            <SwipeableRow
+              onDismiss={() => dismiss(item.id)}
+              onActivate={open}
+              extraActions={[
+                { name: 'toggleUnread', label: unread ? 'Mark as read' : 'Mark as unread', onPress: () => toggleUnread(item.id) },
+              ]}
+            >
+              <NotificationRow
+                notification={item}
+                unread={unread}
+                onPress={open}
+                onLongPress={() => toggleUnread(item.id)}
+              />
             </SwipeableRow>
           );
         }}
@@ -136,10 +203,12 @@ function NotificationRow({
   notification,
   unread,
   onPress,
+  onLongPress,
 }: {
   notification: AppNotification;
   unread: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
 }) {
   const { t } = useTheme();
   const Icon = TYPE_ICON[notification.type];
@@ -147,7 +216,7 @@ function NotificationRow({
     notification.type === 'PAYMENT' ? t.goInk : notification.type === 'JOB' ? t.primary : t.inkSecondary;
 
   return (
-    <Panel padding={0} onPress={onPress} accessibilityLabel={notification.title} style={{ overflow: 'hidden' }}>
+    <Panel padding={0} onPress={onPress} onLongPress={onLongPress} accessibilityLabel={notification.title} style={{ overflow: 'hidden' }}>
       <View style={{ flexDirection: 'row' }}>
         {/* Unread is a quiet left edge, not a loud dot. */}
         <View style={{ width: unread ? 3 : 0, backgroundColor: t.primary }} />

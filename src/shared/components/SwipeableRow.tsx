@@ -22,6 +22,8 @@ interface SwipeableRowProps {
   actionLabel?: string;
   /** What a screen reader's activate (double-tap) does, when the row's content is pressable. */
   onActivate?: () => void;
+  /** More actions for screen readers, e.g. mark as unread. Shown in the actions menu. */
+  extraActions?: { name: string; label: string; onPress: () => void }[];
 }
 
 const THRESHOLD = -88;
@@ -34,7 +36,7 @@ const THRESHOLD = -88;
  * between rows outside this component (a separator, not a margin on the
  * child), or the reveal will show through the gap.
  */
-export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onActivate }: SwipeableRowProps) {
+export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onActivate, extraActions }: SwipeableRowProps) {
   const { t } = useTheme();
   const translateX = useSharedValue(0);
   const [removed, setRemoved] = useState(false);
@@ -106,10 +108,12 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss', onA
           accessibilityActions={[
             ...(onActivate ? [{ name: 'activate' }] : []),
             { name: 'dismiss', label: actionLabel },
+            ...(extraActions ?? []).map((a) => ({ name: a.name, label: a.label })),
           ]}
           onAccessibilityAction={(e) => {
             if (e.nativeEvent.actionName === 'dismiss') onDismiss();
             if (e.nativeEvent.actionName === 'activate') onActivate?.();
+            extraActions?.find((a) => a.name === e.nativeEvent.actionName)?.onPress();
           }}
           style={rowStyle}
         >
