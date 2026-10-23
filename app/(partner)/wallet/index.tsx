@@ -81,6 +81,10 @@ export default function WalletScreen() {
   const payoutLabel = nextPayoutDate();
   const fareJob = fareEntry?.jobId ? jobs.find((j) => j.id === fareEntry.jobId) ?? null : null;
   const sections = groupLedgerByDate(ledger);
+  const lastCashout = ledger.find((e) => e.type === 'WITHDRAWAL');
+  const lastCashoutLabel = lastCashout
+    ? new Date(lastCashout.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -110,6 +114,7 @@ export default function WalletScreen() {
                   {canWithdraw
                     ? `You've crossed the ${formatCurrency(threshold)} cash-out threshold.`
                     : `${formatCurrency(Math.max(threshold - earnings, 0))} more to unlock a cash-out.`}
+                  {lastCashoutLabel ? ` Last cash-out: ${lastCashoutLabel}.` : ''}
                 </Txt>
               </View>
               <View style={{ gap: 8 }}>
