@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { Lock, Mail } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -41,6 +42,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +117,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
+              textContentType="emailAddress"
               returnKeyType="next"
               blurOnSubmit={false}
               onSubmitEditing={() => passwordRef.current?.focus()}
@@ -137,10 +140,11 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               placeholder={'••••••'}
               placeholderTextColor={theme.textSecondary}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="password"
+              textContentType="password"
               returnKeyType="go"
               onSubmitEditing={onSubmit}
               style={{
@@ -149,6 +153,18 @@ export default function LoginScreen() {
                 color: theme.text,
               }}
             />
+            <Pressable
+              onPress={() => setShowPassword((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              hitSlop={10}
+            >
+              {showPassword ? (
+                <EyeOff size={20} color={theme.textSecondary} />
+              ) : (
+                <Eye size={20} color={theme.textSecondary} />
+              )}
+            </Pressable>
           </Field>
 
           {error && (

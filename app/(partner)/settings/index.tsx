@@ -75,8 +75,8 @@ export default function SettingsScreen() {
         <SettingsRowSpacer />
         <SettingsRow
           icon={Wallet}
-          iconColor={colors.brand.teal}
-          iconBg={colors.brand.tealTint}
+          iconColor={colors.partner.orange}
+          iconBg={colors.partner.orangeTint}
           label="Payout details"
           description="Where instant cash-outs are sent"
           onPress={() => router.push('/settings/payout')}

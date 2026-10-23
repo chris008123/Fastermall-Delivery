@@ -1,27 +1,25 @@
 import { Laptop, Moon, Power, Sun, Vibrate } from 'lucide-react-native';
-import type { ComponentType } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { radii } from '@/src/ds/tokens';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { BackButton } from '@/src/shared/components/BackButton';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useInteractionStore } from '@/src/stores/interactionStore';
 import { useNavStyleStore, type NavAlign, type NavStyle } from '@/src/stores/navStyleStore';
 import { useSettingsStore, type ThemeMode } from '@/src/stores/settingsStore';
-import { Group, ListRow } from '@/src/ui/List';
-import { ScreenHeader } from '@/src/ui/ScreenHeader';
-import { Segmented } from '@/src/ui/Segmented';
+import { colors } from '@/src/theme';
 
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: ComponentType<{ size?: number; color?: string }> }[] = [
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
   { value: 'dark', label: 'Dark', icon: Moon },
   { value: 'system', label: 'System', icon: Laptop },
 ];
 
 const NAV_OPTIONS: { value: NavStyle; label: string; description: string }[] = [
-  { value: 'docked', label: 'Docked', description: 'Full-width bar with labels. The easiest to read at a glance.' },
-  { value: 'compact', label: 'Compact', description: 'Icons only, in a slimmer bar. Leaves more room for content.' },
-  { value: 'floating', label: 'Floating', description: 'A detached bar that sits over the screen.' },
+  { value: 'floating', label: 'Floating', description: 'The frosted bar that sits over the screen.' },
+  { value: 'docked', label: 'Docked', description: 'A full-width bar with labels at the bottom.' },
+  { value: 'compact', label: 'Compact', description: 'Icons only, in a slimmer bar. Leaves more room.' },
 ];
 
 const ALIGN_OPTIONS: { value: NavAlign; label: string }[] = [
@@ -31,14 +29,18 @@ const ALIGN_OPTIONS: { value: NavAlign; label: string }[] = [
 ];
 
 /** A tiny schematic of the screen with the nav drawn in the chosen style. */
-function NavPreview({ style }: { style: NavStyle }) {
-  const { t } = useTheme();
+function NavPreview({ style, theme }: { style: NavStyle; theme: typeof colors.light | typeof colors.dark }) {
   const dots = (
     <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
       {[0, 1, 2, 3, 4].map((i) => (
         <View
           key={i}
-          style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: i === 0 ? t.primary : t.lineStrong }}
+          style={{
+            width: 5,
+            height: 5,
+            borderRadius: 3,
+            backgroundColor: i === 0 ? colors.partner.orange : theme.borderStrong,
+          }}
         />
       ))}
     </View>
@@ -49,10 +51,12 @@ function NavPreview({ style }: { style: NavStyle }) {
       style={{
         width: 88,
         height: 64,
-        borderRadius: radii.sm,
-        backgroundColor: t.sunken,
+        borderRadius: 12,
+        backgroundColor: theme.background,
         overflow: 'hidden',
         justifyContent: 'flex-end',
+        borderWidth: 1,
+        borderColor: theme.border,
       }}
     >
       {style === 'floating' ? (
@@ -62,9 +66,9 @@ function NavPreview({ style }: { style: NavStyle }) {
               height: 16,
               paddingHorizontal: 10,
               borderRadius: 8,
-              backgroundColor: t.surface,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: t.lineStrong,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.borderStrong,
               justifyContent: 'center',
             }}
           >
@@ -75,9 +79,9 @@ function NavPreview({ style }: { style: NavStyle }) {
         <View
           style={{
             height: style === 'docked' ? 18 : 12,
-            backgroundColor: t.surface,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: t.line,
+            backgroundColor: theme.surface,
+            borderTopWidth: 1,
+            borderTopColor: theme.border,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -89,157 +93,184 @@ function NavPreview({ style }: { style: NavStyle }) {
   );
 }
 
+// Theme picker is unchanged from the original screen; below it are the
+// navigation-bar and controls options added alongside it.
 export default function AppearanceScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useTheme();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const currentTheme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
+
   const navStyle = useNavStyleStore((s) => s.navStyle);
   const setNavStyle = useNavStyleStore((s) => s.setNavStyle);
   const navAlign = useNavStyleStore((s) => s.navAlign);
   const setNavAlign = useNavStyleStore((s) => s.setNavAlign);
+
   const hapticsEnabled = useInteractionStore((s) => s.hapticsEnabled);
   const setHapticsEnabled = useInteractionStore((s) => s.setHapticsEnabled);
   const offlineByTap = useInteractionStore((s) => s.offlineByTap);
   const setOfflineByTap = useInteractionStore((s) => s.setOfflineByTap);
 
-  return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScreenHeader title="Appearance" back />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 32, gap: 28 }}>
-        <View style={{ gap: 10 }}>
-          <Txt variant="heading">Theme</Txt>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
-              const active = currentTheme === value;
-              return (
-                <Pressable
-                  key={value}
-                  onPress={() => setTheme(value)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={label}
-                  style={{ flex: 1 }}
-                >
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      gap: 8,
-                      paddingVertical: 16,
-                      borderRadius: radii.md,
-                      borderWidth: 2,
-                      borderColor: active ? t.primary : t.line,
-                      backgroundColor: active ? t.primaryTint : t.surface,
-                    }}
-                  >
-                    <Icon size={22} color={active ? t.primary : t.inkSecondary} />
-                    <Txt variant="label" tone={active ? 'primary' : 'secondary'}>
-                      {label}
-                    </Txt>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Txt variant="caption" tone="secondary">
-            {currentTheme === 'system'
-              ? "Follows your device's appearance setting."
-              : `Always uses ${currentTheme} mode, whatever your device is set to.`}
-          </Txt>
-        </View>
+  const switchColors = { false: theme.borderStrong, true: colors.partner.orange };
 
-        <View style={{ gap: 10 }}>
-          <Txt variant="heading">Navigation bar</Txt>
-          <View style={{ gap: 10 }}>
-            {NAV_OPTIONS.map((option) => {
-              const active = navStyle === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setNavStyle(option.value)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${option.label}. ${option.description}`}
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <BackButton />
+        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Appearance</Text>
+      </View>
+
+      <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+            const active = currentTheme === value;
+            return (
+              <AnimatedPressable key={value} onPress={() => setTheme(value)} scaleTo={0.97} style={{ flex: 1 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    borderWidth: 1.5,
+                    borderColor: active ? colors.partner.orange : theme.border,
+                    backgroundColor: active ? colors.partner.orangeTint : 'transparent',
+                  }}
                 >
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 14,
-                      padding: 12,
-                      borderRadius: radii.md,
-                      borderWidth: 2,
-                      borderColor: active ? t.primary : t.line,
-                      backgroundColor: t.surface,
-                    }}
-                  >
-                    <NavPreview style={option.value} />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Txt variant="bodyStrong">{option.label}</Txt>
-                      <Txt variant="caption" tone="secondary">
-                        {option.description}
-                      </Txt>
-                    </View>
+                  <Icon size={20} color={active ? colors.partner.orange : theme.textSecondary} />
+                  <Text className="text-caption font-semibold" style={{ color: active ? colors.partner.orange : theme.textSecondary }}>
+                    {label}
+                  </Text>
+                </View>
+              </AnimatedPressable>
+            );
+          })}
+        </View>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>
+          {currentTheme === 'system'
+            ? "Follows your device's appearance setting."
+            : `Always uses ${currentTheme} mode, regardless of your device setting.`}
+        </Text>
+      </GlassView>
+
+      <Text className="text-card-title font-semibold" style={{ color: theme.text, marginTop: 4 }}>
+        Navigation bar
+      </Text>
+      <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
+        {NAV_OPTIONS.map((option) => {
+          const active = navStyle === option.value;
+          return (
+            <AnimatedPressable key={option.value} onPress={() => setNavStyle(option.value)} scaleTo={0.98}>
+              <View
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${option.label}. ${option.description}`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: 12,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: active ? colors.partner.orange : theme.border,
+                  backgroundColor: active ? colors.partner.orangeTint : 'transparent',
+                }}
+              >
+                <NavPreview style={option.value} theme={theme} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{option.label}</Text>
+                  <Text className="text-caption" style={{ color: theme.textSecondary }}>{option.description}</Text>
+                </View>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    borderWidth: 2,
+                    borderColor: active ? colors.partner.orange : theme.borderStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {active ? (
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.partner.orange }} />
+                  ) : null}
+                </View>
+              </View>
+            </AnimatedPressable>
+          );
+        })}
+
+        {navStyle === 'floating' && (
+          <View style={{ gap: 8, marginTop: 4 }}>
+            <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>Position</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {ALIGN_OPTIONS.map(({ value, label }) => {
+                const active = navAlign === value;
+                return (
+                  <AnimatedPressable key={value} onPress={() => setNavAlign(value)} scaleTo={0.97} style={{ flex: 1 }}>
                     <View
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={label}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 11,
-                        borderWidth: 2,
-                        borderColor: active ? t.primary : t.lineStrong,
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        paddingVertical: 12,
+                        borderRadius: 16,
+                        borderWidth: 1.5,
+                        borderColor: active ? colors.partner.orange : theme.border,
+                        backgroundColor: active ? colors.partner.orangeTint : 'transparent',
                       }}
                     >
-                      {active ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.primary }} /> : null}
+                      <Text
+                        className="text-caption font-semibold"
+                        style={{ color: active ? colors.partner.orange : theme.textSecondary }}
+                      >
+                        {label}
+                      </Text>
                     </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-          {navStyle === 'floating' ? (
-            <View style={{ gap: 6 }}>
-              <Txt variant="label" tone="secondary">
-                Position
-              </Txt>
-              <Segmented options={ALIGN_OPTIONS} value={navAlign} onChange={setNavAlign} accessibilityLabel="Floating bar position" />
+                  </AnimatedPressable>
+                );
+              })}
             </View>
-          ) : null}
-          <Txt variant="caption" tone="secondary">
-            Your choices are saved on this device.
-          </Txt>
-        </View>
+          </View>
+        )}
 
-        <Group title="Controls">
-          <ListRow
-            icon={Vibrate}
-            label="Vibration feedback"
-            description="A small buzz when you go online, accept a job or switch tabs."
-            right={
-              <Switch
-                value={hapticsEnabled}
-                onValueChange={setHapticsEnabled}
-                trackColor={{ false: t.lineStrong, true: t.primary }}
-                thumbColor="#FFFFFF"
-              />
-            }
-          />
-          <ListRow
-            icon={Power}
-            label="Go offline with a tap"
-            description="Going online always takes a slide, so it can't happen by accident."
-            right={
-              <Switch
-                value={offlineByTap}
-                onValueChange={setOfflineByTap}
-                trackColor={{ false: t.lineStrong, true: t.primary }}
-                thumbColor="#FFFFFF"
-              />
-            }
-          />
-        </Group>
-      </ScrollView>
-    </View>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>
+          Your choices are saved on this device.
+        </Text>
+      </GlassView>
+
+      <Text className="text-card-title font-semibold" style={{ color: theme.text, marginTop: 4 }}>
+        Controls
+      </Text>
+      <GlassView radius="card" style={{ padding: 18, gap: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Vibrate size={20} color={theme.textSecondary} />
+          <View style={{ flex: 1 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Vibration feedback</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              A small buzz when you go online, accept a job or switch tabs.
+            </Text>
+          </View>
+          <Switch value={hapticsEnabled} onValueChange={setHapticsEnabled} trackColor={switchColors} thumbColor="#ffffff" />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Power size={20} color={theme.textSecondary} />
+          <View style={{ flex: 1 }}>
+            <Text className="text-body-lg font-medium" style={{ color: theme.text }}>Go offline with a tap</Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Going online always takes a slide, so it can't happen by accident.
+            </Text>
+          </View>
+          <Switch value={offlineByTap} onValueChange={setOfflineByTap} trackColor={switchColors} thumbColor="#ffffff" />
+        </View>
+      </GlassView>
+    </ScrollView>
   );
 }

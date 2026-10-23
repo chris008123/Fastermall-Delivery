@@ -12,11 +12,13 @@ import {
   User,
 } from 'lucide-react-native';
 import { useMemo, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
+import { PhotoSourceSheet } from '@/src/shared/components/PhotoSourceSheet';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { haptics } from '@/src/shared/utils/haptics';
 import { formatGhanaPhone, stripPhoneFormatting } from '@/src/shared/utils/phone';
 import { colors } from '@/src/theme';
 import type { PartnerMode } from '@/src/types/job';
@@ -38,12 +40,40 @@ interface FormData {
   fullName: string;
   dateOfBirth: string;
   address: string;
-  ghanaCardCaptured: boolean;
   vehicleMode: PartnerMode;
   plateNumber: string;
-  licenceCaptured: boolean;
-  vehicleRegCaptured: boolean;
-  selfieCaptured: boolean;
+  /** Local photo URIs, null until the partner adds one. */
+  photos: Record<PhotoKey, string | null>;
+}
+
+type PhotoKey = 'ghanaCard' | 'licence' | 'vehicleReg' | 'selfie';
+
+const PHOTO_COPY: Record<PhotoKey, { title: string; guidance: string; front?: boolean }> = {
+  ghanaCard: {
+    title: 'Ghana Card',
+    guidance: 'Place the card flat in good light, with all four corners and every word readable.',
+  },
+  licence: {
+    title: "Driver's Licence",
+    guidance: 'Place the licence flat in good light, with all four corners and every word readable.',
+  },
+  vehicleReg: {
+    title: 'Vehicle Registration',
+    guidance: 'Place the document flat in good light. The plate number must be readable.',
+  },
+  selfie: {
+    title: 'Selfie',
+    guidance: 'Look straight at the camera in good light, with no sunglasses or hat.',
+    front: true,
+  },
+};
+
+/** "12091995" -> "12/09/1995" while typing. */
+function formatDob(value: string) {
+  const d = value.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 }
 
 const INITIAL: FormData = {
@@ -51,12 +81,9 @@ const INITIAL: FormData = {
   fullName: '',
   dateOfBirth: '',
   address: '',
-  ghanaCardCaptured: false,
   vehicleMode: 'MOTORCYCLE',
   plateNumber: '',
-  licenceCaptured: false,
-  vehicleRegCaptured: false,
-  selfieCaptured: false,
+  photos: { ghanaCard: null, licence: null, vehicleReg: null, selfie: null },
 };
 
 export default function OnboardingScreen() {
@@ -64,6 +91,7 @@ export default function OnboardingScreen() {
   const theme = isDark ? colors.dark : colors.light;
   const [form, setForm] = useState<FormData>(INITIAL);
   const [stepIndex, setStepIndex] = useState(0);
+  const [capturing, setCapturing] = useState<PhotoKey | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Walking partners don't own a vehicle, so the driver-documents step
@@ -82,15 +110,15 @@ export default function OnboardingScreen() {
       case 'phone':
         return stripPhoneFormatting(form.phone).length === 10;
       case 'personal':
-        return form.fullName.trim().length > 1 && form.dateOfBirth.trim().length > 0 && form.address.trim().length > 3;
+        return form.fullName.trim().length > 1 && form.dateOfBirth.trim().length === 10 && form.address.trim().length > 3;
       case 'identity':
-        return form.ghanaCardCaptured;
+        return !!form.photos.ghanaCard;
       case 'vehicle':
         return form.vehicleMode === 'WALKING' || form.plateNumber.trim().length > 3;
       case 'driver-docs':
-        return form.licenceCaptured && form.vehicleRegCaptured;
+        return !!form.photos.licence && !!form.photos.vehicleReg;
       case 'selfie':
-        return form.selfieCaptured;
+        return !!form.photos.selfie;
       default:
         return true;
     }
@@ -164,7 +192,8 @@ export default function OnboardingScreen() {
             <Field label="Date of birth" theme={theme} icon={<User size={18} color={theme.textSecondary} />}>
               <TextInput
                 value={form.dateOfBirth}
-                onChangeText={(v) => update({ dateOfBirth: v })}
+                onChangeText={(v) => update({ dateOfBirth: formatDob(v) })}
+                maxLength={10}
                 placeholder="DD/MM/YYYY"
                 placeholderTextColor={theme.textSecondary}
                 keyboardType="numbers-and-punctuation"
@@ -188,8 +217,9 @@ export default function OnboardingScreen() {
             icon={CreditCard}
             label="Ghana Card"
             helper="Make sure all four corners are visible and the text is readable."
-            captured={form.ghanaCardCaptured}
-            onPress={() => update({ ghanaCardCaptured: !form.ghanaCardCaptured })}
+            captured={!!form.photos.ghanaCard}
+            uri={form.photos.ghanaCard}
+            onPress={() => setCapturing('ghanaCard')}
             theme={theme}
           />
         )}
@@ -255,16 +285,18 @@ export default function OnboardingScreen() {
               icon={FileText}
               label="Driver's Licence"
               helper="A valid, unexpired licence for your vehicle class."
-              captured={form.licenceCaptured}
-              onPress={() => update({ licenceCaptured: !form.licenceCaptured })}
+              captured={!!form.photos.licence}
+              uri={form.photos.licence}
+              onPress={() => setCapturing('licence')}
               theme={theme}
             />
             <UploadTile
               icon={Bike}
               label="Vehicle Registration"
               helper="Must match the plate number you entered."
-              captured={form.vehicleRegCaptured}
-              onPress={() => update({ vehicleRegCaptured: !form.vehicleRegCaptured })}
+              captured={!!form.photos.vehicleReg}
+              uri={form.photos.vehicleReg}
+              onPress={() => setCapturing('vehicleReg')}
               theme={theme}
             />
           </View>
@@ -275,8 +307,9 @@ export default function OnboardingScreen() {
             icon={Camera}
             label="Selfie"
             helper="Look straight at the camera in good lighting, no sunglasses or hats."
-            captured={form.selfieCaptured}
-            onPress={() => update({ selfieCaptured: !form.selfieCaptured })}
+            captured={!!form.photos.selfie}
+            uri={form.photos.selfie}
+            onPress={() => setCapturing('selfie')}
             theme={theme}
             actionLabel="Take selfie"
           />
@@ -304,6 +337,18 @@ export default function OnboardingScreen() {
           onPress={step.key === 'review' ? submit : goNext}
         />
       </ScrollView>
+
+      <PhotoSourceSheet
+        visible={!!capturing}
+        onClose={() => setCapturing(null)}
+        title={capturing ? PHOTO_COPY[capturing].title : ''}
+        guidance={capturing ? PHOTO_COPY[capturing].guidance : ''}
+        front={capturing ? PHOTO_COPY[capturing].front : false}
+        onPicked={(uri) => {
+          if (capturing) setForm((f) => ({ ...f, photos: { ...f.photos, [capturing]: uri } }));
+          haptics.success();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -365,6 +410,7 @@ function UploadTile({
   label,
   helper,
   captured,
+  uri,
   onPress,
   theme,
   actionLabel = 'Take photo',
@@ -373,6 +419,8 @@ function UploadTile({
   label: string;
   helper: string;
   captured: boolean;
+  /** The photo that was added, shown as a thumbnail once captured. */
+  uri?: string | null;
   onPress: () => void;
   theme: { text: string; textSecondary: string; border: string };
   actionLabel?: string;
@@ -391,22 +439,30 @@ function UploadTile({
           gap: 10,
         }}
       >
-        <View
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: captured ? 'rgba(26, 156, 92, 0.14)' : colors.partner.orangeTint,
-          }}
-        >
-          {captured ? (
-            <Check size={22} color={colors.semantic.success} />
-          ) : (
-            <Icon size={22} color={colors.partner.orange} />
-          )}
-        </View>
+        {captured && uri ? (
+          <Image
+            source={{ uri }}
+            accessibilityLabel={`Photo you added for ${label}`}
+            style={{ width: 96, height: 72, borderRadius: 12, backgroundColor: theme.border }}
+          />
+        ) : (
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: captured ? 'rgba(26, 156, 92, 0.14)' : colors.partner.orangeTint,
+            }}
+          >
+            {captured ? (
+              <Check size={22} color={colors.semantic.success} />
+            ) : (
+              <Icon size={22} color={colors.partner.orange} />
+            )}
+          </View>
+        )}
         <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
           {captured ? `${label} captured` : label}
         </Text>
