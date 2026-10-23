@@ -1,7 +1,7 @@
 import { Trash2 } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -11,8 +11,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '@/src/theme';
-import { radii } from '@/src/theme/radii';
+import { haptics } from '@/src/ds/haptics';
+import { radii } from '@/src/ds/tokens';
+import { Txt } from '@/src/ds/Txt';
+import { useTheme } from '@/src/ds/useTheme';
 
 interface SwipeableRowProps {
   children: ReactNode;
@@ -23,23 +25,27 @@ interface SwipeableRowProps {
 const THRESHOLD = -88;
 
 /**
- * Swipe-left-to-dismiss with a background reveal that zooms in as you swipe
- * and confirms on release — per the motion spec's rule for swipeable rows
- * (notifications, job cards): "background zoom/shift on swipe, confirm on
- * release". Purely a client-side reveal/hide gesture — the actual removal
- * (`onDismiss`) is left entirely to the caller.
+ * Swipe-left-to-dismiss with a colored reveal that grows as you swipe and
+ * confirms on release. Purely a client-side reveal/hide gesture — the
+ * actual removal (`onDismiss`) is left entirely to the caller. Screen
+ * readers get a "dismiss" action instead of the gesture. Keep spacing
+ * between rows outside this component (a separator, not a margin on the
+ * child), or the reveal will show through the gap.
  */
 export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss' }: SwipeableRowProps) {
+  const { t } = useTheme();
   const translateX = useSharedValue(0);
   const [removed, setRemoved] = useState(false);
 
   const pan = Gesture.Pan()
     .activeOffsetX([-10, 10])
+    .failOffsetY([-14, 14])
     .onUpdate((e) => {
       translateX.value = Math.min(0, e.translationX);
     })
     .onEnd(() => {
       if (translateX.value < THRESHOLD) {
+        runOnJS(haptics.light)();
         translateX.value = withTiming(-500, { duration: 220 }, (finished) => {
           if (finished) runOnJS(setRemoved)(true);
         });
@@ -74,10 +80,10 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss' }: S
       <Animated.View
         pointerEvents="none"
         style={[
-          StyleSheet.absoluteFillObject,
+          StyleSheet.absoluteFill,
           {
-            backgroundColor: colors.semantic.error,
-            borderRadius: radii.card,
+            backgroundColor: t.alert,
+            borderRadius: radii.md,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-end',
@@ -87,11 +93,22 @@ export function SwipeableRow({ children, onDismiss, actionLabel = 'Dismiss' }: S
           backgroundStyle,
         ]}
       >
-        <Trash2 size={18} color="#ffffff" />
-        <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{actionLabel}</Text>
+        <Trash2 size={18} color={t.onAlert} />
+        <Txt variant="label" color={t.onAlert}>
+          {actionLabel}
+        </Txt>
       </Animated.View>
       <GestureDetector gesture={pan}>
-        <Animated.View style={rowStyle}>{children}</Animated.View>
+        <Animated.View
+          accessible
+          accessibilityActions={[{ name: 'dismiss', label: actionLabel }]}
+          onAccessibilityAction={(e) => {
+            if (e.nativeEvent.actionName === 'dismiss') onDismiss();
+          }}
+          style={rowStyle}
+        >
+          {children}
+        </Animated.View>
       </GestureDetector>
     </View>
   );
