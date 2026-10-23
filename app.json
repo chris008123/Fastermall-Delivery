@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121211",
+        "backgroundColor": "#0F1C1F",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "package": "com.fastermall.partner",
@@ -35,7 +35,7 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#121211"
+          "backgroundColor": "#0F1C1F"
         }
       ]
     ],
