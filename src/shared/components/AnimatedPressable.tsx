@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { cssInterop } from 'nativewind';
-import { springs } from '@/src/shared/animation/constants';
+import { springs, type SpringConfig } from '@/src/shared/animation/constants';
 
 const AnimatedPressableBase = Animated.createAnimatedComponent(Pressable);
 cssInterop(AnimatedPressableBase, { className: 'style' });
@@ -17,7 +17,7 @@ interface AnimatedPressableProps extends PressableProps {
   /** Spring physics for the press animation. Defaults to `springs.snappy`;
    * pass `springs.buttonPress` for the crisper, near-zero-overshoot feel
    * the motion spec calls for on primary buttons specifically. */
-  springConfig?: typeof springs.snappy;
+  springConfig?: SpringConfig;
   // Reanimated's layout-animation prop types are stricter than the actual
   // range of values (`FadeInUp`, `FadeInUp.delay(80)`, etc.) that get
   // passed in practice — loosened here rather than importing Reanimated's

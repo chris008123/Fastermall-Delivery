@@ -25,7 +25,6 @@ export default function SecurityScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
-  const phone = useAuthStore((s) => s.phone);
   const twoFactorEnabled = useSettingsStore((s) => s.twoFactorEnabled);
   const setTwoFactorEnabled = useSettingsStore((s) => s.setTwoFactorEnabled);
 
@@ -58,7 +57,7 @@ export default function SecurityScreen() {
             iconColor={colors.accent.blue}
             iconBg="rgba(59, 130, 196, 0.14)"
             label="Phone number"
-            description={phone ?? 'Not set'}
+            description="Not added"
             onPress={() => notImplemented('Change phone number')}
           />
           <SettingsRowSpacer />
