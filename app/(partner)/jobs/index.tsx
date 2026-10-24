@@ -112,15 +112,6 @@ export default function JobsScreen() {
     [jobs],
   );
 
-  const typeCounts = useMemo(() => {
-    const available = jobs.filter((j) => j.stage === 'AVAILABLE');
-    return {
-      ALL: available.length,
-      MARKETPLACE: available.filter((j) => j.type === 'MARKETPLACE').length,
-      FOOD: available.filter((j) => j.type === 'FOOD').length,
-      LAUNDRY: available.filter((j) => j.type === 'LAUNDRY').length,
-    } satisfies Record<TypeFilter, number>;
-  }, [jobs]);
 
   const openJobs = useMemo(
     () =>
