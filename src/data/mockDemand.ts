@@ -1,6 +1,7 @@
 import type { DemandSnapshot } from '@/src/types/demand';
 
 export const demandSnapshot: DemandSnapshot = {
+  jobType: 'FOOD',
   headline: 'High demand near you',
   totalNearbyOrders: 8,
   radiusKm: 2,
