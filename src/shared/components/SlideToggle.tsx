@@ -4,11 +4,13 @@ import { ActivityIndicator, Text, View, type LayoutChangeEvent } from 'react-nat
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  ReduceMotion,
   cancelAnimation,
   interpolate,
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -22,7 +24,12 @@ import { colors } from '@/src/theme';
 const HEIGHT = 56;
 const THUMB = 48;
 const PAD = 4;
-const SPRING = { damping: 20, stiffness: 260, mass: 0.8 };
+// reduceMotion: System makes the thumb snap to its resting end instead of
+// springing when the phone's "reduce motion" setting is on.
+const SPRING = { damping: 20, stiffness: 260, mass: 0.8, reduceMotion: ReduceMotion.System };
+// While reduced motion is on, the online glow holds at this steady level
+// instead of pulsing.
+const STEADY_GLOW = 0.6;
 
 interface SlideToggleProps {
   isOnline: boolean;
@@ -42,6 +49,7 @@ interface SlideToggleProps {
  */
 export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideToggleProps) {
   const { isDark } = useResolvedTheme();
+  const reduceMotion = useReducedMotion();
   const theme = isDark ? colors.dark : colors.light;
   const [width, setWidth] = useState(0);
   const travel = Math.max(0, width - THUMB - PAD * 2);
@@ -58,9 +66,13 @@ export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideTog
     if (!busy) x.value = withSpring(isOnline ? travel : 0, SPRING);
   }, [isOnline, busy, travel, travelSv, x]);
 
-  // Soft pulsing glow while online, like the original toggle.
+  // Soft pulsing glow while online, like the original toggle. With reduce
+  // motion on it stays as a steady, non-moving halo.
   useEffect(() => {
-    if (isOnline) {
+    if (isOnline && reduceMotion) {
+      cancelAnimation(glow);
+      glow.value = STEADY_GLOW;
+    } else if (isOnline) {
       glow.value = withRepeat(
         withSequence(
           withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
@@ -74,7 +86,7 @@ export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideTog
       glow.value = 0;
     }
     return () => cancelAnimation(glow);
-  }, [isOnline, glow]);
+  }, [isOnline, reduceMotion, glow]);
 
   const enabled = !busy && travel > 0;
 
@@ -110,7 +122,10 @@ export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideTog
       runOnJS(haptics.light)();
       const nudge = isOnline ? travelSv.value - 40 : 40;
       const rest = isOnline ? travelSv.value : 0;
-      x.value = withSequence(withTiming(nudge, { duration: 140 }), withSpring(rest, SPRING));
+      x.value = withSequence(
+        withTiming(nudge, { duration: 140, reduceMotion: ReduceMotion.System }),
+        withSpring(rest, SPRING),
+      );
     });
 
   const gesture = Gesture.Race(pan, tap);
@@ -127,7 +142,7 @@ export function SlideToggle({ isOnline, onChange, busy, offlineByTap }: SlideTog
   }));
   const glowStyle = useAnimatedStyle(() => ({
     opacity: isOnline ? glow.value * 0.45 : 0,
-    transform: [{ scale: 1 + glow.value * 0.04 }],
+    transform: [{ scale: reduceMotion ? 1 : 1 + glow.value * 0.04 }],
   }));
   const thumbStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   const offlineLabel = useAnimatedStyle(() => ({
