@@ -1,4 +1,5 @@
-import { ArrowDownCircle, Banknote, ChevronRight, History, PiggyBank, RefreshCcw } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ArrowDownCircle, Banknote, ChevronRight, History, PiggyBank, RefreshCcw, Smartphone } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { SectionList, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -14,6 +15,7 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
 import { haptics } from '@/src/shared/utils/haptics';
 import { useJobsStore } from '@/src/stores/jobsStore';
+import { maskMomoNumber, usePayoutStore } from '@/src/stores/payoutStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
 import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
@@ -68,6 +70,8 @@ export default function WalletScreen() {
   const withdraw = useWalletStore((s) => s.withdraw);
   const withdrawInstant = useWalletStore((s) => s.withdrawInstant);
   const jobs = useJobsStore((s) => s.jobs);
+  const payoutNumber = usePayoutStore((s) => s.number);
+  const payoutNetwork = usePayoutStore((s) => s.network);
   const { show } = useToast();
 
   useEffect(() => {
@@ -149,6 +153,32 @@ export default function WalletScreen() {
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
               Next automatic payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{payoutLabel}</Text>. Free, no fee.
             </Text>
+            <AnimatedPressable
+              onPress={() => router.push('/settings/payout')}
+              scaleTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Payout details"
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingTop: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.border,
+                }}
+              >
+                <Smartphone size={18} color={colors.partner.orange} />
+                <View style={{ flex: 1 }}>
+                  <Text className="text-body font-medium" style={{ color: theme.text }}>Payout details</Text>
+                  <Text className="text-caption" style={{ color: theme.textSecondary }}>
+                    {payoutNumber ? `${payoutNetwork} · ${maskMomoNumber(payoutNumber)}` : 'Add where instant cash-outs are sent'}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={theme.textSecondary} />
+              </View>
+            </AnimatedPressable>
           </GlassView>
 
           <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
