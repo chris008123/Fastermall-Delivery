@@ -8,7 +8,7 @@ import { Badge } from '@/src/shared/components/Badge';
 import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { IconCircle } from '@/src/shared/components/IconCircle';
-import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
+import { useNavClearance } from '@/src/shared/components/AppNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
@@ -25,6 +25,7 @@ const MODES: { value: PartnerMode; label: string; icon: typeof Bike }[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navClearance = useNavClearance();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
@@ -44,11 +45,11 @@ export default function ProfileScreen() {
     // profile screen: this list only grows over time (more settings rows
     // are a near-certainty), and a fixed View risks the Sign out button
     // sitting under the floating nav on shorter screens. paddingBottom uses
-    // NAV_BAR_CLEARANCE (+ insets.bottom) so it stays correct if the nav's
+    // the live nav clearance (it includes insets.bottom) so it stays correct if the nav's
     // own height ever changes, instead of a hardcoded magic number.
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 16 }}
     >
       <View style={{ alignItems: 'center', gap: 10, paddingVertical: 12 }}>
         <View

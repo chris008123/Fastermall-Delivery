@@ -4,7 +4,7 @@ import { AppNav } from '@/src/shared/components/AppNav';
 
 // Ported from the customer app's (main)/_layout.tsx pattern: a header-less
 // Stack with the floating glass nav mounted as a sibling, not inside any
-// one screen. FloatingNav is absolutely positioned so it needs this
+// one screen. AppNav is absolutely positioned so it needs this
 // full-screen flex:1 parent to anchor to, and it needs to live above the
 // Stack so it persists across screen transitions instead of remounting per
 // screen. Its own segment-matching logic decides which screens show it —

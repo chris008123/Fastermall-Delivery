@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
+import { useNavClearance } from '@/src/shared/components/AppNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
@@ -48,6 +48,7 @@ function sortJobs(jobs: Job[], sortBy: SortOption): Job[] {
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
+  const navClearance = useNavClearance();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -189,7 +190,7 @@ export default function JobsScreen() {
     return (
       <FlatList<Job>
         style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 12 }}
         data={history}
         keyExtractor={(j) => j.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.partner.orange} colors={[colors.partner.orange]} />}
@@ -217,7 +218,7 @@ export default function JobsScreen() {
   return (
     <FlatList
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 12 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 12 }}
       data={openJobs}
       keyExtractor={(j) => j.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.partner.orange} colors={[colors.partner.orange]} />}

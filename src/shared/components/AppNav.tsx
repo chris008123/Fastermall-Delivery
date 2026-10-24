@@ -30,7 +30,7 @@ const SEGMENT_MAP: Record<string, NavKey> = {
 };
 
 // `height` excludes the bottom safe-area inset; `offset` is the gap under
-// the floating bar. The floating numbers match the original FloatingNav.
+// the floating bar. The floating numbers match the original floating pill.
 const GEOMETRY: Record<NavStyle, { height: number; offset: number }> = {
   floating: { height: 76, offset: 12 },
   docked: { height: 62, offset: 0 },

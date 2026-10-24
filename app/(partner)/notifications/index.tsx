@@ -5,7 +5,7 @@ import { SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
+import { useNavClearance } from '@/src/shared/components/AppNav';
 import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
@@ -56,6 +56,7 @@ function groupByRecency(notifications: AppNotification[]) {
 
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const navClearance = useNavClearance();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -126,7 +127,7 @@ export default function NotificationsScreen() {
   return (
     <SectionList<AppNotification>
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 10 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 10 }}
       sections={sections}
       keyExtractor={(n) => n.id}
       stickySectionHeadersEnabled={false}

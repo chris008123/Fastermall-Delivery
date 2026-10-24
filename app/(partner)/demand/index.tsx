@@ -2,7 +2,6 @@ import { Flame } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
-import { DemandMap } from '@/src/shared/components/DemandMap';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { demandSnapshot } from '@/src/data/mockDemand';
@@ -47,7 +46,6 @@ export default function DemandScreen() {
         </GlassView>
       ) : null}
 
-      {/* <DemandMap zones={demandSnapshot.zones} height={260} scrollEnabled /> */}
 
       {demandSnapshot.jobType === OFFERED_JOB_TYPE ? (
         <>

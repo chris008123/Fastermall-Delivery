@@ -14,9 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
-import { DemandMap } from '@/src/shared/components/DemandMap';
 import { GlassView } from '@/src/shared/components/GlassView';
-import { NAV_BAR_CLEARANCE } from '@/src/shared/components/FloatingNav';
+import { useNavClearance } from '@/src/shared/components/AppNav';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { SlideToggle } from '@/src/shared/components/SlideToggle';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -37,6 +36,7 @@ import { formatCurrency } from '@/src/utils/money';
 // availability toggle that rolls back on a failed backend PATCH.
 export default function PartnerHomeScreen() {
   const insets = useSafeAreaInsets();
+  const navClearance = useNavClearance();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -152,10 +152,10 @@ export default function PartnerHomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      // paddingBottom uses NAV_BAR_CLEARANCE (+ insets.bottom) since this
+      // paddingBottom uses the live nav clearance (it includes insets.bottom) since this
       // screen sits under a floating, absolutely-positioned nav instead of a
       // native tab bar that used to reserve its own space automatically.
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: insets.bottom + NAV_BAR_CLEARANCE, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 16 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -264,7 +264,6 @@ export default function PartnerHomeScreen() {
               {demandSnapshot.totalNearbyOrders} {jobTypeNoun(demandSnapshot.jobType)} orders within {demandSnapshot.radiusKm} km · est.{' '}
               {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
             </Text>
-            {/* <DemandMap zones={demandSnapshot.zones} height={110} /> */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
               <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
               <ChevronRight size={14} color={colors.partner.orange} />
