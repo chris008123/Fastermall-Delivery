@@ -27,7 +27,7 @@ import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificat
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
-import { isOfferedOpenJob } from '@/src/utils/jobFilters';
+import { isOfferedOpenJob, jobTypeNoun, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout/visual language ported from the app's established GlassView design
@@ -252,7 +252,8 @@ export default function PartnerHomeScreen() {
         </GlassView>
       )}
 
-      {!activeJob && (
+      {/* Only shown while the demand data describes the kind of order this partner is offered. */}
+      {!activeJob && demandSnapshot.jobType === OFFERED_JOB_TYPE && (
         <AnimatedPressable onPress={() => router.push('/(partner)/demand')} scaleTo={0.98}>
           <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -260,7 +261,7 @@ export default function PartnerHomeScreen() {
               <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
             </View>
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
-              {demandSnapshot.totalNearbyOrders} orders within {demandSnapshot.radiusKm} km · est.{' '}
+              {demandSnapshot.totalNearbyOrders} {jobTypeNoun(demandSnapshot.jobType)} orders within {demandSnapshot.radiusKm} km · est.{' '}
               {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
             </Text>
             {/* <DemandMap zones={demandSnapshot.zones} height={110} /> */}
