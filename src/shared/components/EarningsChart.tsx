@@ -1,9 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, Easing } from 'react-native-reanimated';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
-import { Segmented } from '@/src/ui/Segmented';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { colors } from '@/src/theme';
 import type { LedgerEntry } from '@/src/types/wallet';
 import { formatCurrency } from '@/src/utils/money';
 
@@ -62,30 +63,33 @@ export function sumLastSevenDays(ledger: LedgerEntry[]): number {
   return lastSevenDayTotals(ledger).reduce((sum, d) => sum + d.total, 0);
 }
 
-const RANGE_OPTIONS: { value: '7D' | '4W'; label: string }[] = [
-  { value: '7D', label: '7 days' },
-  { value: '4W', label: '4 weeks' },
-];
-
 /** Plain-View bar chart — no charting library, since seven bars don't
  * need one. Combines earnings + reimbursements per period: "how much money
  * came in", which is what a partner glancing at this actually wants to
- * know (the two-lane split already lives in the cards above it). Bars grow
- * in left to right, the current period is the solid one and earlier ones
- * are paler, and a 7-day/4-week switch stands in for a full timeframe
- * selector without cramming 30 daily bars onto a phone screen. */
+ * know, not the two lanes broken out again (that split already lives in
+ * the cards above this). Bars grow in on mount, use the same orange
+ * gradient as the partner brand's primary button, sit on a baseline with
+ * faint reference gridlines, and the current period's bar gets a subtle
+ * ring + bold label so "where am I" is a glance, not a read. A 7-day/
+ * 4-week toggle stands in for a full timeframe selector without trying to
+ * cram 30 individual daily bars onto a phone screen. */
 export function EarningsChart({ ledger }: { ledger: LedgerEntry[] }) {
-  const { t } = useTheme();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const [range, setRange] = useState<'7D' | '4W'>('7D');
   const data = range === '7D' ? lastSevenDayTotals(ledger) : lastFourWeekTotals(ledger);
   const max = Math.max(...data.map((d) => d.total), 1);
 
   return (
-    <View style={{ gap: 12 }}>
-      <Segmented options={RANGE_OPTIONS} value={range} onChange={setRange} accessibilityLabel="Chart range" />
-      <View style={{ height: CHART_HEIGHT + 22 }}>
-        {/* Faint reference lines, evenly spaced. No axis labels: this chart
-            is for a quick glance, not precise reading. */}
+    <View>
+      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+        <RangeChip label="7 days" active={range === '7D'} onPress={() => setRange('7D')} theme={theme} />
+        <RangeChip label="4 weeks" active={range === '4W'} onPress={() => setRange('4W')} theme={theme} />
+      </View>
+      <View style={{ height: CHART_HEIGHT, marginBottom: 4 }}>
+        {/* Faint horizontal reference lines, evenly spaced, purely decorative
+            scale cues — no axis labels, this chart is for a quick glance
+            not precise reading. */}
         {GRIDLINE_FRACTIONS.map((f) => (
           <View
             key={f}
@@ -93,24 +97,28 @@ export function EarningsChart({ ledger }: { ledger: LedgerEntry[] }) {
               position: 'absolute',
               left: 0,
               right: 0,
-              bottom: CHART_HEIGHT * f - StyleSheet.hairlineWidth,
-              height: StyleSheet.hairlineWidth,
-              backgroundColor: t.line,
+              bottom: CHART_HEIGHT * f - 1,
+              height: 1,
+              backgroundColor: theme.border,
+              opacity: 0.4,
             }}
           />
         ))}
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
           {data.map((bar, i) => (
-            <Bar key={`${range}-${i}`} bar={bar} index={i} max={max} />
+            <Bar key={`${range}-${i}`} bar={bar} index={i} max={max} theme={theme} />
           ))}
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         {data.map((bar, i) => (
           <View key={`${range}-${i}`} style={{ flex: 1, alignItems: 'center' }}>
-            <Txt variant={bar.highlight ? 'label' : 'caption'} tone={bar.highlight ? 'ink' : 'secondary'}>
+            <Text
+              className={bar.highlight ? 'text-caption font-bold' : 'text-caption'}
+              style={{ color: bar.highlight ? colors.partner.orange : theme.textSecondary }}
+            >
               {range === '7D' && bar.highlight ? 'Today' : bar.label}
-            </Txt>
+            </Text>
           </View>
         ))}
       </View>
@@ -118,14 +126,56 @@ export function EarningsChart({ ledger }: { ledger: LedgerEntry[] }) {
   );
 }
 
-function Bar({ bar, index, max }: { bar: BarDatum; index: number; max: number }) {
-  const { t } = useTheme();
+function RangeChip({
+  label,
+  active,
+  onPress,
+  theme,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  theme: { border: string; textSecondary: string };
+}) {
+  return (
+    <AnimatedPressable onPress={onPress} scaleTo={0.96}>
+      <View
+        style={{
+          paddingHorizontal: 12,
+          paddingVertical: 5,
+          borderRadius: 999,
+          backgroundColor: active ? colors.partner.orangeTint : 'transparent',
+          borderWidth: 1.5,
+          borderColor: active ? colors.partner.orange : theme.border,
+        }}
+      >
+        <Text className="text-caption font-semibold" style={{ color: active ? colors.partner.orange : theme.textSecondary }}>
+          {label}
+        </Text>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+function Bar({
+  bar,
+  index,
+  max,
+  theme,
+}: {
+  bar: BarDatum;
+  index: number;
+  max: number;
+  theme: { text: string; border: string };
+}) {
   const targetHeight = bar.total > 0 ? Math.max((bar.total / max) * CHART_HEIGHT, 6) : 3;
   const height = useSharedValue(0);
 
   useEffect(() => {
-    // Staggered grow-in, left to right, so the chart reads as one motion.
-    // Restarts whenever the range switch changes the dataset.
+    // Staggered grow-in, left to right, so the chart reads as one motion
+    // rather than several bars popping in at once. Restarts (rather than
+    // holding at the old value) whenever the timeframe toggle changes the
+    // dataset — the effect re-fires because `targetHeight` changes too.
     height.value = 0;
     height.value = withDelay(index * 60, withTiming(targetHeight, { duration: 420, easing: Easing.out(Easing.cubic) }));
   }, [targetHeight, index]);
@@ -133,28 +183,45 @@ function Bar({ bar, index, max }: { bar: BarDatum; index: number; max: number })
   const animatedStyle = useAnimatedStyle(() => ({ height: height.value }));
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: CHART_HEIGHT + 22 }}>
-      {bar.total > 0 && (
-        <Txt
-          variant="micro"
-          tone={bar.highlight ? 'ink' : 'secondary'}
-          style={{ marginBottom: 4, textAlign: 'center', fontVariant: ['tabular-nums'] }}
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <View style={{ height: CHART_HEIGHT, justifyContent: 'flex-end', width: '100%', alignItems: 'center' }}>
+        {bar.total > 0 && (
+          <Text
+            className={bar.highlight ? 'text-caption font-bold' : 'text-caption font-semibold'}
+            style={{
+              color: bar.highlight ? colors.partner.orange : theme.text,
+              marginBottom: 4,
+              textAlign: 'center',
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {formatCurrency(bar.total).replace('GH₵ ', '')}
+          </Text>
+        )}
+        <Animated.View
+          style={[
+            {
+              width: 20,
+              borderRadius: 6,
+              overflow: 'hidden',
+              borderWidth: bar.highlight ? 1.5 : 0,
+              borderColor: colors.partner.orangeBright,
+            },
+            animatedStyle,
+          ]}
         >
-          {formatCurrency(bar.total).replace('GH₵ ', '')}
-        </Txt>
-      )}
-      <Animated.View
-        style={[
-          {
-            width: 20,
-            borderTopLeftRadius: 6,
-            borderTopRightRadius: 6,
-            backgroundColor: bar.total > 0 ? t.primary : t.line,
-            opacity: bar.total > 0 && !bar.highlight ? 0.4 : 1,
-          },
-          animatedStyle,
-        ]}
-      />
+          {bar.total > 0 ? (
+            <LinearGradient
+              colors={[colors.partner.orangeBright, colors.partner.orangeDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          ) : (
+            <View style={{ flex: 1, backgroundColor: theme.border }} />
+          )}
+        </Animated.View>
+      </View>
     </View>
   );
 }

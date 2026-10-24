@@ -1,13 +1,13 @@
-import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ChevronDown, ChevronUp, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { Button } from '@/src/shared/components/Button';
 import { PayoutDestinationForm } from '@/src/shared/components/PayoutDestinationForm';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { maskMomoNumber, usePayoutStore } from '@/src/stores/payoutStore';
+import { colors } from '@/src/theme';
 import { formatCurrency } from '@/src/utils/money';
-import { Button } from '@/src/ui/Button';
-import { Sheet } from '@/src/ui/Sheet';
 
 interface InstantCashoutSheetProps {
   visible: boolean;
@@ -29,7 +29,8 @@ export function InstantCashoutSheet({
   feeAmount,
   nextPayoutLabel,
 }: InstantCashoutSheetProps) {
-  const { t } = useTheme();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
   const net = Math.max(balance - feeAmount, 0);
 
   const savedNumber = usePayoutStore((s) => s.number);
@@ -51,86 +52,138 @@ export function InstantCashoutSheet({
   const canConfirm = !!savedNumber && !editing;
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Cash out instantly?">
-      <View style={{ gap: 16, paddingTop: 4 }}>
-        <View style={{ gap: 10 }}>
-          <Row label="Available balance" value={formatCurrency(balance)} />
-          <Row label="Instant transfer fee" value={`− ${formatCurrency(feeAmount)}`} muted />
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.lineStrong, marginVertical: 2 }} />
-          <Row label="You'll receive now" value={formatCurrency(net)} strong />
-        </View>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              maxHeight: '92%',
+              backgroundColor: theme.surface,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingTop: 24,
+              paddingHorizontal: 24,
+              paddingBottom: 36,
+            }}
+          >
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16 }}>
+              <View style={{ alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: colors.partner.orangeTint,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Zap size={26} color={colors.partner.orange} />
+                </View>
+                <Text className="text-h1 font-bold" style={{ color: theme.text }}>Cash out instantly?</Text>
+              </View>
 
-        <Pressable
-          onPress={() => setFeeInfoOpen((v) => !v)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: feeInfoOpen }}
-          hitSlop={8}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, alignSelf: 'flex-start' }}
-        >
-          <Txt variant="label" tone="primary">
-            Why is there a fee?
-          </Txt>
-          {feeInfoOpen ? <ChevronUp size={16} color={t.primary} /> : <ChevronDown size={16} color={t.primary} />}
-        </Pressable>
-        {feeInfoOpen ? (
-          <Txt variant="caption" tone="secondary" style={{ marginTop: -8 }}>
-            Instant transfers use mobile money's fast lane, which carries a small fee. Your scheduled payout goes out
-            in a regular batch, so it's free. You'd get the full {formatCurrency(balance)} on {nextPayoutLabel}.
-          </Txt>
-        ) : null}
+              <View style={{ gap: 10 }}>
+                <SheetRow label="Available balance" value={formatCurrency(balance)} theme={theme} />
+                <SheetRow label="Instant transfer fee" value={`− ${formatCurrency(feeAmount)}`} theme={theme} muted />
+                <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 2 }} />
+                <SheetRow label="You'll receive now" value={formatCurrency(net)} theme={theme} bold />
+              </View>
 
-        <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.line }} />
+              <AnimatedPressable
+                onPress={() => setFeeInfoOpen((v) => !v)}
+                scaleTo={0.98}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: feeInfoOpen }}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>
+                    Why is there a fee?
+                  </Text>
+                  {feeInfoOpen ? (
+                    <ChevronUp size={14} color={colors.partner.orange} />
+                  ) : (
+                    <ChevronDown size={14} color={colors.partner.orange} />
+                  )}
+                </View>
+              </AnimatedPressable>
+              {feeInfoOpen ? (
+                <Text className="text-caption" style={{ color: theme.textSecondary, marginTop: -8 }}>
+                  Instant transfers use mobile money's fast lane, which carries a small fee. Your scheduled payout goes
+                  out in a regular batch, so it's free. You'd get the full {formatCurrency(balance)} on{' '}
+                  {nextPayoutLabel}.
+                </Text>
+              ) : null}
 
-        {editing ? (
-          <View style={{ gap: 10 }}>
-            <Txt variant="heading">{savedNumber ? 'Change where it goes' : 'Where should we send it?'}</Txt>
-            <PayoutDestinationForm
-              key={`${savedNumber ?? ''}-${savedNetwork}`}
-              initialNumber={savedNumber}
-              initialNetwork={savedNetwork}
-              onSave={(network, number) => {
-                setDestination(network, number);
-                setEditing(false);
-              }}
-              onCancel={savedNumber ? () => setEditing(false) : undefined}
-            />
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Txt variant="caption" tone="secondary">
-                Sending to
-              </Txt>
-              <Txt variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
-                {savedNetwork} · {savedNumber ? maskMomoNumber(savedNumber) : ''}
-              </Txt>
-            </View>
-            <Pressable onPress={() => setEditing(true)} accessibilityRole="button" hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Txt variant="label" tone="primary">
-                Change
-              </Txt>
-            </Pressable>
-          </View>
-        )}
+              <View style={{ height: 1, backgroundColor: theme.border }} />
 
-        <View style={{ gap: 8 }}>
-          <Button title="Cash out now" size="lg" fullWidth disabled={!canConfirm} onPress={onConfirm} />
-          <Button title="Wait for scheduled payout" variant="quiet" fullWidth onPress={onClose} />
-        </View>
-      </View>
-    </Sheet>
+              {editing ? (
+                <View style={{ gap: 12 }}>
+                  <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
+                    {savedNumber ? 'Change where it goes' : 'Where should we send it?'}
+                  </Text>
+                  <PayoutDestinationForm
+                    key={`${savedNumber ?? ''}-${savedNetwork}`}
+                    initialNumber={savedNumber}
+                    initialNetwork={savedNetwork}
+                    onSave={(network, number) => {
+                      setDestination(network, number);
+                      setEditing(false);
+                    }}
+                    onCancel={savedNumber ? () => setEditing(false) : undefined}
+                  />
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text className="text-caption" style={{ color: theme.textSecondary }}>Sending to</Text>
+                    <Text className="text-body-lg font-semibold" style={{ color: theme.text, fontVariant: ['tabular-nums'] }}>
+                      {savedNetwork} · {savedNumber ? maskMomoNumber(savedNumber) : ''}
+                    </Text>
+                  </View>
+                  <AnimatedPressable onPress={() => setEditing(true)} scaleTo={0.97} accessibilityRole="button" hitSlop={10}>
+                    <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Change</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
+
+              <Button title="Cash out now" variant="partner" fullWidth disabled={!canConfirm} onPress={onConfirm} />
+              <AnimatedPressable onPress={onClose} scaleTo={0.98} style={{ alignItems: 'center' }}>
+                <Text className="text-body-lg font-medium" style={{ color: theme.textSecondary }}>
+                  Wait for scheduled payout
+                </Text>
+              </AnimatedPressable>
+            </ScrollView>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Pressable>
+    </Modal>
   );
 }
 
-function Row({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
+function SheetRow({
+  label,
+  value,
+  theme,
+  bold,
+  muted,
+}: {
+  label: string;
+  value: string;
+  theme: { text: string; textSecondary: string };
+  bold?: boolean;
+  muted?: boolean;
+}) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-      <Txt variant={strong ? 'heading' : 'body'} tone={muted ? 'secondary' : 'ink'}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      <Text className={bold ? 'text-body-lg font-bold' : 'text-body'} style={{ color: muted ? theme.textSecondary : theme.text }}>
         {label}
-      </Txt>
-      <Txt variant={strong ? 'heading' : 'bodyStrong'} tone={muted ? 'secondary' : 'ink'} style={{ fontVariant: ['tabular-nums'] }}>
+      </Text>
+      <Text className={bold ? 'text-body-lg font-bold' : 'text-body font-medium'} style={{ color: muted ? theme.textSecondary : theme.text, fontVariant: ['tabular-nums'] }}>
         {value}
-      </Txt>
+      </Text>
     </View>
   );
 }
