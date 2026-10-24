@@ -10,6 +10,7 @@ import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
 import { haptics } from '@/src/shared/utils/haptics';
+import { useNotificationFilterStore } from '@/src/stores/notificationFilterStore';
 import { useNotificationsStore } from '@/src/stores/notificationsStore';
 import { colors } from '@/src/theme';
 import type { AppNotification, NotificationType } from '@/src/types/notification';
@@ -73,6 +74,8 @@ export default function NotificationsScreen() {
   );
   // Alerts the partner flipped read/unread during this visit.
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
+  const unreadOnly = useNotificationFilterStore((s) => s.unreadOnly);
+  const setUnreadOnly = useNotificationFilterStore((s) => s.setUnreadOnly);
 
   // Client-side-only hide list, not a store mutation — swiping a
   // notification away hides it for this session without touching the
@@ -99,20 +102,30 @@ export default function NotificationsScreen() {
     show('Alert dismissed', 'info', { action: { label: 'Undo', onPress: () => undoDismiss([id]) } });
   };
 
-  const toggleUnread = (id: string) => {
-    const wasUnread = isUnread(id);
-    haptics.light();
+  // Sets an explicit state instead of flipping the current one, so the Undo
+  // on the toast can't act on a stale closure and flip it the wrong way.
+  const applyUnread = (id: string, makeUnread: boolean) => {
     setFlaggedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (makeUnread !== unreadAtOpen.has(id)) next.add(id);
+      else next.delete(id);
       return next;
     });
-    setRead(id, wasUnread);
-    show(wasUnread ? 'Marked as read' : 'Marked as unread', 'info');
+    setRead(id, !makeUnread);
   };
 
-  const visible = notifications.filter((n) => !dismissedIds.has(n.id));
+  const toggleUnread = (id: string) => {
+    const makeUnread = !isUnread(id);
+    haptics.light();
+    applyUnread(id, makeUnread);
+    show(makeUnread ? 'Marked as unread' : 'Marked as read', 'info', {
+      action: { label: 'Undo', onPress: () => applyUnread(id, !makeUnread) },
+    });
+  };
+
+  const notDismissed = notifications.filter((n) => !dismissedIds.has(n.id));
+  const unreadCount = notDismissed.filter((n) => isUnread(n.id)).length;
+  const visible = unreadOnly ? notDismissed.filter((n) => isUnread(n.id)) : notDismissed;
   const sections = groupByRecency(visible);
 
   const clearAll = () => {
@@ -152,12 +165,48 @@ export default function NotificationsScreen() {
               Swipe left to dismiss. Hold to mark as unread.
             </Text>
           ) : null}
+          {notDismissed.length > 0 ? (
+            <AnimatedPressable
+              onPress={() => {
+                haptics.light();
+                setUnreadOnly(!unreadOnly);
+              }}
+              scaleTo={0.96}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: unreadOnly }}
+              accessibilityLabel="Unread only"
+              style={{ alignSelf: 'flex-start', marginTop: 8 }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: unreadOnly ? colors.partner.orange : theme.border,
+                  backgroundColor: unreadOnly ? colors.partner.orangeTint : 'transparent',
+                }}
+              >
+                <Text
+                  className="text-caption font-semibold"
+                  style={{ color: unreadOnly ? colors.partner.orange : theme.textSecondary }}
+                >
+                  {unreadCount > 0 ? `Unread only · ${unreadCount}` : 'Unread only'}
+                </Text>
+              </View>
+            </AnimatedPressable>
+          ) : null}
         </View>
       }
       ListEmptyComponent={
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
           <BellOff size={20} color={theme.textSecondary} />
-          <Text className="text-body" style={{ color: theme.textSecondary }}>Nothing here yet.</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            {unreadOnly && notDismissed.length > 0 ? "You're all caught up." : 'Nothing here yet.'}
+          </Text>
         </GlassView>
       }
       renderSectionHeader={({ section }) => (
