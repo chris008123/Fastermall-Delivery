@@ -15,6 +15,7 @@ import { useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
+import { isOfferedOpenJob, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout ported from the app's GlassView design system, same merge pattern
@@ -70,7 +71,7 @@ export default function JobsScreen() {
   useEffect(() => {
     void loadJobs().finally(() => {
       seenRef.current = new Set(
-        useJobsStore.getState().jobs.filter((j) => j.stage === 'AVAILABLE').map((j) => j.id),
+        useJobsStore.getState().jobs.filter(isOfferedOpenJob).map((j) => j.id),
       );
     });
   }, [loadJobs]);
@@ -90,7 +91,7 @@ export default function JobsScreen() {
   useEffect(() => {
     const seen = seenRef.current;
     if (!seen) return;
-    const fresh = jobs.filter((j) => j.stage === 'AVAILABLE' && !seen.has(j.id)).map((j) => j.id);
+    const fresh = jobs.filter((j) => isOfferedOpenJob(j) && !seen.has(j.id)).map((j) => j.id);
     if (fresh.length === 0) return;
     fresh.forEach((id) => seen.add(id));
     setNewIds((prev) => new Set([...prev, ...fresh]));
@@ -116,7 +117,7 @@ export default function JobsScreen() {
   const openJobs = useMemo(
     () =>
       sortJobs(
-        jobs.filter((j) => j.stage === 'AVAILABLE' && j.type === 'FOOD'),
+        jobs.filter(isOfferedOpenJob),
         sortBy,
       ),
     [jobs, sortBy],
@@ -163,7 +164,7 @@ export default function JobsScreen() {
           <Zap size={22} color={colors.partner.orange} />
           <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
           <Text className="text-body" style={{ color: theme.textSecondary }}>
-            Go online from the Home tab to see jobs near you.
+            Go online from the Home tab to see food jobs near you.
           </Text>
         </GlassView>
       </View>
@@ -225,6 +226,9 @@ export default function JobsScreen() {
           <Text className="text-h1 font-bold" style={{ color: theme.text }}>Jobs</Text>
           {segmented}
           {errorBanner}
+          <View style={{ flexDirection: 'row', marginTop: 6 }}>
+            <Badge jobType="FOOD" label={OFFERED_JOB_LABEL} />
+          </View>
 
           <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 10 }}>
             SORT BY
@@ -244,7 +248,7 @@ export default function JobsScreen() {
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
           <PackageSearch size={20} color={theme.textSecondary} />
           <Text className="text-body" style={{ color: theme.textSecondary }}>
-            No open jobs right now — check back in a bit.
+            No open food jobs right now — check back in a bit.
           </Text>
         </GlassView>
       }

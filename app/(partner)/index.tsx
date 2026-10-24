@@ -27,6 +27,7 @@ import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificat
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
+import { isOfferedOpenJob } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout/visual language ported from the app's established GlassView design
@@ -126,7 +127,7 @@ export default function PartnerHomeScreen() {
     }
   };
 
-  const availableCount = jobs.filter((j) => j.stage === 'AVAILABLE').length;
+  const availableCount = jobs.filter(isOfferedOpenJob).length;
   const activeJob = jobs.find((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED');
   const earnings = selectEarningsBalance(ledger);
   const reimbursed = selectReimbursedTotal(ledger);
@@ -276,7 +277,7 @@ export default function PartnerHomeScreen() {
           <Zap size={22} color={colors.partner.orange} />
           <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
           <Text className="text-body" style={{ color: theme.textSecondary }}>
-            Slide to go online and start receiving Marketplace, Food, and Laundry jobs near you.
+            Slide to go online and start receiving food delivery jobs near you.
           </Text>
         </GlassView>
       )}
@@ -312,7 +313,7 @@ export default function PartnerHomeScreen() {
               <ChevronRight size={20} color={theme.textSecondary} />
             </View>
             <Text className="text-body" style={{ color: theme.textSecondary }}>
-              Browse and accept a Marketplace, Food, or Laundry job.
+              Browse and accept a food delivery job.
             </Text>
           </GlassView>
         </AnimatedPressable>
@@ -330,7 +331,7 @@ export default function PartnerHomeScreen() {
           <PackageSearch size={22} color={theme.textSecondary} />
           <Text className="text-card-title font-semibold" style={{ color: theme.text }}>No jobs nearby right now</Text>
           <Text className="text-body" style={{ color: theme.textSecondary }}>
-            You're online and ready — a new Marketplace, Food, or Laundry job will show up here as soon as one opens up.
+            You're online and ready — a new food delivery job will show up here as soon as one opens up.
           </Text>
         </GlassView>
       )}
