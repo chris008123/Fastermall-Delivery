@@ -1,23 +1,24 @@
-import { ArrowDownCircle, Banknote, ChevronRight, RefreshCcw } from 'lucide-react-native';
+import { ArrowDownCircle, Banknote, ChevronRight, History, PiggyBank, RefreshCcw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Pressable, SectionList, StyleSheet, View } from 'react-native';
-import { haptics } from '@/src/shared/utils/haptics';
-import { Txt } from '@/src/ds/Txt';
-import { useTheme } from '@/src/ds/useTheme';
+import { SectionList, Text, View } from 'react-native';
+import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { useNavClearance } from '@/src/shared/components/AppNav';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '@/src/shared/components/Button';
 import { EarningsChart, sumLastSevenDays } from '@/src/shared/components/EarningsChart';
 import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
+import { GlassView } from '@/src/shared/components/GlassView';
 import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
+import { ProgressBar } from '@/src/shared/components/ProgressBar';
+import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useToast } from '@/src/shared/toast/ToastProvider';
+import { haptics } from '@/src/shared/utils/haptics';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
+import { colors } from '@/src/theme';
 import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
 import { nextPayoutDate } from '@/src/utils/date';
 import { formatCurrency } from '@/src/utils/money';
-import { useNavClearance } from '@/src/shared/components/AppNav';
-import { Button } from '@/src/ui/Button';
-import { Panel } from '@/src/ui/Panel';
-import { ProgressBar } from '@/src/ui/ProgressBar';
-import { ScreenHeader } from '@/src/ui/ScreenHeader';
 
 const ENTRY_META: Record<LedgerEntryType, { icon: typeof Banknote; label: string }> = {
   EARNING: { icon: Banknote, label: 'Earning' },
@@ -34,8 +35,8 @@ function instantFeeFor(balance: number): number {
 
 /** Groups ledger entries into Today / Yesterday / calendar-date sections,
  * preserving the ledger's existing order within each day. Assumes the
- * ledger already comes newest-first — this only inserts headers, it
- * doesn't re-sort. */
+ * ledger already comes newest-first, same as before this grouping — this
+ * only inserts headers, it doesn't re-sort. */
 function groupLedgerByDate(ledger: LedgerEntry[]): { title: string; data: LedgerEntry[] }[] {
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -56,8 +57,10 @@ function groupLedgerByDate(ledger: LedgerEntry[]): { title: string; data: Ledger
 }
 
 export default function WalletScreen() {
-  const { t } = useTheme();
+  const insets = useSafeAreaInsets();
   const navClearance = useNavClearance();
+  const { isDark } = useResolvedTheme();
+  const theme = isDark ? colors.dark : colors.light;
 
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
@@ -87,169 +90,194 @@ export default function WalletScreen() {
     : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScreenHeader title="Wallet" />
-      <SectionList<LedgerEntry, { title: string }>
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: navClearance }}
-        sections={sections}
-        keyExtractor={(e) => e.id}
-        stickySectionHeadersEnabled={false}
-        ListHeaderComponent={
-          <View style={{ gap: 24, marginBottom: 8 }}>
-            {/* Two lanes, kept visually separate on purpose: reimbursements
-                are always yours, earnings only cash out once they cross the
-                threshold. Blending them into one number would hide that rule. */}
-            <View style={{ gap: 14 }}>
-              <View>
-                <Txt variant="caption" tone="secondary">
-                  Work earnings
-                </Txt>
-                <Txt variant="numeral" numberOfLines={1} adjustsFontSizeToFit>
-                  {formatCurrency(earnings)}
-                </Txt>
-              </View>
-              <View style={{ gap: 8 }}>
-                <ProgressBar progress={threshold > 0 ? earnings / threshold : 0} />
-                <Txt variant="caption" tone="secondary">
-                  {canWithdraw
-                    ? `You've crossed the ${formatCurrency(threshold)} cash-out threshold.`
-                    : `${formatCurrency(Math.max(threshold - earnings, 0))} more to unlock a cash-out.`}
-                  {lastCashoutLabel ? ` Last cash-out: ${lastCashoutLabel}.` : ''}
-                </Txt>
-              </View>
-              <View style={{ gap: 8 }}>
-                <Button
-                  title="Cash out instantly"
-                  size="lg"
-                  fullWidth
-                  disabled={!canWithdraw}
-                  onPress={() => setCashoutVisible(true)}
-                />
-                <Button
-                  title="Scheduled payout"
-                  variant="secondary"
-                  fullWidth
-                  disabled={!canWithdraw}
-                  onPress={() => {
-                    withdraw();
-                    haptics.success();
-                    show(`${formatCurrency(earnings)} scheduled for ${payoutLabel}`, 'success');
-                  }}
-                />
-              </View>
-              <Txt variant="caption" tone="secondary">
-                Next automatic payout: <Txt variant="caption" style={{ fontFamily: 'Fredoka_700Bold' }}>{payoutLabel}</Txt>. Free, no fee.
-              </Txt>
+    <SectionList<LedgerEntry, { title: string }>
+      style={{ flex: 1, backgroundColor: theme.background }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance }}
+      sections={sections}
+      keyExtractor={(e) => e.id}
+      stickySectionHeadersEnabled={false}
+      ListHeaderComponent={
+        <View style={{ gap: 16, marginBottom: 8 }}>
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>Wallet</Text>
+
+          {/* Two lanes, kept visually separate on purpose: reimbursements are
+              always yours, earnings only cash out once they cross the
+              threshold — blending them into one number would hide that rule. */}
+          <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <PiggyBank size={18} color={colors.partner.orange} />
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                WORK EARNINGS
+              </Text>
             </View>
-
-            <Panel style={{ gap: 6 }}>
-              <Txt variant="heading">Reimbursed</Txt>
-              <Txt variant="display" style={{ fontVariant: ['tabular-nums'] }}>
-                {formatCurrency(reimbursed)}
-              </Txt>
-              <Txt variant="caption" tone="secondary">
-                Your own money, returned instantly. The cash-out threshold doesn't apply to it.
-              </Txt>
-            </Panel>
-
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <Txt variant="heading">Earnings</Txt>
-                <Txt variant="caption" tone="secondary" style={{ fontVariant: ['tabular-nums'] }}>
-                  {formatCurrency(sumLastSevenDays(ledger))} in the last 7 days
-                </Txt>
-              </View>
-              <Panel>
-                <EarningsChart ledger={ledger} />
-              </Panel>
+            <Text
+              className="text-display font-bold"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={{ color: theme.text, fontVariant: ['tabular-nums'] }}
+            >
+              {formatCurrency(earnings)}
+            </Text>
+            <ProgressBar progress={threshold > 0 ? earnings / threshold : 0} color={colors.partner.orange} />
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              {canWithdraw
+                ? `You've crossed the ${formatCurrency(threshold)} cash-out threshold.`
+                : `${formatCurrency(Math.max(threshold - earnings, 0))} more to unlock a cash-out.`}
+              {lastCashoutLabel ? ` Last cash-out: ${lastCashoutLabel}.` : ''}
+            </Text>
+            <View style={{ gap: 8 }}>
+              <Button
+                title="Cash out instantly"
+                variant="partner"
+                size="lg"
+                fullWidth
+                disabled={!canWithdraw}
+                onPress={() => setCashoutVisible(true)}
+              />
+              <Button
+                title="Scheduled payout"
+                variant="secondary"
+                fullWidth
+                disabled={!canWithdraw}
+                onPress={() => {
+                  withdraw();
+                  haptics.success();
+                  show(`${formatCurrency(earnings)} scheduled for ${payoutLabel}`, 'success');
+                }}
+              />
             </View>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Next automatic payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{payoutLabel}</Text>. Free, no fee.
+            </Text>
+          </GlassView>
 
-            {sections.length > 0 && <Txt variant="heading">Activity</Txt>}
-          </View>
-        }
-        renderSectionHeader={({ section }) => (
-          <Txt variant="label" tone="secondary" style={{ marginTop: 12, marginBottom: 4 }}>
-            {section.title}
-          </Txt>
-        )}
-        ListEmptyComponent={
-          <Panel style={{ gap: 4 }}>
-            <Txt variant="heading">No transactions yet</Txt>
-            <Txt variant="body" tone="secondary">
-              Earnings and reimbursements will show up here once you complete your first job.
-            </Txt>
-          </Panel>
-        }
-        ItemSeparatorComponent={() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: t.line }} />}
-        renderItem={({ item }) => (
-          <LedgerRow entry={item} onPress={item.type === 'EARNING' && item.jobId ? () => setFareEntry(item) : undefined} />
-        )}
-        ListFooterComponent={
-          <>
-            <InstantCashoutSheet
-              visible={cashoutVisible}
-              onClose={() => setCashoutVisible(false)}
-              onConfirm={() => {
-                const net = Math.max(earnings - instantFee, 0);
-                withdrawInstant(instantFee);
-                setCashoutVisible(false);
-                haptics.success();
-                show(`${formatCurrency(net)} sent instantly`, 'success');
-              }}
-              balance={earnings}
-              feeAmount={instantFee}
-              nextPayoutLabel={payoutLabel}
-            />
-            <FareBreakdownSheet visible={!!fareEntry} onClose={() => setFareEntry(null)} job={fareJob} />
-          </>
-        }
-      />
-    </View>
+          <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <RefreshCcw size={16} color={colors.brand.teal} />
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                REIMBURSED
+              </Text>
+            </View>
+            <Text className="text-h2 font-bold" style={{ color: colors.brand.teal, fontVariant: ['tabular-nums'] }}>
+              {formatCurrency(reimbursed)}
+            </Text>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Your own money, returned instantly. The cash-out threshold doesn't apply to it.
+            </Text>
+          </GlassView>
+
+          <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                EARNINGS
+              </Text>
+              <Text className="text-body-lg font-bold" style={{ color: colors.partner.orange, fontVariant: ['tabular-nums'] }}>
+                {formatCurrency(sumLastSevenDays(ledger))} / 7d
+              </Text>
+            </View>
+            <EarningsChart ledger={ledger} />
+          </GlassView>
+
+          {sections.length > 0 && (
+            <Text className="text-card-title font-semibold" style={{ color: theme.text, marginTop: 4 }}>
+              Activity
+            </Text>
+          )}
+        </View>
+      }
+      renderSectionHeader={({ section }) => (
+        <Text
+          className="text-overline font-semibold"
+          style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 16, marginBottom: 8 }}
+        >
+          {section.title.toUpperCase()}
+        </Text>
+      )}
+      ListEmptyComponent={
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8, marginTop: 16 }}>
+          <History size={20} color={theme.textSecondary} />
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            No transactions yet — earnings and reimbursements will show up here once you complete your first job.
+          </Text>
+        </GlassView>
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />}
+      renderItem={({ item }) => (
+        <LedgerRow
+          entry={item}
+          theme={theme}
+          onPress={item.type === 'EARNING' && item.jobId ? () => setFareEntry(item) : undefined}
+        />
+      )}
+      ListFooterComponent={
+        <>
+          <InstantCashoutSheet
+            visible={cashoutVisible}
+            onClose={() => setCashoutVisible(false)}
+            onConfirm={() => {
+              const net = Math.max(earnings - instantFee, 0);
+              withdrawInstant(instantFee);
+              setCashoutVisible(false);
+              haptics.success();
+              show(`${formatCurrency(net)} sent instantly`, 'success');
+            }}
+            balance={earnings}
+            feeAmount={instantFee}
+            nextPayoutLabel={payoutLabel}
+          />
+          <FareBreakdownSheet visible={!!fareEntry} onClose={() => setFareEntry(null)} job={fareJob} />
+        </>
+      }
+    />
   );
 }
 
-function LedgerRow({ entry, onPress }: { entry: LedgerEntry; onPress?: () => void }) {
-  const { t } = useTheme();
+function LedgerRow({
+  entry,
+  theme,
+  onPress,
+}: {
+  entry: LedgerEntry;
+  theme: { text: string; textSecondary: string };
+  onPress?: () => void;
+}) {
   const meta = ENTRY_META[entry.type];
   const Icon = meta.icon;
   const positive = entry.amount >= 0;
-  // Money coming in reads green; a withdrawal's negative amount is a
-  // routine, deliberate cash-out, not an error, so it stays neutral.
-  const comingIn = entry.type !== 'WITHDRAWAL';
+  const accent =
+    entry.type === 'EARNING' ? colors.partner.orange : entry.type === 'REIMBURSEMENT' ? colors.brand.teal : theme.textSecondary;
+  // Amount color follows entry type, not sign — a withdrawal's negative
+  // amount is a routine, deliberate cash-out, not an error.
+  const amountColor = entry.type === 'WITHDRAWAL' ? theme.text : accent;
 
-  const content = (pressed: boolean) => (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        minHeight: 60,
-        paddingVertical: 10,
-        opacity: pressed ? 0.6 : 1,
-      }}
-    >
-      <Icon size={20} color={t.inkSecondary} />
+  const Row = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, minHeight: 56 }}>
+      <Icon size={20} color={accent} />
       <View style={{ flex: 1 }}>
-        <Txt variant="body" numberOfLines={1}>
+        <Text className="text-body font-medium" style={{ color: theme.text }} numberOfLines={1}>
           {entry.note}
-        </Txt>
-        <Txt variant="caption" tone="secondary">
+        </Text>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>
           {meta.label}
-        </Txt>
+        </Text>
       </View>
-      <Txt variant="bodyStrong" tone={comingIn ? 'go' : 'ink'} style={{ fontVariant: ['tabular-nums'] }}>
-        {positive ? '+' : ''}
-        {formatCurrency(entry.amount)}
-      </Txt>
-      {onPress ? <ChevronRight size={16} color={t.inkTertiary} /> : null}
+      <Text className="text-body-lg font-semibold" style={{ color: amountColor, fontVariant: ['tabular-nums'] }}>
+        {positive ? '+' : ''}{formatCurrency(entry.amount)}
+      </Text>
+      {onPress ? <ChevronRight size={16} color={theme.textSecondary} /> : null}
     </View>
   );
 
-  if (!onPress) return content(false);
+  if (!onPress) return Row;
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${entry.note}, see how this was calculated`}>
-      {({ pressed }) => content(pressed)}
-    </Pressable>
+    <AnimatedPressable
+      onPress={onPress}
+      scaleTo={0.99}
+      accessibilityRole="button"
+      accessibilityLabel={`${entry.note}, see how this was calculated`}
+    >
+      {Row}
+    </AnimatedPressable>
   );
 }
