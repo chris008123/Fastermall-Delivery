@@ -1,10 +1,11 @@
-import { Bell, Briefcase, Megaphone, Vibrate, Volume2, Wallet } from 'lucide-react-native';
+import { Bell, Briefcase, Inbox, Megaphone, Vibrate, Volume2, Wallet } from 'lucide-react-native';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { useNotificationFilterStore } from '@/src/stores/notificationFilterStore';
 import { useSettingsStore, type NotificationPrefs } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
@@ -60,6 +61,9 @@ export default function NotificationSettingsScreen() {
   const theme = isDark ? colors.dark : colors.light;
   const prefs = useSettingsStore((s) => s.notificationPrefs);
   const setPref = useSettingsStore((s) => s.setNotificationPref);
+  // Same saved choice as the "Unread only" pill on the Notifications tab.
+  const unreadOnly = useNotificationFilterStore((s) => s.unreadOnly);
+  const setUnreadOnly = useNotificationFilterStore((s) => s.setUnreadOnly);
 
   // "New job requests" is the one alert a partner can't afford to miss —
   // rather than making it un-toggleable outright, turning it off asks for
@@ -133,6 +137,29 @@ export default function NotificationSettingsScreen() {
           ALERT STYLE
         </Text>
         {renderGroup(ALERT_STYLE_ROWS)}
+      </View>
+
+      <View style={{ gap: 8 }}>
+        <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginLeft: 4 }}>
+          INBOX
+        </Text>
+        <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
+          <SettingsRow
+            icon={Inbox}
+            iconColor={colors.accent.blue}
+            iconBg="rgba(59, 130, 196, 0.14)"
+            label="Unread only"
+            description="Show only alerts you have not read yet in your Notifications list"
+            right={
+              <Switch
+                value={unreadOnly}
+                onValueChange={setUnreadOnly}
+                trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
+                thumbColor={unreadOnly ? colors.partner.orange : theme.surfaceRaised}
+              />
+            }
+          />
+        </GlassView>
       </View>
     </ScrollView>
   );
