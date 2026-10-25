@@ -17,6 +17,7 @@ import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { CourierScene } from '@/src/shared/components/CourierScene';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { ApiError } from '@/src/services/api';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
 
@@ -46,6 +47,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const canSubmit =
     email.trim().length > 0 &&
@@ -59,12 +61,15 @@ export default function LoginScreen() {
     }
 
     setError(null);
+    setFieldErrors({});
     setLoading(true);
 
     try {
       await signIn(email, password);
       router.replace('/(partner)');
     } catch (err) {
+      // Problems the server tied to one input show under that input.
+      if (err instanceof ApiError) setFieldErrors(err.fieldErrors);
       setError(
         err instanceof Error
           ? err.message
@@ -106,6 +111,7 @@ export default function LoginScreen() {
 
           <Field
             label="Email address"
+            error={fieldErrors.email}
             theme={theme}
             icon={<Mail size={18} color={theme.textSecondary} />}
           >
@@ -132,6 +138,7 @@ export default function LoginScreen() {
 
           <Field
             label="Password"
+            error={fieldErrors.password}
             theme={theme}
             icon={<Lock size={18} color={theme.textSecondary} />}
           >
@@ -222,11 +229,13 @@ function Field({
   label,
   icon,
   theme,
+  error,
   children,
 }: {
   label: string;
   icon: ReactNode;
   theme: Theme;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -244,7 +253,7 @@ function Field({
           alignItems: 'center',
           gap: 10,
           borderWidth: 1.5,
-          borderColor: theme.border,
+          borderColor: error ? colors.semantic.error : theme.border,
           borderRadius: 16,
           paddingHorizontal: 14,
           paddingVertical: 12,
@@ -254,6 +263,12 @@ function Field({
         {icon}
         {children}
       </View>
+
+      {error ? (
+        <Text className="text-caption" style={{ color: colors.semantic.error }}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
