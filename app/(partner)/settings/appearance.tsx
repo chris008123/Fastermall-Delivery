@@ -258,7 +258,7 @@ export default function AppearanceScreen() {
               A small buzz when you go online, accept a job or switch tabs.
             </Text>
           </View>
-          <Switch value={hapticsEnabled} onValueChange={setHapticsEnabled} trackColor={switchColors} thumbColor="#ffffff" />
+          <Switch accessibilityLabel="Vibration feedback" value={hapticsEnabled} onValueChange={setHapticsEnabled} trackColor={switchColors} thumbColor="#ffffff" />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Power size={20} color={theme.textSecondary} />
@@ -268,7 +268,7 @@ export default function AppearanceScreen() {
               Going online always takes a slide, so it can't happen by accident.
             </Text>
           </View>
-          <Switch value={offlineByTap} onValueChange={setOfflineByTap} trackColor={switchColors} thumbColor="#ffffff" />
+          <Switch accessibilityLabel="Go offline with a tap" value={offlineByTap} onValueChange={setOfflineByTap} trackColor={switchColors} thumbColor="#ffffff" />
         </View>
       </GlassView>
     </ScrollView>

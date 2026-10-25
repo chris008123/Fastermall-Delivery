@@ -360,7 +360,7 @@ function StepAction({
       <View style={{ gap: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <KeyRound size={16} color={accent} />
-          <TextInput
+          <TextInput accessibilityLabel="6-digit delivery code"
             value={code}
             // Pasting a whole message ("Your code is 123456") keeps just the code.
             onChangeText={(v) => setCode(extractDeliveryCode(v))}

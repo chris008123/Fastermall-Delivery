@@ -76,7 +76,7 @@ export function PartnerAuthHeroHeader({ title, subtitle, height = 196, onBack }:
             elevation: 5,
           }}
         >
-          <Image
+          <Image accessibilityLabel="Fastermall logo"
             source={require('@/assets/images/logo-mark.png')}
             style={{ width: 52, height: 36 }}
             resizeMode="contain"

@@ -159,7 +159,7 @@ export default function SupportChatScreen() {
           borderTopColor: theme.border,
         }}
       >
-        <TextInput
+        <TextInput accessibilityLabel="Type a message"
           value={draft}
           onChangeText={setDraft}
           placeholder="Type a message"
@@ -177,7 +177,7 @@ export default function SupportChatScreen() {
           onSubmitEditing={send}
           returnKeyType="send"
         />
-        <AnimatedPressable onPress={send} scaleTo={0.9}>
+        <AnimatedPressable accessibilityRole="button" accessibilityLabel="Send message" onPress={send} scaleTo={0.9}>
           <View
             style={{
               width: 42,

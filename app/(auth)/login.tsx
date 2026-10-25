@@ -109,7 +109,7 @@ export default function LoginScreen() {
             theme={theme}
             icon={<Mail size={18} color={theme.textSecondary} />}
           >
-            <TextInput
+            <TextInput accessibilityLabel="Email address"
               value={email}
               onChangeText={setEmail}
               placeholder="partner@example.com"
@@ -135,7 +135,7 @@ export default function LoginScreen() {
             theme={theme}
             icon={<Lock size={18} color={theme.textSecondary} />}
           >
-            <TextInput
+            <TextInput accessibilityLabel="Password"
               ref={passwordRef}
               value={password}
               onChangeText={setPassword}

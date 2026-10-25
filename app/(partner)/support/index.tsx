@@ -73,7 +73,7 @@ export default function SupportScreen() {
         }}
       >
         <Search size={18} color={theme.textSecondary} />
-        <TextInput
+        <TextInput accessibilityLabel="Search help"
           value={query}
           onChangeText={setQuery}
           placeholder="Search help"

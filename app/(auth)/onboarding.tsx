@@ -166,7 +166,7 @@ export default function OnboardingScreen() {
         {step.key === 'phone' && (
           <View style={{ gap: 18 }}>
             <Field label="Phone number" theme={theme} icon={<Phone size={18} color={theme.textSecondary} />}>
-              <TextInput
+              <TextInput accessibilityLabel="Phone number"
                 value={form.phone}
                 onChangeText={(v) => update({ phone: formatGhanaPhone(v) })}
                 placeholder="024 412 3456"
@@ -181,7 +181,7 @@ export default function OnboardingScreen() {
         {step.key === 'personal' && (
           <View style={{ gap: 18 }}>
             <Field label="Full name" theme={theme} icon={<User size={18} color={theme.textSecondary} />}>
-              <TextInput
+              <TextInput accessibilityLabel="Full name"
                 value={form.fullName}
                 onChangeText={(v) => update({ fullName: v })}
                 placeholder="As it appears on your Ghana Card"
@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
               />
             </Field>
             <Field label="Date of birth" theme={theme} icon={<User size={18} color={theme.textSecondary} />}>
-              <TextInput
+              <TextInput accessibilityLabel="Date of birth"
                 value={form.dateOfBirth}
                 onChangeText={(v) => update({ dateOfBirth: formatDob(v) })}
                 maxLength={10}
@@ -201,7 +201,7 @@ export default function OnboardingScreen() {
               />
             </Field>
             <Field label="Home address" theme={theme} icon={<MapPin size={18} color={theme.textSecondary} />}>
-              <TextInput
+              <TextInput accessibilityLabel="Home address"
                 value={form.address}
                 onChangeText={(v) => update({ address: v })}
                 placeholder="e.g. Ayeduase, Kumasi"
@@ -266,7 +266,7 @@ export default function OnboardingScreen() {
             </View>
             {form.vehicleMode === 'MOTORCYCLE' && (
               <Field label="Registration number" theme={theme} icon={<Bike size={18} color={theme.textSecondary} />}>
-                <TextInput
+                <TextInput accessibilityLabel="Registration number"
                   value={form.plateNumber}
                   onChangeText={(v) => update({ plateNumber: v.toUpperCase() })}
                   placeholder="AS 1234-24"

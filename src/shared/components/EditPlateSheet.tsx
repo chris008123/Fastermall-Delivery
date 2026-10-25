@@ -45,12 +45,12 @@ export function EditPlateSheet({ visible, onClose, initialValue, onSave }: EditP
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text className="text-h1 font-bold" style={{ color: theme.text }}>Edit plate number</Text>
-            <AnimatedPressable onPress={onClose} scaleTo={0.9}>
+            <AnimatedPressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} scaleTo={0.9}>
               <X size={22} color={theme.textSecondary} />
             </AnimatedPressable>
           </View>
 
-          <TextInput
+          <TextInput accessibilityLabel="Plate number"
             value={value}
             onChangeText={setValue}
             autoCapitalize="characters"
