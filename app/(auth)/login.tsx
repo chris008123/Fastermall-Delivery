@@ -38,6 +38,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
 
   const signIn = useAuthStore((s) => s.signIn);
+  const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const passwordRef = useRef<TextInput>(null);
 
   const [email, setEmail] = useState('');
@@ -166,6 +167,12 @@ export default function LoginScreen() {
               )}
             </Pressable>
           </Field>
+
+          {sessionExpired && !error && (
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Your session ended. Please sign in again.
+            </Text>
+          )}
 
           {error && (
             <Text

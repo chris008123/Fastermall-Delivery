@@ -5,6 +5,7 @@ import {
   clearAccessToken,
   getAccessToken,
   saveAccessToken,
+  setSessionExpiredHandler,
 } from '@/src/services/api';
 import { clearAccountSession, prepareAccountSession } from '@/src/stores/sessionReset';
 
@@ -31,15 +32,30 @@ interface AuthState {
   isAuthenticated: boolean;
   isHydrating: boolean;
   user: StaffUser | null;
+  /** True after the server ended the session, so the login screen can say why. */
+  sessionExpired: boolean;
+  /** Ends the session because the server rejected the saved token. */
+  expireSession: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   hydrate: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isHydrating: true,
   user: null,
+  sessionExpired: false,
+
+  expireSession: async () => {
+    // Several requests can fail together; only the first one ends the session.
+    if (!get().isAuthenticated) return;
+
+    set({ isAuthenticated: false, user: null, isHydrating: false, sessionExpired: true });
+
+    await clearAccessToken();
+    await clearAccountSession();
+  },
 
   signIn: async (email, password) => {
     const response = await apiFetch<LoginResponse>('/staff/login', {
@@ -69,6 +85,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       user,
       isHydrating: false,
+      sessionExpired: false,
     });
   },
 
@@ -123,6 +140,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isAuthenticated: false,
           user: null,
           isHydrating: false,
+          sessionExpired: true,
         });
         return;
       }
@@ -144,8 +162,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       user: null,
       isHydrating: false,
+      sessionExpired: false,
     });
 
     await clearAccountSession();
   },
 }));
+
+// A 401 on any signed-in request ends the session (see apiFetch).
+setSessionExpiredHandler(() => {
+  void useAuthStore.getState().expireSession();
+});
