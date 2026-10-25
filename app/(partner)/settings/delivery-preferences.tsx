@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { usePartnerStore } from '@/src/stores/partnerStore';
@@ -33,6 +34,10 @@ export default function DeliveryPreferencesScreen() {
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Delivery preferences</Text>
       </View>
 
+      <InactiveSettingNotice>
+        Auto-accept, pickup radius, distance and job types are saved on this phone, but they don't change which jobs you see yet. The online switch below works.
+      </InactiveSettingNotice>
+
       <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
         <SettingsRow
           icon={Package}
@@ -41,7 +46,7 @@ export default function DeliveryPreferencesScreen() {
           label="Auto-accept jobs"
           description="Matching jobs are accepted for you automatically"
           right={
-            <Switch
+            <Switch accessibilityLabel="Auto-accept jobs"
               value={deliveryPrefs.autoAccept}
               onValueChange={(value) => setDeliveryPref('autoAccept', value)}
               trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
@@ -107,7 +112,7 @@ export default function DeliveryPreferencesScreen() {
             label="Online — receiving jobs"
             description={partner.isAvailable ? 'You are currently online' : 'You are currently offline'}
             right={
-              <Switch
+              <Switch accessibilityLabel="Online, receiving jobs"
                 value={partner.isAvailable}
                 onValueChange={partner.setAvailable}
                 trackColor={{ false: theme.border, true: colors.partner.orangeTint }}

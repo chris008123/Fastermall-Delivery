@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type NavigationApp, type NavigationPrefs } from '@/src/stores/settingsStore';
@@ -40,6 +41,10 @@ export default function NavigationSettingsScreen() {
         <BackButton />
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Navigation</Text>
       </View>
+
+      <InactiveSettingNotice>
+        Your choice of navigation app works. The route options below are saved on this phone but aren't passed on to the map app yet.
+      </InactiveSettingNotice>
 
       <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
@@ -97,7 +102,7 @@ export default function NavigationSettingsScreen() {
                 label={label}
                 description={description}
                 right={
-                  <Switch
+                  <Switch accessibilityLabel={label}
                     value={navigationPrefs[key]}
                     onValueChange={(value) => setNavigationPref(key, value)}
                     trackColor={{ false: theme.border, true: colors.partner.orangeTint }}

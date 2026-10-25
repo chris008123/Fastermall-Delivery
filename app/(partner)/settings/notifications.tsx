@@ -3,6 +3,7 @@ import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
+import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useNotificationFilterStore } from '@/src/stores/notificationFilterStore';
@@ -94,7 +95,7 @@ export default function NotificationSettingsScreen() {
             label={row.label}
             description={row.description}
             right={
-              <Switch
+              <Switch accessibilityLabel={row.label}
                 value={prefs[row.key]}
                 onValueChange={(value) => handleToggle(row, value)}
                 trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
@@ -143,7 +144,11 @@ export default function NotificationSettingsScreen() {
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginLeft: 4 }}>
           INBOX
         </Text>
-        <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
+        <InactiveSettingNotice>
+        Push notifications aren't set up yet, so these choices are saved on this phone but nothing is sent or silenced yet. Alerts you see in the Notifications tab are unaffected.
+      </InactiveSettingNotice>
+
+      <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
           <SettingsRow
             icon={Inbox}
             iconColor={colors.accent.blue}
@@ -151,7 +156,7 @@ export default function NotificationSettingsScreen() {
             label="Unread only"
             description="Show only alerts you have not read yet in your Notifications list"
             right={
-              <Switch
+              <Switch accessibilityLabel="Unread only"
                 value={unreadOnly}
                 onValueChange={setUnreadOnly}
                 trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
