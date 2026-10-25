@@ -46,6 +46,8 @@ function sortJobs(jobs: Job[], sortBy: SortOption): Job[] {
   return sorted;
 }
 
+const HISTORY_PAGE_SIZE = 20;
+
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
   const navClearance = useNavClearance();
@@ -55,6 +57,8 @@ export default function JobsScreen() {
   const [view, setView] = useState<JobsView>('available');
   const [sortBy, setSortBy] = useState<SortOption>('HIGHEST_PAY');
   const [refreshing, setRefreshing] = useState(false);
+  // History can grow without limit, so it draws 20 deliveries at a time.
+  const [historyCount, setHistoryCount] = useState(HISTORY_PAGE_SIZE);
 
   const isAvailable = usePartnerStore((s) => s.isAvailable);
   const jobs = useJobsStore((s) => s.jobs);
@@ -191,7 +195,9 @@ export default function JobsScreen() {
       <FlatList<Job>
         style={{ flex: 1, backgroundColor: theme.background }}
         contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 12 }}
-        data={history}
+        data={history.slice(0, historyCount)}
+        onEndReached={() => setHistoryCount((n) => (n < history.length ? n + HISTORY_PAGE_SIZE : n))}
+        onEndReachedThreshold={0.5}
         keyExtractor={(j) => j.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.partner.orange} colors={[colors.partner.orange]} />}
         ListHeaderComponent={
