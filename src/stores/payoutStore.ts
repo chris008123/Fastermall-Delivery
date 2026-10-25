@@ -31,7 +31,6 @@ export const usePayoutStore = create<PayoutState>()(
   ),
 );
 
-export const isValidMomoNumber = (value: string) => /^0\d{9}$/.test(value);
-
-/** "0241234567" -> "024 ··· 4567" */
-export const maskMomoNumber = (value: string) => `${value.slice(0, 3)} ··· ${value.slice(-4)}`;
+// The number rules live in utils/momo so they can be tested on their own;
+// re-exported here so existing imports keep working.
+export { isValidMomoNumber, maskMomoNumber } from '@/src/utils/momo';

@@ -11,3 +11,9 @@ export const jobTypeNoun = (type: Job['type']) => type.toLowerCase();
 
 /** An open job this partner can actually accept right now. */
 export const isOfferedOpenJob = (job: Job) => job.stage === 'AVAILABLE' && job.type === OFFERED_JOB_TYPE;
+
+/** Ids of open jobs the partner hasn't been told about yet — the basis for
+ * the "N new jobs available" alert on the Jobs tab. */
+export function findFreshJobIds(jobs: readonly Job[], seen: ReadonlySet<string>): string[] {
+  return jobs.filter((j) => isOfferedOpenJob(j) && !seen.has(j.id)).map((j) => j.id);
+}

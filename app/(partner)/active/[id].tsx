@@ -11,6 +11,7 @@ import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
 import { FailedDeliverySheet, FAILURE_REASONS } from '@/src/shared/components/FailedDeliverySheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
+import { extractDeliveryCode } from '@/src/utils/deliveryCode';
 import { SafetySheet } from '@/src/shared/components/SafetySheet';
 import { SlideToConfirm } from '@/src/shared/components/SlideToConfirm';
 import { StarRating } from '@/src/shared/components/StarRating';
@@ -362,11 +363,8 @@ function StepAction({
           <KeyRound size={16} color={accent} />
           <TextInput
             value={code}
-            onChangeText={(v) => {
-              // Pasting a whole message ("Your code is 123456") keeps just the code.
-              const run = v.length > 6 ? v.match(/\d{6}/) : null;
-              setCode(run ? run[0] : v.replace(/[^0-9]/g, '').slice(0, 6));
-            }}
+            // Pasting a whole message ("Your code is 123456") keeps just the code.
+            onChangeText={(v) => setCode(extractDeliveryCode(v))}
             textContentType="oneTimeCode"
             autoComplete="sms-otp"
             placeholder="6-digit code"

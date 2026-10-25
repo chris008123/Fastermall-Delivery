@@ -3,7 +3,8 @@ import { Text, TextInput, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { isValidMomoNumber, type MomoNetwork } from '@/src/stores/payoutStore';
+import type { MomoNetwork } from '@/src/stores/payoutStore';
+import { isValidMomoNumber, sanitizeMomoInput } from '@/src/utils/momo';
 import { colors } from '@/src/theme';
 
 const NETWORKS: MomoNetwork[] = ['MTN', 'Telecel', 'AirtelTigo'];
@@ -64,7 +65,7 @@ export function PayoutDestinationForm({ initialNumber, initialNetwork, onSave, o
         </Text>
         <TextInput
           value={number}
-          onChangeText={(v) => setNumber(v.replace(/\D/g, '').slice(0, 10))}
+          onChangeText={(v) => setNumber(sanitizeMomoInput(v))}
           placeholder="024 123 4567"
           placeholderTextColor={theme.textSecondary}
           keyboardType="phone-pad"

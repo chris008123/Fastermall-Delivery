@@ -15,7 +15,7 @@ import { useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
-import { isOfferedOpenJob, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
+import { findFreshJobIds, isOfferedOpenJob, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout ported from the app's GlassView design system, same merge pattern
@@ -92,7 +92,7 @@ export default function JobsScreen() {
   useEffect(() => {
     const seen = seenRef.current;
     if (!seen) return;
-    const fresh = jobs.filter((j) => isOfferedOpenJob(j) && !seen.has(j.id)).map((j) => j.id);
+    const fresh = findFreshJobIds(jobs, seen);
     if (fresh.length === 0) return;
     fresh.forEach((id) => seen.add(id));
     setNewIds((prev) => new Set([...prev, ...fresh]));
