@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 import { ApiError, apiFetch, clearAccessToken, getAccessToken } from '@/src/services/api';
 import { useAuthStore } from '@/src/stores/authStore';
@@ -8,6 +9,16 @@ import { usePayoutStore } from '@/src/stores/payoutStore';
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+jest.mock('expo-secure-store', () => {
+  const store = new Map<string, string>();
+  return {
+    getItemAsync: jest.fn(async (k: string) => store.get(k) ?? null),
+    setItemAsync: jest.fn(async (k: string, v: string) => void store.set(k, v)),
+    deleteItemAsync: jest.fn(async (k: string) => void store.delete(k)),
+    __store: store,
+  };
+});
 
 jest.mock('@/src/services/api', () => ({
   ...jest.requireActual('@/src/services/api'),
@@ -26,7 +37,7 @@ const partner = { id: 'u1', email: 'a@b.co', fullName: 'Ama', role: 'DELIVERY_PA
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
-  useAuthStore.setState({ isAuthenticated: false, isHydrating: true, user: null });
+  useAuthStore.setState({ isAuthenticated: false, isHydrating: true, user: null, sessionExpired: false });
   mockGetToken.mockResolvedValue('token');
 });
 
@@ -78,7 +89,7 @@ describe('signOut', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useJobsStore.getState().jobs).toEqual([]);
     expect(usePayoutStore.getState().number).toBeNull();
-    expect(await AsyncStorage.getItem('fastermall-partner-payout')).toBeNull();
+    expect(await SecureStore.getItemAsync('fastermall-partner-payout')).toBeNull();
   });
 
   it('leaves device preferences alone', async () => {
@@ -86,6 +97,34 @@ describe('signOut', () => {
     useNavStyleStore.setState({ navStyle: 'compact' });
     await useAuthStore.getState().signOut();
     expect(useNavStyleStore.getState().navStyle).toBe('compact');
+  });
+});
+
+describe('expireSession (the server rejected the saved token)', () => {
+  it('signs out, remembers why, and wipes the account data', async () => {
+    useAuthStore.setState({ isAuthenticated: true, isHydrating: false, user: partner });
+    usePayoutStore.setState({ network: 'MTN', number: '0241234567' });
+
+    await useAuthStore.getState().expireSession();
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().sessionExpired).toBe(true);
+    expect(mockClearToken).toHaveBeenCalled();
+    expect(usePayoutStore.getState().number).toBeNull();
+  });
+
+  it('does nothing when already signed out', async () => {
+    await useAuthStore.getState().expireSession();
+    expect(mockClearToken).not.toHaveBeenCalled();
+  });
+
+  it('is cleared by a fresh sign-in', async () => {
+    useAuthStore.setState({ sessionExpired: true });
+    mockApiFetch
+      .mockResolvedValueOnce({ success: true, data: { accessToken: 't' } })
+      .mockResolvedValueOnce({ success: true, data: partner });
+    await useAuthStore.getState().signIn('a@b.co', 'pw');
+    expect(useAuthStore.getState().sessionExpired).toBe(false);
   });
 });
 
