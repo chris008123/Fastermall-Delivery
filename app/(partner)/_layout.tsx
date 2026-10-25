@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router';
+import { Redirect, Stack } from 'expo-router';
 import { View } from 'react-native';
 import { AppNav } from '@/src/shared/components/AppNav';
+import { useAuthStore } from '@/src/stores/authStore';
 
 // Ported from the customer app's (main)/_layout.tsx pattern: a header-less
 // Stack with the floating glass nav mounted as a sibling, not inside any
@@ -17,7 +18,16 @@ import { AppNav } from '@/src/shared/components/AppNav';
 // platform-default tab bar. AppNav keeps the original frosted floating pill
 // as its default and adds two docked styles the partner can switch to in
 // Settings > Appearance.
+// Every partner screen sits behind this check, so a deep link, a restored
+// navigation state or a back-swipe after signing out can never show them to
+// a signed-out device.
 export default function PartnerLayout() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }} />
