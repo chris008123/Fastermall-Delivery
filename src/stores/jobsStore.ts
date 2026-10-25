@@ -368,12 +368,19 @@ function replaceJob(
   );
 }
 
+// The 30s poll, pull-to-refresh and screen focus can all ask for a load at
+// once. They share one request instead of racing each other.
+let loadJobsInFlight: Promise<void> | null = null;
+
 export const useJobsStore = create<JobsState>((set, get) => ({
   jobs: [],
   isLoading: false,
   error: null,
 
-  loadJobs: async () => {
+  loadJobs: () => {
+    if (loadJobsInFlight) return loadJobsInFlight;
+
+    const run = (async () => {
     set({
       isLoading: true,
       error: null,
@@ -499,6 +506,13 @@ export const useJobsStore = create<JobsState>((set, get) => ({
 
       throw error;
     }
+    })();
+
+    loadJobsInFlight = run.finally(() => {
+      loadJobsInFlight = null;
+    });
+
+    return loadJobsInFlight;
   },
 
   acceptJob: async (id) => {
