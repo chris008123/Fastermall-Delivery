@@ -6,8 +6,10 @@ import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { SUPPORT_EMAIL } from '@/src/config/contact';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
+import { buildDeletionRequestMailto } from '@/src/utils/accountDeletion';
 
 // Placeholder domain — swap for the real legal-pages URL once Fastermall
 // publishes one; kept as a single constant so that's a one-line change.
@@ -29,23 +31,27 @@ export default function PrivacyScreen() {
     );
   };
 
-  const confirmDeleteAccount = () => {
+  // The app can't delete an account itself yet, so this asks support to do
+  // it and says so. Nothing is deleted, and the partner stays signed in,
+  // until support confirms. Swap for a real in-app deletion call once the
+  // backend has one (see BACKEND_CHANGES_NEEDED.md).
+  const openDeletionEmail = () => {
+    const accountEmail = useAuthStore.getState().user?.email;
+    Linking.openURL(buildDeletionRequestMailto(SUPPORT_EMAIL, accountEmail)).catch(() => {
+      Alert.alert(
+        'No email app found',
+        `Please email ${SUPPORT_EMAIL} from another app and ask us to delete your partner account. Use the email address you sign in with.`,
+      );
+    });
+  };
+
+  const requestAccountDeletion = () => {
     Alert.alert(
-      'Delete account?',
-      'This permanently removes your partner account, documents, and delivery history. This can\u2019t be undone.',
+      'Request account deletion',
+      'This opens an email to Fastermall support asking them to delete your partner account.\n\nNothing is deleted yet. Your account stays active until support confirms with you.\n\nSome records, such as completed deliveries and payouts, may have to be kept for legal or accounting reasons.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete account',
-          style: 'destructive',
-          onPress: () => {
-            // No backend to actually delete against yet — signing the
-            // partner out is the honest stand-in for "your account is
-            // gone" until account deletion is wired up for real.
-            useAuthStore.getState().signOut();
-            router.replace('/(auth)/login');
-          },
-        },
+        { text: 'Open email', onPress: openDeletionEmail },
       ],
     );
   };
@@ -126,16 +132,16 @@ export default function PrivacyScreen() {
             icon={Trash2}
             iconColor={colors.semantic.error}
             iconBg="rgba(214, 69, 69, 0.12)"
-            label="Delete account"
-            description="Permanently remove your partner account"
+            label="Request account deletion"
+            description="Ask support to remove your partner account"
             destructive
-            onPress={confirmDeleteAccount}
+            onPress={requestAccountDeletion}
           />
         </GlassView>
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginLeft: 4 }}>
           <AlertTriangle size={14} color={theme.textSecondary} style={{ marginTop: 2 }} />
           <Text className="text-caption" style={{ color: theme.textSecondary, flex: 1 }}>
-            Deleting your account removes access to job history, earnings records, and documents on file.
+            Once support confirms your request, you lose access to job history, earnings records and documents on file. Your account stays active until then.
           </Text>
         </View>
       </View>
