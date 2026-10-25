@@ -10,14 +10,17 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { BootErrorScreen } from '@/src/shared/components/BootErrorScreen';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { useStoreHydrated } from '@/src/shared/hooks/useStoreHydrated';
 import { ToastProvider } from '@/src/shared/toast/ToastProvider';
 import { useAuthStore } from '@/src/stores/authStore';
+import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
 export { ErrorBoundary } from 'expo-router';
@@ -46,6 +49,7 @@ export default function RootLayout() {
     (state) => state.isHydrating,
   );
 
+  const settingsHydrated = useStoreHydrated(useSettingsStore);
   const [ready, setReady] = useState(false);
   const [bootError, setBootError] = useState<string | null>(
     null,
@@ -58,47 +62,42 @@ export default function RootLayout() {
     }
   }, [fontError]);
 
+  const initializeApp = useCallback(async () => {
+    try {
+      await hydrate();
+    } catch (error) {
+      setBootError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to initialize authentication.',
+      );
+    } finally {
+      await SplashScreen.hideAsync().catch(() => {});
+      setReady(true);
+    }
+  }, [hydrate]);
+
   useEffect(() => {
     if (!fontsLoaded) {
       return;
     }
 
-    const initializeApp = async () => {
-      try {
-        await hydrate();
-      } catch (error) {
-        setBootError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to initialize authentication.',
-        );
-      } finally {
-        await SplashScreen.hideAsync().catch(() => {});
-        setReady(true);
-      }
-    };
-
     void initializeApp();
-  }, [fontsLoaded, hydrate]);
+  }, [fontsLoaded, initializeApp]);
 
-  if (!ready || isHydrating) {
+  if (!ready || isHydrating || !settingsHydrated) {
     return null;
   }
 
   if (bootError) {
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
+      <BootErrorScreen
+        message={bootError}
+        onRetry={() => {
+          setBootError(null);
+          void initializeApp();
         }}
-      >
-        <Text style={{ color: '#d64545' }}>
-          Boot error: {bootError}
-        </Text>
-      </View>
+      />
     );
   }
 
