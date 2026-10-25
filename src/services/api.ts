@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
-export const API_BASE_URL =
-  'https://fastermall-super-app-backend.onrender.com/api/v1';
+import { API_BASE_URL } from '@/src/config/env';
+
+export { API_BASE_URL };
 
 // The access token lives in the platform keychain/keystore (encrypted), not
 // plain AsyncStorage. SecureStore keys can't contain "@", hence a new name;
