@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Bike, Footprints, MapPin, Package, PackageX, Wallet } from 'lucide-react-native';
+import { Bike, Footprints, MapPin, PackageX, Wallet } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
-import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { haptics } from '@/src/shared/utils/haptics';
@@ -128,7 +127,7 @@ export default function JobDetailScreen() {
         <View style={{ height: 1, backgroundColor: theme.border }} />
         <Row icon={<MapPin size={16} color={theme.textSecondary} />} label="Drop-off" title={job.dropoff.label} sub={`${job.dropoff.sub} \u00b7 ${job.customerName}`} theme={theme} />
       </GlassView>
-      {/* <DeliveryMap job={job} showPartner={false} height={160} /> */}
+      {/* Map hidden for now. To bring it back: import DeliveryMap from '@/src/shared/components/DeliveryMap' and render <DeliveryMap job={job} showPartner={false} height={160} />. */}
       
 
       <GlassView radius="card" style={{ padding: 18, gap: 6 }}>

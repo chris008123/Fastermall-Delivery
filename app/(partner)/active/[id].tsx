@@ -7,7 +7,6 @@ import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
-import { DeliveryMap } from '@/src/shared/components/DeliveryMap';
 import { FailedDeliverySheet, FAILURE_REASONS } from '@/src/shared/components/FailedDeliverySheet';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
@@ -271,7 +270,7 @@ export default function ActiveDeliveryScreen() {
         </AnimatedPressable>
       </View>
 
-      {/* <DeliveryMap job={job} /> */}
+      {/* Map hidden for now. To bring it back: import DeliveryMap from '@/src/shared/components/DeliveryMap' and render <DeliveryMap job={job} />. */}
 
       {navigationApp !== 'FASTERMALL_MAPS' && (
         <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>

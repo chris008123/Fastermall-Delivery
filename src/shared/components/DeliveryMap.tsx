@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getPartnerPosition } from '@/src/utils/geo';
-import { radii } from '@/src/theme';
-import { colors } from '@/src/theme';
+import { colors, radii } from '@/src/theme';
 import type { Coordinate, Job } from '@/src/types/job';
 
 interface DeliveryMapProps {

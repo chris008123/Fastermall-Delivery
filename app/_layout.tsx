@@ -46,10 +46,6 @@ export default function RootLayout() {
     (state) => state.isHydrating,
   );
 
-  const isAuthenticated = useAuthStore(
-    (state) => state.isAuthenticated,
-  );
-
   const [ready, setReady] = useState(false);
   const [bootError, setBootError] = useState<string | null>(
     null,

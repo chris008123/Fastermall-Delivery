@@ -12,7 +12,6 @@ import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
 const RADIUS_MIN = 1;
-const RADIUS_MAX = 20;
 const DISTANCE_MIN = 5;
 const DISTANCE_MAX = 50;
 
