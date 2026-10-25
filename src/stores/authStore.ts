@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import {
+  ApiError,
   apiFetch,
   clearAccessToken,
   getAccessToken,
   saveAccessToken,
 } from '@/src/services/api';
+import { clearAccountSession, prepareAccountSession } from '@/src/stores/sessionReset';
 
 export interface StaffUser {
   id: string;
@@ -60,6 +62,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw new Error('This account is not a delivery partner.');
     }
 
+    // Never let this account see data left on the device by a different one.
+    await prepareAccountSession(user.id);
+
     set({
       isAuthenticated: true,
       user,
@@ -101,11 +106,29 @@ export const useAuthStore = create<AuthState>((set) => ({
         user,
         isHydrating: false,
       });
-    } catch {
-      await clearAccessToken();
+    } catch (error) {
+      // Only a response from the server saying the session is over (401/403)
+      // ends it. No signal, a timeout or a server hiccup must not sign a
+      // delivery partner out: the token stays and the screens show their own
+      // retry states until the connection is back.
+      const sessionEnded =
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403);
+
+      if (sessionEnded) {
+        await clearAccessToken();
+        await clearAccountSession();
+
+        set({
+          isAuthenticated: false,
+          user: null,
+          isHydrating: false,
+        });
+        return;
+      }
 
       set({
-        isAuthenticated: false,
+        isAuthenticated: true,
         user: null,
         isHydrating: false,
       });
@@ -115,10 +138,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await clearAccessToken();
 
+    // Flip to signed-out first so the partner screens leave before their
+    // data is emptied, then wipe everything tied to the account.
     set({
       isAuthenticated: false,
       user: null,
       isHydrating: false,
     });
+
+    await clearAccountSession();
   },
 }));

@@ -17,6 +17,18 @@ export async function clearAccessToken() {
   await AsyncStorage.removeItem(TOKEN_KEY);
 }
 
+/** An error response from the backend, with its HTTP status so callers can
+ * tell "your session ended" (401/403) from "the server is struggling". */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 type ApiOptions = RequestInit & {
   auth?: boolean;
 };
@@ -94,7 +106,7 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(data, response.status));
+    throw new ApiError(extractErrorMessage(data, response.status), response.status);
   }
 
   return data as T;
