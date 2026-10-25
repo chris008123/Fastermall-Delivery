@@ -56,7 +56,7 @@ Accept job, advance stage and cash-out must be safe to repeat. Accept an `Idempo
 ## P2: needed so the app stops using mock data
 
 ### 6. Job stages and the timeline
-- The app has two stages the backend does not know about: **PAY_VENDOR** and **DELIVERED** (the backend only has a status for the step before and after). If the app is closed during PAY_VENDOR, the stage is lost. Add real statuses, or tell us how to store them.
+- The app has two stages the backend does not know about: **PAY_VENDOR** and **DELIVERED** (the backend only has a status for the step before and after). The app now remembers these on the phone, so closing the app no longer loses them, but they are lost on a reinstall or a different phone, and support cannot see them. Add real statuses, or tell us how to store them.
 - Return a **stage history** on each job: `[{ "stage": "PICKED_UP", "at": "2026-10-24T14:14:00Z" }, ...]`. The timeline can then show when each step happened (useful in disputes).
 - Add `?status=` filtering and **cursor pagination** to `GET /logistics/me/deliveries`.
 - Add `updatedSince=` or `ETag` support to both delivery lists. The app refreshes every 30 seconds, and this would make most refreshes empty and cheap.
@@ -114,6 +114,31 @@ Echo an `X-Request-Id` header on every response, so a partner can quote it to su
 
 ### 17. Content to publish
 Privacy policy and terms at `/privacy` and `/terms` on the domain the app links to (`https://fastermall.com`, currently a placeholder).
+
+---
+
+## Added after the second app review (Section 11)
+
+### 18. Saved preferences, and making them real
+These settings are now saved on the phone only. They change nothing yet, and the app says so on each screen.
+- `GET` and `PUT /logistics/me/preferences` for: notification choices (new jobs, job updates, payments, promotions, sound, vibration), delivery choices (auto-accept, pickup radius, maximum distance, job types) and navigation choices (preferred map app, avoid tolls and highways).
+- **The backend must then act on them:** only offer jobs inside the partner's radius and chosen types, honour auto-accept, and respect quiet notification choices. Until it does, the app should keep showing them as "not active yet".
+- Partner preferences should follow the account, not the phone, so they carry over to a new phone.
+
+### 19. Partner location
+Radius matching, the demand map and distance-to-pickup all need the partner's position, and the app does not collect it yet.
+- `PUT /logistics/me/location` (latest position, with a timestamp), called only while the partner is online.
+- The app will need a location permission and a privacy explanation before this goes live. Tell us how often you want updates (for example every 30 to 60 seconds while a job is active).
+- Say how long positions are kept.
+
+### 20. Partner profile edits
+The profile screens (plate number, vehicle type, phone number, photo) save only on the phone.
+- `PATCH /logistics/me` accepting `vehiclePlate`, `vehicleType` and `phone`, with validation errors in the standard format (item 13).
+- `PUT /logistics/me/photo` for the profile photo.
+- Decide which changes need re-verification by an admin (a new plate probably does).
+
+### 21. Anything the app can show about "online"
+`PATCH /logistics/me` for the online switch should return the saved state, and `GET /logistics/me` should include `lastSeenAt`. If the partner's phone dies while online, the backend should stop offering them jobs after a timeout (see item 16).
 
 ---
 
