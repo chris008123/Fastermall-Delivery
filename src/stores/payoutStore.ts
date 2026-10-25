@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { secureStateStorage } from '@/src/services/secureStorage';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type MomoNetwork = 'MTN' | 'Telecel' | 'AirtelTigo';
@@ -25,7 +25,7 @@ export const usePayoutStore = create<PayoutState>()(
     }),
     {
       name: 'fastermall-partner-payout',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStateStorage),
       partialize: (s) => ({ number: s.number, network: s.network }),
     },
   ),
