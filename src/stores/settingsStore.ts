@@ -1,8 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type NavigationApp = 'FASTERMALL_MAPS' | 'GOOGLE_MAPS' | 'WAZE';
-export type PermissionStatus = 'granted' | 'denied' | 'not_determined';
 export type JobCategory = 'MARKETPLACE' | 'FOOD' | 'LAUNDRY';
 
 export interface NavigationPrefs {
@@ -28,14 +29,6 @@ export interface DeliveryPrefs {
   categories: JobCategory[];
 }
 
-export interface PermissionState {
-  location: PermissionStatus;
-  backgroundLocation: PermissionStatus;
-  notifications: PermissionStatus;
-  camera: PermissionStatus;
-  storage: PermissionStatus;
-}
-
 interface SettingsState {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
@@ -52,17 +45,15 @@ interface SettingsState {
   setDeliveryPref: <K extends keyof DeliveryPrefs>(key: K, value: DeliveryPrefs[K]) => void;
   toggleDeliveryCategory: (category: JobCategory) => void;
 
-  permissions: PermissionState;
-  setPermission: (key: keyof PermissionState, status: PermissionStatus) => void;
-
-  twoFactorEnabled: boolean;
-  setTwoFactorEnabled: (enabled: boolean) => void;
 }
 
-// Kept as a plain in-memory zustand store (no persistence yet) — this is
-// the frontend-only slice of the app, so nothing here needs to survive a
-// reload until it's wired to real accounts.
-export const useSettingsStore = create<SettingsState>((set) => ({
+// Preferences are saved on the phone, so a partner's theme, navigation app
+// and notification choices survive closing the app. Several of them don't
+// change app behaviour yet (the settings screens say so); they live here so
+// they are already in place when the backend and push support arrive.
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
   theme: 'dark',
   setTheme: (theme) => set({ theme }),
 
@@ -117,21 +108,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         : [...s.deliveryPrefs.categories, category];
       return { deliveryPrefs: { ...s.deliveryPrefs, categories } };
     }),
-
-  // Mocked statuses — this app has no expo-location / expo-notifications /
-  // expo-camera dependency yet, so these reflect UI state only, matching
-  // the rest of this frontend-only settings slice. Wiring to the real OS
-  // permission APIs is a follow-up native-module task.
-  permissions: {
-    location: 'granted',
-    backgroundLocation: 'denied',
-    notifications: 'granted',
-    camera: 'granted',
-    storage: 'not_determined',
-  },
-  setPermission: (key, status) =>
-    set((s) => ({ permissions: { ...s.permissions, [key]: status } })),
-
-  twoFactorEnabled: false,
-  setTwoFactorEnabled: (twoFactorEnabled) => set({ twoFactorEnabled }),
-}));
+    }),
+    {
+      name: 'fastermall-partner-settings',
+      storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+    },
+  ),
+);
