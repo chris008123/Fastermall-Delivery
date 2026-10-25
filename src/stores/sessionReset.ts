@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useDocumentsStore } from '@/src/stores/documentsStore';
 import { useJobsStore } from '@/src/stores/jobsStore';
+import { useLocalStageStore } from '@/src/stores/localStageStore';
 import { useNotificationsStore } from '@/src/stores/notificationsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { usePayoutStore } from '@/src/stores/payoutStore';
@@ -23,7 +24,9 @@ export async function resetAccountData(): Promise<void> {
   useNotificationsStore.setState(useNotificationsStore.getInitialState(), true);
   useDocumentsStore.setState(useDocumentsStore.getInitialState(), true);
   usePayoutStore.setState(usePayoutStore.getInitialState(), true);
+  useLocalStageStore.setState(useLocalStageStore.getInitialState(), true);
   await usePayoutStore.persist.clearStorage();
+  await useLocalStageStore.persist.clearStorage();
 }
 
 /** Called when a partner signs in. If a different account (or an unknown one,

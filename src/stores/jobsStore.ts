@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/src/services/api';
+import { useLocalStageStore } from '@/src/stores/localStageStore';
 import type {
   FailureReason,
   Job,
@@ -7,6 +8,7 @@ import type {
   JobType,
   PartnerMode,
 } from '@/src/types/job';
+import { applyLocalStage, pruneLocalStages } from '@/src/utils/localStages';
 
 type BackendDeliveryStatus =
   | 'ASSIGNED'
@@ -455,27 +457,25 @@ export const useJobsStore = create<JobsState>((set, get) => ({
        * otherwise throw the partner back a step, so keep the local
        * stage while the backend is still on the step just before it.
        */
-      for (const previous of get().jobs) {
-        const reloaded = jobMap.get(previous.id);
+      const localStageStore = useLocalStageStore.getState();
+      const backendStages = new Map<string, JobStage>();
 
-        if (!reloaded) {
-          continue;
+      for (const [jobId, job] of jobMap) {
+        backendStages.set(jobId, job.stage);
+
+        const stage = applyLocalStage(job.stage, localStageStore.stages[jobId]);
+
+        if (stage !== job.stage) {
+          jobMap.set(jobId, { ...job, stage });
         }
+      }
 
-        const keepPayVendor =
-          previous.stage === 'PAY_VENDOR' &&
-          reloaded.stage === 'EN_ROUTE_TO_PICKUP';
+      // Forget steps for jobs that moved on or are no longer listed. The
+      // remembered steps live on the phone, so they survive closing the app.
+      const stillTrue = pruneLocalStages(localStageStore.stages, backendStages);
 
-        const keepCodeEntry =
-          previous.stage === 'DELIVERED' &&
-          reloaded.stage === 'EN_ROUTE_TO_CUSTOMER';
-
-        if (keepPayVendor || keepCodeEntry) {
-          jobMap.set(previous.id, {
-            ...reloaded,
-            stage: previous.stage,
-          });
-        }
+      if (Object.keys(stillTrue).length !== Object.keys(localStageStore.stages).length) {
+        localStageStore.replaceAll(stillTrue);
       }
 
       const nextJobs = Array.from(jobMap.values());
@@ -578,6 +578,8 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       job.type === 'FOOD' &&
       job.stage === 'EN_ROUTE_TO_PICKUP'
     ) {
+      useLocalStageStore.getState().setStage(id, 'PAY_VENDOR');
+
       set((state) => ({
         jobs: state.jobs.map((item) =>
           item.id === id
@@ -662,6 +664,8 @@ export const useJobsStore = create<JobsState>((set, get) => ({
          * no request is made. The partner just moves to the code-entry
          * screen; the backend stays on EN_ROUTE_TO_CUSTOMER.
          */
+        useLocalStageStore.getState().setStage(id, 'DELIVERED');
+
         set((state) => ({
           jobs: state.jobs.map((item) =>
             item.id === id
