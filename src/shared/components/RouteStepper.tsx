@@ -3,12 +3,15 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { colors } from '@/src/theme';
 
 export type RouteStepStatus = 'done' | 'current' | 'upcoming';
 
@@ -39,8 +42,9 @@ const LINE_WIDTH = 3;
  */
 export function RouteStepper({ steps, accentColor, renderAction }: RouteStepperProps) {
   const { isDark } = useResolvedTheme();
-  const mutedLine = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(28,28,26,0.12)';
-  const mutedDot = isDark ? 'rgba(255,255,255,0.24)' : 'rgba(28,28,26,0.2)';
+  const theme = isDark ? colors.dark : colors.light;
+  const mutedLine = theme.border;
+  const mutedDot = theme.borderStrong;
 
   return (
     <View>
@@ -64,7 +68,7 @@ export function RouteStepper({ steps, accentColor, renderAction }: RouteStepperP
               )}
             </View>
             <View style={{ flex: 1, paddingBottom: isLast ? 0 : 18, paddingLeft: 12 }}>
-              <StepContent step={step} renderAction={renderAction} />
+              <StepContent step={step} position={index + 1} total={steps.length} renderAction={renderAction} />
             </View>
           </View>
         );
@@ -82,15 +86,22 @@ function StepDot({
   accentColor: string;
   mutedDot: string;
 }) {
+  const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(0);
 
+  // The current stop pulses; with reduce motion on it holds a steady ring.
   useEffect(() => {
-    if (status === 'current') {
+    if (status === 'current' && reduceMotion) {
+      cancelAnimation(pulse);
+      pulse.value = 0.5;
+    } else if (status === 'current') {
       pulse.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }), -1, true);
     } else {
+      cancelAnimation(pulse);
       pulse.value = 0;
     }
-  }, [status, pulse]);
+    return () => cancelAnimation(pulse);
+  }, [status, reduceMotion, pulse]);
 
   const ringStyle = useAnimatedStyle(() => ({
     opacity: status === 'current' ? 0.3 * (1 - pulse.value) + 0.05 : 0,
@@ -127,15 +138,36 @@ function StepDot({
   );
 }
 
-function StepContent({ step, renderAction }: { step: RouteStep; renderAction?: (step: RouteStep) => ReactNode }) {
+const STATUS_SPOKEN: Record<RouteStepStatus, string> = {
+  done: 'completed',
+  current: 'current step',
+  upcoming: 'upcoming',
+};
+
+function StepContent({
+  step,
+  position,
+  total,
+  renderAction,
+}: {
+  step: RouteStep;
+  position: number;
+  total: number;
+  renderAction?: (step: RouteStep) => ReactNode;
+}) {
   const { isDark } = useResolvedTheme();
-  const text = isDark ? '#f7f7f6' : '#1c1c1a';
-  const textSecondary = isDark ? '#a3a39c' : '#7a7a72';
+  const theme = isDark ? colors.dark : colors.light;
+  const text = theme.text;
+  const textSecondary = theme.textSecondary;
   const muted = step.status === 'upcoming';
 
   return (
     <View style={{ gap: 4 }}>
+      {/* Only the label is announced as a unit, so the button or code field
+          under the current step stays separately reachable. */}
       <Text
+        accessible
+        accessibilityLabel={`Step ${position} of ${total}: ${step.label}, ${STATUS_SPOKEN[step.status]}`}
         className={step.status === 'current' ? 'text-card-title font-semibold' : 'text-body-lg font-medium'}
         style={{ color: muted ? textSecondary : text }}
       >
