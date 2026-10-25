@@ -5,6 +5,7 @@ import Animated, {
   cancelAnimation,
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withTiming,
@@ -70,17 +71,19 @@ export function Button({
   // the "streaming shimmer, not a blank spinner-only state" rule from the
   // motion spec, kept to a simple pulse rather than a translating gradient
   // sweep to stay predictable across every variant/size combination.
+  const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(1);
 
+  // With reduce motion on, the spinner alone shows loading — no pulsing.
   useEffect(() => {
-    if (loading) {
+    if (loading && !reduceMotion) {
       pulse.value = withRepeat(withTiming(0.6, { duration: 650, easing: Easing.inOut(Easing.ease) }), -1, true);
     } else {
       cancelAnimation(pulse);
       pulse.value = 1;
     }
     return () => cancelAnimation(pulse);
-  }, [loading, pulse]);
+  }, [loading, reduceMotion, pulse]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: loading ? pulse.value : 1,
