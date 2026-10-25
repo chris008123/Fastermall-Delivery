@@ -9,4 +9,14 @@
 | `zod` (inside the Expo CLI) | high | No, CLI | Runs on a developer machine. |
 | `postcss-selector-parser` (via Tailwind / NativeWind) | moderate | No, build time | Runs while styles are compiled. |
 
-Next review: when upgrading to the next Expo SDK, and before each release.
+
+
+## Schedule (proposed, change it to suit the team)
+| When | What |
+|---|---|
+| Before every release | Run `npm audit`; read any new advisory; update this file |
+| First week of each month | `npm audit fix` for safe updates, run typecheck, lint and tests, then test on a phone |
+| Within 4 weeks of each new Expo SDK | Plan the upgrade (`npx expo install expo@latest`, then `npx expo install --fix`); it clears the three advisories that need a major version |
+| Next dated review | **25 November 2026** |
+
+`@sentry/react-native` is pinned to the version Expo recommends for this SDK (`~7.11.0`). Upgrade it with the SDK.

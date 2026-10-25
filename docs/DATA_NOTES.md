@@ -14,8 +14,13 @@ Written from the code, as a starting point for the privacy policy, the store "da
 ## Sent to the backend
 Email and password at sign-in; the token on every request; the online/offline switch; accepting a job, each delivery step and the customer's 6-digit handover code; a failed-delivery reason. Photos for documents are not uploaded yet (that screen uses mock data).
 
+## Crash and error reports (Sentry), only when a DSN is configured
+When the app crashes, or the backend answers with a 5xx error, a report is sent to Sentry so the bug can be fixed. A report contains: the error and where in the code it happened, the app version and build type, the phone model and operating system version, and the partner's **account id** (nothing else about them). The report is cleaned on the phone before it is sent: email addresses and long numbers (phone numbers, codes) are replaced, query strings are cut from web addresses, and request headers, request bodies and anything named like a password, token, code, email or phone are removed (see `src/utils/scrub.ts`, covered by tests). No screenshots, no location, no advertising id.
+
+For the store forms this counts as **crash logs / diagnostics**, linked to the account id. Add it to the privacy policy and to the Google Play data-safety and App Store privacy answers. Decide how long Sentry keeps events (its project setting) and write the period here.
+
 ## Not collected
-Location (the app does not ask for it), contacts, advertising identifiers, analytics, crash reports. This changes when partner location, push notifications or crash reporting are added; update this file and the store forms when it does.
+Location (the app does not ask for it), contacts, advertising identifiers, usage analytics. This changes when partner location or push notifications are added; update this file and the store forms when it does.
 
 ## Permissions requested
 Camera and photo library, only when the partner adds a document.

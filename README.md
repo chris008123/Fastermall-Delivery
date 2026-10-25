@@ -25,6 +25,8 @@ The same three run on every push and pull request (`.github/workflows/ci.yml`).
 
 The API address comes from `EXPO_PUBLIC_API_URL`. EAS builds read it from the build profile in `eas.json`; for local work copy `.env.example` to `.env`. It must be `https://` (plain `http://` is allowed only in development). Everything starting with `EXPO_PUBLIC_` is baked into the app, so never put a secret in it.
 
+Crash reporting (Sentry) is off unless `EXPO_PUBLIC_SENTRY_DSN` is set, and it is always off in development. Reports are cleaned of personal details on the phone first (`src/utils/scrub.ts`). To upload readable stack traces from EAS builds, set `SENTRY_AUTH_TOKEN` (a secret), `SENTRY_ORG` and `SENTRY_PROJECT`. See `docs/DATA_NOTES.md` for what a report contains.
+
 ## What is real and what is not
 
 | Area | State |
