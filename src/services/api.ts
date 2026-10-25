@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
 import { API_BASE_URL } from '@/src/config/env';
+import { reportError } from '@/src/services/monitoring';
+import { extractFieldErrors, type FieldErrors } from '@/src/utils/fieldErrors';
 
 export { API_BASE_URL };
 
@@ -51,11 +53,14 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
  * tell "your session ended" (401/403) from "the server is struggling". */
 export class ApiError extends Error {
   readonly status: number;
+  /** Problems the server tied to a specific input, by field name. Often empty. */
+  readonly fieldErrors: FieldErrors;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, fieldErrors: FieldErrors = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -178,7 +183,15 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(extractErrorMessage(data, response.status), response.status);
+    const apiError = new ApiError(extractErrorMessage(data, response.status), response.status, extractFieldErrors(data));
+
+    // The server failing is worth hearing about. Wrong passwords, expired
+    // sessions and other 4xx answers are normal, so they are not reported.
+    if (response.status >= 500) {
+      reportError(apiError, { status: response.status, path: path.split('?')[0].replace(/[0-9a-f-]{8,}/gi, ':id') });
+    }
+
+    throw apiError;
   }
 
   return data as T;

@@ -35,6 +35,12 @@ export function resolveApiBaseUrl(
   return trimmed.replace(/\/+$/, '');
 }
 
+/** Crash reporting address. Empty means no reports are sent. */
+export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined;
+
+/** Which build this is, so reports can be told apart (development, preview, production). */
+export const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV?.trim() || (__DEV__ ? 'development' : 'production');
+
 // EXPO_PUBLIC_ variables are filled in at build time (see eas.json per
 // build profile, or a local .env file). They end up inside the app, so never
 // put a secret in one.

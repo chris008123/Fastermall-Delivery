@@ -23,7 +23,18 @@ import { useAuthStore } from '@/src/stores/authStore';
 import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
-export { ErrorBoundary } from 'expo-router';
+import { initMonitoring, reportError, wrapWithMonitoring } from '@/src/services/monitoring';
+
+initMonitoring();
+
+/** Catches an error thrown while a screen draws, reports it, and offers a retry. */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  useEffect(() => {
+    reportError(error);
+  }, [error]);
+
+  return <BootErrorScreen message={error.message} onRetry={() => void retry()} />;
+}
 
 try {
   SplashScreen.preventAutoHideAsync();
@@ -31,7 +42,7 @@ try {
   // no-op — splash screen may already be hidden on some platforms
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Fredoka_400Regular,
     Fredoka_500Medium,
@@ -132,3 +143,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapWithMonitoring(RootLayout);

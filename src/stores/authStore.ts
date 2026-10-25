@@ -7,6 +7,7 @@ import {
   saveAccessToken,
   setSessionExpiredHandler,
 } from '@/src/services/api';
+import { setMonitoringUser } from '@/src/services/monitoring';
 import { clearAccountSession, prepareAccountSession } from '@/src/stores/sessionReset';
 
 export interface StaffUser {
@@ -51,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Several requests can fail together; only the first one ends the session.
     if (!get().isAuthenticated) return;
 
+    setMonitoringUser(null);
     set({ isAuthenticated: false, user: null, isHydrating: false, sessionExpired: true });
 
     await clearAccessToken();
@@ -81,6 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Never let this account see data left on the device by a different one.
     await prepareAccountSession(user.id);
 
+    setMonitoringUser(user.id);
     set({
       isAuthenticated: true,
       user,
@@ -118,6 +121,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      setMonitoringUser(user.id);
       set({
         isAuthenticated: true,
         user,
@@ -158,6 +162,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Flip to signed-out first so the partner screens leave before their
     // data is emptied, then wipe everything tied to the account.
+    setMonitoringUser(null);
     set({
       isAuthenticated: false,
       user: null,
