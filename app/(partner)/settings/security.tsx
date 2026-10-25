@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { KeyRound, Laptop2, LogOut, Mail, Phone, ShieldCheck, User } from 'lucide-react-native';
-import { Alert, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
@@ -9,7 +9,6 @@ import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/Settings
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
-import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
 // Change password/PIN and Trusted devices have no backend to act against
@@ -25,8 +24,6 @@ export default function SecurityScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
-  const twoFactorEnabled = useSettingsStore((s) => s.twoFactorEnabled);
-  const setTwoFactorEnabled = useSettingsStore((s) => s.setTwoFactorEnabled);
 
   return (
     <ScrollView
@@ -90,15 +87,8 @@ export default function SecurityScreen() {
             iconColor={colors.semantic.success}
             iconBg="rgba(26, 156, 92, 0.14)"
             label="Two-factor authentication"
-            description={twoFactorEnabled ? 'Enabled' : 'Off'}
-            right={
-              <Switch
-                value={twoFactorEnabled}
-                onValueChange={setTwoFactorEnabled}
-                trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
-                thumbColor={twoFactorEnabled ? colors.partner.orange : theme.surfaceRaised}
-              />
-            }
+            description="Not available yet"
+            onPress={() => notImplemented('Two-factor authentication')}
           />
           <SettingsRowSpacer />
           <SettingsRow
