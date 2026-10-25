@@ -20,6 +20,15 @@ describe('extractDeliveryCode', () => {
     expect(extractDeliveryCode('Fastermall: 654321 is your delivery code. Do not share it.')).toBe('654321');
   });
 
+  it('prefers the number after the word "code" over other numbers', () => {
+    expect(extractDeliveryCode('Order 884210 code 123456')).toBe('123456');
+    expect(extractDeliveryCode('Delivery code: 123456. Order 884210')).toBe('123456');
+  });
+
+  it('skips digits that belong to a longer number such as a phone number', () => {
+    expect(extractDeliveryCode('Call 0241234567 or use 654321')).toBe('654321');
+  });
+
   it('handles a code pasted with a space in the middle', () => {
     expect(extractDeliveryCode('123 456')).toBe('123456');
   });
