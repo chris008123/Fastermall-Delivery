@@ -1,20 +1,49 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 export const API_BASE_URL =
   'https://fastermall-super-app-backend.onrender.com/api/v1';
 
-const TOKEN_KEY = '@fastermall_delivery_access_token';
+// The access token lives in the platform keychain/keystore (encrypted), not
+// plain AsyncStorage. SecureStore keys can't contain "@", hence a new name;
+// the old AsyncStorage key is only read to carry an existing session across.
+const TOKEN_KEY = 'fastermall_delivery_access_token';
+const LEGACY_TOKEN_KEY = '@fastermall_delivery_access_token';
+
+/** Requests give up after this long. Generous because the backend can take a
+ * while to wake up after sitting idle. */
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 export async function getAccessToken() {
-  return AsyncStorage.getItem(TOKEN_KEY);
+  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  if (token) return token;
+
+  const legacy = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
+  if (legacy) {
+    await SecureStore.setItemAsync(TOKEN_KEY, legacy);
+    await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
+    return legacy;
+  }
+
+  return null;
 }
 
 export async function saveAccessToken(token: string) {
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
 export async function clearAccessToken() {
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
+}
+
+let onSessionExpired: (() => void) | null = null;
+
+/** The auth store registers here, so a 401 on any signed-in request ends the
+ * session without api.ts having to import the store. */
+export function setSessionExpiredHandler(handler: (() => void) | null) {
+  onSessionExpired = handler;
 }
 
 /** An error response from the backend, with its HTTP status so callers can
@@ -31,6 +60,8 @@ export class ApiError extends Error {
 
 type ApiOptions = RequestInit & {
   auth?: boolean;
+  /** Overrides the default 30 second timeout. */
+  timeoutMs?: number;
 };
 
 /**
@@ -73,7 +104,7 @@ export async function apiFetch<T>(
   path: string,
   options: ApiOptions = {},
 ): Promise<T> {
-  const { auth = true, headers, ...requestOptions } = options;
+  const { auth = true, headers, timeoutMs = DEFAULT_TIMEOUT_MS, ...requestOptions } = options;
 
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -88,12 +119,45 @@ export async function apiFetch<T>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...requestOptions,
-    headers: requestHeaders,
-  });
+  // One AbortController covers both the timeout and a caller-supplied signal.
+  const controller = new AbortController();
+  const callerSignal = requestOptions.signal;
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
 
-  const text = await response.text();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  let response: Response;
+  let text: string;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      headers: requestHeaders,
+      signal: controller.signal,
+    });
+    text = await response.text();
+  } catch (error) {
+    // A caller that cancelled on purpose gets its own abort back.
+    if (callerSignal?.aborted && !timedOut) throw error;
+
+    // Status 0 = never got an answer. Callers treat it as "try again", never
+    // as "your session ended".
+    throw new ApiError(
+      timedOut
+        ? 'The server took too long to respond. Check your connection and try again.'
+        : "Can't reach Fastermall. Check your connection and try again.",
+      0,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   let data: unknown = null;
 
@@ -103,6 +167,13 @@ export async function apiFetch<T>(
     } catch {
       data = text;
     }
+  }
+
+  // A rejected token on a signed-in request means the session is over.
+  // (A wrong password on the sign-in request is also a 401, but that one
+  // is sent with auth: false.)
+  if (response.status === 401 && auth) {
+    onSessionExpired?.();
   }
 
   if (!response.ok) {
