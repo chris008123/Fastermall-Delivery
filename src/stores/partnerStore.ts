@@ -56,32 +56,19 @@ export const usePartnerStore = create<PartnerState>((set) => ({
   setAvailable: async (available) => {
     const previous = usePartnerStore.getState().isAvailable;
 
-    console.log('TOGGLE PRESSED:', available);
-
     set({
       isAvailable: available,
     });
 
-    console.log(
-      'LOCAL STATE AFTER SET:',
-      usePartnerStore.getState().isAvailable,
-    );
-
     try {
-      const response = await apiFetch('/logistics/me', {
+      await apiFetch('/logistics/me', {
         method: 'PATCH',
         body: JSON.stringify({
           isAvailable: available,
         }),
       });
 
-      console.log(
-        'BACKEND AVAILABILITY RESPONSE:',
-        JSON.stringify(response, null, 2),
-      );
     } catch (error) {
-      console.log('AVAILABILITY ERROR:', error);
-
       set({
         isAvailable: previous,
       });

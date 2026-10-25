@@ -49,8 +49,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       }),
     });
 
-    console.log('LOGIN RESPONSE:', JSON.stringify(response, null, 2));
-
     await saveAccessToken(response.data.accessToken);
 
     const meResponse = await apiFetch<MeResponse>('/staff/me');
