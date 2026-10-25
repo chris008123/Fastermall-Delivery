@@ -12,3 +12,19 @@ android/
 
 expo-env.d.ts
 # @end expo-cli
+
+# Secrets and signing material — never commit these
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+credentials.json
+
+# Test output
+coverage/
