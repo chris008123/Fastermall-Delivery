@@ -1,9 +1,6 @@
 # Fastermall Partner
 
-Delivery-partner companion app for Fastermall (Marketplace, Food, Laundry).
-Frontend-only for now — screens run on mock in-memory data (`src/data`,
-`src/stores`) so the Pickup & Handover flow and wallet/ledger can be reviewed
-and iterated on before the backend contract is finalized.
+Delivery-partner app for Fastermall food deliveries (Expo, React Native, TypeScript).
 
 ## Run it
 
@@ -12,19 +9,41 @@ npm install
 npx expo start
 ```
 
-## What's here
+Some features need a development build instead of Expo Go (secure storage, network status). Use `eas build --profile development` or `npx expo run:android` / `run:ios`.
 
-- `app/(partner)/index.tsx` — dashboard: availability toggle, active job, wallet snapshot
-- `app/(partner)/jobs/` — browse and accept available jobs
-- `app/(partner)/active/[id].tsx` — the Pickup & Handover flow for an accepted job
-- `app/(partner)/wallet/` — earnings + reimbursement ledger, GH₵50 cash-out threshold
-- `src/theme/` — ported from the customer app so both apps share one visual identity
+## Checks
 
-## Notes on what's mocked vs real
+```
+npm run typecheck   # TypeScript
+npm run lint        # ESLint (errors fail CI; a few warnings are known)
+npm test            # Jest unit tests
+```
 
-- **Auth** (`app/(auth)/login.tsx`) accepts any valid-shaped phone + password — there's no backend to check credentials against yet.
-- **Live map** (`src/shared/components/DeliveryMap.tsx`) uses `react-native-maps` with mock coordinates around KNUST campus, and derives the partner's on-map position from `job.stage` rather than real GPS — see `src/utils/geo.ts`.
-  - `react-native-maps` needs a development build, not plain Expo Go — run `npx expo run:ios` / `npx expo run:android` (or an EAS dev client) to see the map render.
-  - Android also needs a Google Maps API key added under `expo.android.config.googleMaps.apiKey` in `app.json` before the map will show anything on that platform.
-- **Notifications** are seeded mock data plus whatever the mock delivery flow generates (e.g. completing a delivery adds a payment notification) — no push notifications are wired up.
-- **Delivery handover code** accepts any 4 digits typed in — there's no real code to check it against yet.
+The same three run on every push and pull request (`.github/workflows/ci.yml`).
+
+## Configuration
+
+The API address comes from `EXPO_PUBLIC_API_URL`. EAS builds read it from the build profile in `eas.json`; for local work copy `.env.example` to `.env`. It must be `https://` (plain `http://` is allowed only in development). Everything starting with `EXPO_PUBLIC_` is baked into the app, so never put a secret in it.
+
+## What is real and what is not
+
+| Area | State |
+|---|---|
+| Sign-in, session, profile, online switch | Real (backend) |
+| Job list, accepting, stages, handover code | Real (backend). Two steps, paying the vendor and typing the customer's code, exist only in the app and are remembered on the phone |
+| Wallet and cash-out, notifications, documents, support, demand | Mock data |
+| Payout destination | Saved on the phone only |
+| Delivery, navigation and notification preferences | Saved on the phone; they do not change behaviour yet (the screens say so) |
+| Push notifications, partner location, live map | Not built. The map component is saved in `docs/maps/` |
+| Account deletion | A request to support by email; no in-app deletion yet |
+
+What the backend still has to provide is in `BACKEND_CHANGES_NEEDED.md`.
+
+## Where things are
+
+- `app/` — screens (Expo Router): `(auth)`, `(partner)`
+- `src/stores/` — app state (zustand). Anything tied to one partner's account must be cleared in `src/stores/sessionReset.ts`
+- `src/services/api.ts` — the API client (30 second timeout, ends the session on a 401)
+- `src/utils/` — small pure helpers, all covered by tests in `__tests__/`
+- `src/theme/` — colours, spacing, motion
+- `docs/` — release checklist, device test checklist, data notes, map restore steps
