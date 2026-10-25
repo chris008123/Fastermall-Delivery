@@ -22,7 +22,12 @@ import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
+import { useNavStyleStore, type NavStyle } from '@/src/stores/navStyleStore';
+import { useSettingsStore, type ThemeMode } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
+
+const THEME_LABEL: Record<ThemeMode, string> = { light: 'Light', dark: 'Dark', system: 'System' };
+const NAV_LABEL: Record<NavStyle, string> = { floating: 'Floating', docked: 'Docked', compact: 'Compact' };
 
 /**
  * Settings hub — a pure navigation index into grouped sub-screens, rather
@@ -37,6 +42,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
+  const themeMode = useSettingsStore((s) => s.theme);
+  const navStyle = useNavStyleStore((s) => s.navStyle);
 
   return (
     <ScrollView
@@ -98,7 +105,7 @@ export default function SettingsScreen() {
           iconColor={colors.accent.orange}
           iconBg={colors.partner.orangeTint}
           label="Notifications"
-          description="Job requests, payments, promotions"
+          description="Job requests, payments, unread alerts"
           onPress={() => router.push('/settings/notifications')}
         />
         <SettingsRowSpacer />
@@ -125,7 +132,7 @@ export default function SettingsScreen() {
           iconColor={colors.accent.red}
           iconBg="rgba(214, 69, 69, 0.12)"
           label="Appearance"
-          description="Light, dark, or system"
+          description={`${THEME_LABEL[themeMode]} theme · ${NAV_LABEL[navStyle]} navigation bar`}
           onPress={() => router.push('/settings/appearance')}
         />
       </SettingsGroup>
