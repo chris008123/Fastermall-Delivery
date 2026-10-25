@@ -1,59 +1,88 @@
-import { Bell, Camera, HardDrive, MapPin, Navigation, Settings as SettingsIcon } from 'lucide-react-native';
-import { Linking, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera, Image as ImageIcon, Settings as SettingsIcon } from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Linking, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { useSettingsStore, type PermissionState, type PermissionStatus } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 
-const STATUS_LABEL: Record<PermissionStatus, string> = {
+type Status = 'granted' | 'denied' | 'undetermined' | 'checking';
+
+const STATUS_LABEL: Record<Status, string> = {
   granted: 'Allowed',
   denied: 'Denied',
-  not_determined: 'Not set',
+  undetermined: 'Not asked yet',
+  checking: '…',
 };
 
-const STATUS_COLOR: Record<PermissionStatus, string> = {
+const STATUS_COLOR: Record<Status, string> = {
   granted: colors.semantic.success,
   denied: colors.semantic.error,
-  not_determined: colors.semantic.warning,
+  undetermined: colors.semantic.warning,
+  checking: colors.semantic.warning,
 };
 
-const PERMISSION_ROWS: { key: keyof PermissionState; label: string; description: string; icon: typeof MapPin }[] = [
-  { key: 'location', label: 'Location', description: 'Used to match you with nearby jobs', icon: MapPin },
-  { key: 'backgroundLocation', label: 'Background location', description: 'Keeps tracking your route while the app is backgrounded', icon: Navigation },
-  { key: 'notifications', label: 'Notifications', description: 'Job requests and account alerts', icon: Bell },
-  { key: 'camera', label: 'Camera', description: 'Proof-of-delivery and document photos', icon: Camera },
-  { key: 'storage', label: 'Storage / photos', description: 'Attaching existing photos to documents', icon: HardDrive },
-];
+/** Reads what the phone says right now. Nothing here is stored or guessed. */
+async function readStatuses(): Promise<{ camera: Status; photos: Status }> {
+  const [camera, photos] = await Promise.all([
+    ImagePicker.getCameraPermissionsAsync(),
+    ImagePicker.getMediaLibraryPermissionsAsync(),
+  ]);
+  return { camera: camera.status as Status, photos: photos.status as Status };
+}
 
-// A distinct color per permission type, not one flat gray for the whole
-// list — per the redesign brief's "consistent icon-circle treatment across
-// every settings row, not just some."
-const PERMISSION_COLOR: Record<keyof PermissionState, string> = {
-  location: colors.laundry.blue,
-  backgroundLocation: colors.accent.purple,
-  notifications: colors.partner.orange,
-  camera: colors.accent.green,
-  storage: colors.brand.goldDark,
-};
-
-// This app has no expo-location / expo-notifications / expo-camera
-// dependency wired up yet, so statuses here reflect settingsStore's mocked
-// permission state rather than the real OS permission APIs — a switch
-// here can't actually flip an OS permission, so this shows status +
-// a deep link into the device's own settings instead of a misleading toggle.
+// Only permissions this app really uses are listed, with their real status
+// from the operating system. The app doesn't use location and doesn't send
+// notifications yet, so there is nothing to show for them. Add the rows back
+// when those features exist.
 export default function PermissionsScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
-  const permissions = useSettingsStore((s) => s.permissions);
+  const [statuses, setStatuses] = useState<{ camera: Status; photos: Status }>({
+    camera: 'checking',
+    photos: 'checking',
+  });
 
-  const openDeviceSettings = () => {
-    Linking.openSettings().catch(() => {});
-  };
+  const refresh = useCallback(() => {
+    readStatuses()
+      .then(setStatuses)
+      .catch(() => setStatuses({ camera: 'undetermined', photos: 'undetermined' }));
+  }, []);
+
+  // Re-read when the screen opens and when the partner comes back from the
+  // device's Settings app, where they may have changed something.
+  useFocusEffect(refresh);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  const rows = [
+    {
+      key: 'camera',
+      label: 'Camera',
+      description: 'Taking photos of your documents',
+      icon: Camera,
+      color: colors.accent.green,
+      status: statuses.camera,
+    },
+    {
+      key: 'photos',
+      label: 'Photos',
+      description: 'Choosing existing photos for your documents',
+      icon: ImageIcon,
+      color: colors.brand.goldDark,
+      status: statuses.photos,
+    },
+  ] as const;
 
   return (
     <ScrollView
@@ -62,30 +91,35 @@ export default function PermissionsScreen() {
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />
-        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Location & permissions</Text>
+        <Text className="text-h1 font-bold" style={{ color: theme.text }}>Permissions</Text>
       </View>
 
       <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
-        {PERMISSION_ROWS.map(({ key, label, description, icon: Icon }, i) => (
+        {rows.map(({ key, label, description, icon: Icon, color, status }, i) => (
           <View key={key}>
             <SettingsRow
               icon={Icon}
-              iconColor={PERMISSION_COLOR[key]}
-              iconBg={`${PERMISSION_COLOR[key]}22`}
+              iconColor={color}
+              iconBg={`${color}22`}
               label={label}
               description={description}
               right={
-                <Text className="text-caption font-semibold" style={{ color: STATUS_COLOR[permissions[key]] }}>
-                  {STATUS_LABEL[permissions[key]]}
+                <Text className="text-caption font-semibold" style={{ color: STATUS_COLOR[status] }}>
+                  {STATUS_LABEL[status]}
                 </Text>
               }
             />
-            {i < PERMISSION_ROWS.length - 1 && <SettingsRowSpacer />}
+            {i < rows.length - 1 && <SettingsRowSpacer />}
           </View>
         ))}
       </GlassView>
 
-      <AnimatedPressable onPress={openDeviceSettings} scaleTo={0.98}>
+      <AnimatedPressable
+        onPress={() => Linking.openSettings().catch(() => {})}
+        scaleTo={0.98}
+        accessibilityRole="button"
+        accessibilityLabel="Open device settings"
+      >
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <SettingsIcon size={18} color={colors.partner.orange} />
           <Text className="text-body-lg font-semibold" style={{ color: colors.partner.orange }}>Open device settings</Text>
@@ -93,7 +127,7 @@ export default function PermissionsScreen() {
       </AnimatedPressable>
 
       <Text className="text-caption" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-        Permissions are controlled by your device's operating system. Use the button above to grant or revoke access from your device's own Settings app.
+        The statuses above come straight from your phone. Fastermall Partner doesn&apos;t use your location and doesn&apos;t send notifications yet, so there is nothing to allow for those. Change a permission from your phone&apos;s own Settings app.
       </Text>
     </ScrollView>
   );

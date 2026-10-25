@@ -142,8 +142,8 @@ export default function SettingsScreen() {
           icon={MapPin}
           iconColor={colors.laundry.blue}
           iconBg={colors.laundry.blueTint}
-          label="Location & permissions"
-          description="What the app can access on your device"
+          label="Permissions"
+          description="Camera and photo access on this phone"
           onPress={() => router.push('/settings/permissions')}
         />
         <SettingsRowSpacer />

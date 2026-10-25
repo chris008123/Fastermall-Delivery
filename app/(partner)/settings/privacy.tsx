@@ -98,8 +98,8 @@ export default function PrivacyScreen() {
             icon={MapPin}
             iconColor={colors.laundry.blue}
             iconBg={colors.laundry.blueTint}
-            label="Location data settings"
-            description="Manage what location access the app has"
+            label="Permissions"
+            description="Camera and photo access on this phone"
             onPress={() => router.push('/settings/permissions')}
           />
           <SettingsRowSpacer />
