@@ -471,8 +471,18 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         }
       }
 
+      const nextJobs = Array.from(jobMap.values());
+      const currentJobs = get().jobs;
+
+      /*
+       * The Jobs tab polls every 30 seconds. When nothing changed, keep
+       * the existing array so screens subscribed to it don't re-render
+       * (and the new-job check doesn't run) for no reason.
+       */
+      const unchanged = JSON.stringify(nextJobs) === JSON.stringify(currentJobs);
+
       set({
-        jobs: Array.from(jobMap.values()),
+        jobs: unchanged ? currentJobs : nextJobs,
         isLoading: false,
         error: null,
       });
