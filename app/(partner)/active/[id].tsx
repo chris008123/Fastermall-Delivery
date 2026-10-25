@@ -270,7 +270,7 @@ export default function ActiveDeliveryScreen() {
         </AnimatedPressable>
       </View>
 
-      {/* Map hidden for now. To bring it back: import DeliveryMap from '@/src/shared/components/DeliveryMap' and render <DeliveryMap job={job} />. */}
+      {/* Map hidden for now (react-native-maps is not installed). To bring it back, follow docs/maps/README.md, then render <DeliveryMap job={job} />. */}
 
       {navigationApp !== 'FASTERMALL_MAPS' && (
         <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>
