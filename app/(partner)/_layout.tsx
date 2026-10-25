@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 import { View } from 'react-native';
 import { AppNav } from '@/src/shared/components/AppNav';
+import { ConnectivityWatcher } from '@/src/shared/components/ConnectivityWatcher';
 import { useAuthStore } from '@/src/stores/authStore';
 
 // Ported from the customer app's (main)/_layout.tsx pattern: a header-less
@@ -32,6 +33,7 @@ export default function PartnerLayout() {
     <View style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }} />
       <AppNav />
+      <ConnectivityWatcher />
     </View>
   );
 }
