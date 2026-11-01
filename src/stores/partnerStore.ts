@@ -34,7 +34,14 @@ export const usePartnerStore = create<PartnerState>((set) => ({
   profileId: null,
 
   loadProfile: async () => {
-    const profile = await apiFetch<StaffProfile>('/staff/me');
+    const response = await apiFetch<StaffProfile | { data: StaffProfile }>(
+      '/staff/me',
+    );
+
+    // The backend wraps every body as `{ success, data }` (authStore reads
+    // /staff/me the same way); fall back to an unwrapped body.
+    const profile: StaffProfile =
+      'data' in response && response.data ? response.data : (response as StaffProfile);
 
     const deliveryProfile = profile.deliveryProfile;
 

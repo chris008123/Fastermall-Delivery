@@ -17,6 +17,7 @@ import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
 import { findFreshJobIds, isOfferedOpenJob, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
+import { tripSummary } from '@/src/utils/trip';
 
 // Layout ported from the app's GlassView design system, same merge pattern
 // as the Home screen: the real backend-connected data layer below
@@ -128,6 +129,18 @@ export default function JobsScreen() {
     [jobs, sortBy],
   );
 
+  // Distance and ETA are 0 until the backend sends them (no GPS in the MVP),
+  // so only offer those sorts once some job actually has the data.
+  const sortOptions = useMemo(
+    () =>
+      SORT_OPTIONS.filter(({ value }) => {
+        if (value === 'CLOSEST') return openJobs.some((j) => j.distanceKm > 0);
+        if (value === 'SHORTEST') return openJobs.some((j) => j.etaMinutes > 0);
+        return true;
+      }),
+    [openJobs],
+  );
+
   const history = useMemo(
     () =>
       jobs
@@ -237,14 +250,18 @@ export default function JobsScreen() {
             <Badge jobType="FOOD" label={OFFERED_JOB_LABEL} />
           </View>
 
-          <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 10 }}>
-            SORT BY
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {SORT_OPTIONS.map(({ value, label }) => (
-              <FilterChip key={value} label={label} active={sortBy === value} onPress={() => setSortBy(value)} theme={theme} />
-            ))}
-          </View>
+          {sortOptions.length > 1 && (
+            <>
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 10 }}>
+                SORT BY
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {sortOptions.map(({ value, label }) => (
+                  <FilterChip key={value} label={label} active={sortBy === value} onPress={() => setSortBy(value)} theme={theme} />
+                ))}
+              </View>
+            </>
+          )}
 
           <Text className="text-caption font-medium" style={{ color: theme.textSecondary, marginTop: 8 }}>
             {openJobs.length} job{openJobs.length === 1 ? '' : 's'} near you
@@ -373,7 +390,7 @@ function JobCard({ job, disabled, isNew, onPress }: { job: Job; disabled: boolea
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <ModeIcon size={14} color={theme.textSecondary} />
                 <Text className="text-caption" style={{ color: theme.textSecondary }}>
-                  {`${job.distanceKm.toFixed(1)} km \u00b7 ~${job.etaMinutes} min`}
+                  {tripSummary(job, [job.partnerMode === 'MOTORCYCLE' ? 'Motorcycle' : 'Walking'])}
                 </Text>
               </View>
               {disabled && (

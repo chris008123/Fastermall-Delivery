@@ -56,6 +56,7 @@ export default function PartnerHomeScreen() {
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
   const loadWallet = useWalletStore((s) => s.loadWallet);
   const unreadCount = useNotificationsStore((s) => selectUnreadCount(s.notifications));
+  const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
@@ -84,14 +85,18 @@ export default function PartnerHomeScreen() {
     };
 
     void initialize();
+    // Separate from initialize(): a notifications failure shouldn't block
+    // the dashboard (the store keeps its own error).
+    void loadNotifications();
 
     return () => {
       mounted = false;
     };
-  }, [loadProfile, loadJobs, loadWallet]);
+  }, [loadProfile, loadJobs, loadWallet, loadNotifications]);
 
   const refresh = async () => {
     setRefreshing(true);
+    void loadNotifications();
     setInitializationError(null);
 
     try {

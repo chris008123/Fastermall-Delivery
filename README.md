@@ -33,7 +33,8 @@ Crash reporting (Sentry) is off unless `EXPO_PUBLIC_SENTRY_DSN` is set, and it i
 |---|---|
 | Sign-in, session, profile, online switch | Real (backend) |
 | Job list, accepting, stages, handover code | Real (backend). Two steps, paying the vendor and typing the customer's code, exist only in the app and are remembered on the phone |
-| Wallet and cash-out, notifications, documents, support, demand | Mock data |
+| Notifications list and mark-as-read | Live (`GET /notifications`, `PATCH /notifications/:id/read`). "Mark unread" stays on the phone |
+| Wallet and cash-out, documents, support, demand | Mock data |
 | Payout destination | Saved on the phone only |
 | Delivery, navigation and notification preferences | Saved on the phone; they do not change behaviour yet (the screens say so) |
 | Push notifications, partner location, live map | Not built. The map component is saved in `docs/maps/` |

@@ -54,7 +54,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-  theme: 'dark',
+  theme: 'light',
   setTheme: (theme) => set({ theme }),
 
   // Defaults to the built-in map since that's what every screen already

@@ -14,7 +14,9 @@ What the partner app needs from the backend, in priority order. Written from the
 | `GET /logistics/me/earnings` | Earnings figures |
 | accept / advance-stage calls under `/logistics/deliveries/:id/...` | Accepting a job and moving it through its stages |
 
-Everything else in the app (wallet ledger, cash-out, notifications, documents, support, payout destination, demand map) runs on local mock data and has no endpoint yet.
+`GET /notifications` and `PATCH /notifications/:id/read` are also used (notifications list and mark-as-read).
+
+Everything else in the app (wallet ledger, cash-out, documents, support, payout destination, demand map) runs on local mock data and has no endpoint yet.
 
 ---
 
@@ -148,3 +150,212 @@ The profile screens (plate number, vehicle type, phone number, photo) save only 
 | `src/config/contact.ts` | `support@fastermall.com` |
 | Support screens | phone `0800000000` |
 | `settings/privacy.tsx`, `settings/about.tsx` | `https://fastermall.com` as the legal base URL |
+
+---
+
+## Found in the backend code review (1 Nov 2026)
+
+Read from `Fastermall-Backend-` at `main` @ `8cc6589`. These are concrete
+problems in the current backend code, with the fix. R1 breaks a feature the
+app already has (reporting a failed delivery).
+
+### R1. Allow a partner to mark a delivery as FAILED — **required**
+
+**Problem.** Commit `50e3567` restricted `PATCH /logistics/deliveries/:id/status`
+to the `NEXT_STATUS` map, which only contains:
+
+```
+EN_ROUTE_TO_PICKUP → PICKED_UP
+PICKED_UP          → EN_ROUTE_TO_CUSTOMER
+```
+
+The app's **"Can't complete this delivery?"** button sends `{ "status": "FAILED" }`,
+so it now always gets `400 Cannot change a delivery from X to FAILED`.
+
+**Fix** — `src/modules/logistics/logistics.service.ts`:
+
+```ts
+// A partner can give up on a delivery from any in-progress stage.
+const FAILABLE_FROM: DeliveryStatus[] = [
+  DeliveryStatus.EN_ROUTE_TO_PICKUP,
+  DeliveryStatus.PICKED_UP,
+  DeliveryStatus.EN_ROUTE_TO_CUSTOMER,
+];
+```
+
+In `updateStatus`, replace the transition check:
+
+```ts
+// before
+if (NEXT_STATUS[delivery.status] !== dto.status) {
+
+// after
+const isAllowedStep = NEXT_STATUS[delivery.status] === dto.status;
+const isAllowedFailure =
+  dto.status === DeliveryStatus.FAILED &&
+  FAILABLE_FROM.includes(delivery.status);
+
+if (!isAllowedStep && !isAllowedFailure) {
+```
+
+Leave `orderStatusMap` without a `FAILED` entry, so the order status is left
+as-is for an admin to resolve (cancel/refund/re-dispatch). Consider emitting an
+event (e.g. `delivery.failed`) so admins are notified.
+
+**Tests** — add to `logistics.service.spec.ts`:
+- FAILED is accepted from EN_ROUTE_TO_PICKUP, PICKED_UP, EN_ROUTE_TO_CUSTOMER.
+- FAILED is rejected from ASSIGNED, DELIVERED and FAILED.
+- A partner not assigned to the delivery still gets rejected.
+
+#### R1b. (Optional, recommended) Store the failure reason
+
+The app asks the partner why (`CUSTOMER_NOT_ANSWERING`, `WRONG_ADDRESS`,
+`CUSTOMER_REFUSED`, `VEHICLE_PROBLEM`, `VENDOR_ISSUE`, `OTHER`) but can't send
+it: the global `ValidationPipe` uses `forbidNonWhitelisted: true`, so an extra
+`reason` field would be rejected with 400.
+
+`prisma/schema.prisma`:
+
+```prisma
+enum DeliveryFailureReason {
+  CUSTOMER_NOT_ANSWERING
+  WRONG_ADDRESS
+  CUSTOMER_REFUSED
+  VEHICLE_PROBLEM
+  VENDOR_ISSUE
+  OTHER
+}
+
+model Delivery {
+  // ...existing fields
+  failureReason DeliveryFailureReason?
+  failedAt      DateTime?
+}
+```
+
+`dto/update-delivery-status.dto.ts`:
+
+```ts
+import { IsEnum, IsOptional } from 'class-validator';
+import { DeliveryFailureReason, DeliveryStatus } from '@prisma/client';
+
+export class UpdateDeliveryStatusDto {
+  @IsEnum(DeliveryStatus)
+  status: DeliveryStatus;
+
+  @IsOptional()
+  @IsEnum(DeliveryFailureReason)
+  reason?: DeliveryFailureReason;
+}
+```
+
+In `updateStatus`, when `dto.status === FAILED`, also set
+`failureReason: dto.reason ?? 'OTHER'` and `failedAt: new Date()` in the
+`updateMany` data. Then run `npx prisma migrate dev --name add_delivery_failure_reason`.
+
+> **Order of deploys:** ship this backend change first. Only then update the
+> app's `failJob` in `src/stores/jobsStore.ts` to send `{ status: 'FAILED', reason }`.
+> Sending `reason` to the current backend causes a 400.
+
+---
+
+### R2. Decide how admins handle Marketplace and Laundry deliveries — **decision needed**
+
+**Problem.** After commit `62657e8`, admins can *see* Marketplace and Laundry
+deliveries in `GET /logistics/deliveries/unassigned`. But `claim`, `updateStatus`
+and `verifyDeliveryCode` all look up a `DeliveryPartnerProfile` for the caller
+and throw `404 You are not registered as a delivery partner` if there isn't one.
+A normal admin account has no such profile, so admins can't move these
+deliveries forward at all.
+
+**Options (pick one):**
+
+- **A. Admin endpoints (recommended).** Add admin-only routes, e.g.
+  - `PATCH /admin/deliveries/:id/status` — set any status without the partner
+    ownership check (still record a `DeliveryStatusEvent`, update the order, and
+    emit `delivery.status.updated`).
+  - `POST /admin/deliveries/:id/assign` — `{ partnerId }` to assign a specific
+    partner (e.g. an in-house courier) to a Marketplace or Laundry delivery.
+- **B. Give admin accounts a `DeliveryPartnerProfile`** so the existing
+  endpoints work for them. Quicker, but mixes up admin and courier records and
+  their earnings.
+
+If admins use the existing `updateStatus` with a partner profile, note that the
+`claim` role check is skipped only for `role === ADMIN` — that's correct as written.
+
+---
+
+### R3. Delivery earning is hard-coded to GH₵15 — **confirm intent**
+
+`verifyDeliveryCode` always creates:
+
+```ts
+await tx.driverEarning.create({
+  data: { partnerId: delivery.partnerId, amount: 15, note: `Delivery ${deliveryId}` },
+});
+```
+
+The app shows `order.deliveryFee` as the job's fare on the job list, job detail
+and completion screen, so the partner sees one number and is paid another.
+Either:
+
+- pay from the order: `amount: delivery.order?.deliveryFee ?? 15` (include
+  `deliveryFee` in the `order` select at the top of `verifyDeliveryCode`), or
+- keep the flat rate, and the app will stop showing `deliveryFee` as "your earning".
+
+Also store the delivery ID in a proper column (e.g. `deliveryId String? @unique`
+on `DriverEarning`) instead of matching on the `note` text — it makes the
+duplicate check reliable and lets the app link an earning to its job.
+
+---
+
+### R4. Data the app displays but the backend doesn't send yet — **nice to have**
+
+| App field | Where it's shown | Suggested backend source |
+|---|---|---|
+| `vendorPayoutAmount` | FOOD "Pay the vendor" step, job detail, "Reimbursed to you" | Food subtotal = Σ `OrderItem.unitPrice × quantity` (or `totalAmount − deliveryFee`). Return it on delivery responses, e.g. `order.vendorPayoutAmount`. |
+| Reimbursement ledger entries | Wallet "already reimbursed" total | When a FOOD delivery is verified, record the vendor amount as a separate earning type (add `type EARNING \| REIMBURSEMENT` to `DriverEarning`). |
+| Customer `rating` | Completion screen, profile rating | Customer app endpoint to rate a delivered order; return the rating on `/logistics/me/deliveries`. |
+| Cash out | Wallet "Cash out" / "Instant cash out" | `POST /logistics/me/withdrawals` (balance ≥ GH₵50 threshold), recorded as a negative entry. Currently the app only adds a local entry. |
+| Pickup/drop-off coordinates | External navigation (Google Maps/Waze) | `pickupLat/Lng`, `dropoffLat/Lng` already exist on `Delivery` — populate them when the order is created. The app currently searches by address label instead. |
+
+---
+
+### R5. Support tickets don't work for staff accounts — **needed for in-app support**
+
+`POST /support/tickets` and `GET /support/tickets` are open to any logged-in
+user, but `SupportTicket.userId` is a foreign key to **`User`** (customers).
+A partner's token carries a `StaffUser` id, so creating a ticket fails on the
+foreign key (500) and listing returns nothing. The app's support chat stays
+mocked until this is fixed.
+
+`prisma/schema.prisma`:
+
+```prisma
+model SupportTicket {
+  id          String       @id @default(uuid())
+  userId      String?
+  staffUserId String?
+  // ...existing fields
+  user        User?        @relation(fields: [userId], references: [id])
+  staffUser   StaffUser?   @relation(fields: [staffUserId], references: [id])
+}
+```
+
+(`StaffUser` also needs `supportTickets SupportTicket[]`.) Then in
+`support.controller.ts` / `support.service.ts`, pass the caller's role and use
+`staffUserId` when the caller is staff, `userId` otherwise — the same
+owner-switch `NotificationsService.ownerWhere()` already does.
+
+---
+
+### Contract notes (no change needed — keep these stable)
+
+- Every response is wrapped as `{ success: true, data: ... }` by
+  `ResponseInterceptor`. The app now unwraps this for all endpoints it uses.
+- The app decides a delivery is Food from **`order.type === 'FOOD'`**. Keep
+  `order.type` in the `unassigned`, `me/deliveries`, `claim` and `status`
+  responses — if it disappears, partners see an empty jobs list.
+- `claim` moves a delivery straight to `EN_ROUTE_TO_PICKUP`; the app expects that.
+- `/staff/me` must keep including `deliveryProfile` (the app reads `type`,
+  `isAvailable`, `vehiclePlate`, `id` from it).

@@ -130,6 +130,25 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * The backend's global ResponseInterceptor wraps every body as
+ * `{ success: true, data: ... }`. Unwrap single-delivery responses
+ * (claim, status update) so they map onto a Job correctly.
+ */
+function unwrapDelivery(value: unknown): BackendDelivery {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    typeof (value as { data: unknown }).data === 'object' &&
+    (value as { data: unknown }).data !== null
+  ) {
+    return (value as { data: BackendDelivery }).data;
+  }
+
+  return value as BackendDelivery;
+}
+
 function normalizeDeliveryList(value: unknown): BackendDelivery[] {
   if (Array.isArray(value)) {
     return value as BackendDelivery[];
@@ -521,12 +540,12 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     });
 
     try {
-      const response = await apiFetch<BackendDelivery>(
+      const response = unwrapDelivery(await apiFetch<unknown>(
         `/logistics/deliveries/${id}/claim`,
         {
           method: 'POST',
         },
-      );
+      ));
 
       const { usePartnerStore } = await import(
         '@/src/stores/partnerStore'
@@ -600,7 +619,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
      */
     if (job.stage === 'PAY_VENDOR') {
       try {
-        const response = await apiFetch<BackendDelivery>(
+        const response = unwrapDelivery(await apiFetch<unknown>(
           `/logistics/deliveries/${id}/status`,
           {
             method: 'PATCH',
@@ -608,7 +627,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
               status: 'PICKED_UP',
             }),
           },
-        );
+        ));
 
         const { usePartnerStore } = await import(
           '@/src/stores/partnerStore'
@@ -645,9 +664,22 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     let backendStatus: BackendDeliveryStatus | null = null;
 
     switch (job.stage) {
-      case 'ACCEPTED':
-        backendStatus = 'EN_ROUTE_TO_PICKUP';
-        break;
+      case 'ACCEPTED': {
+        /*
+         * Claiming now moves a delivery straight to EN_ROUTE_TO_PICKUP, and
+         * the backend no longer accepts EN_ROUTE_TO_PICKUP from the status
+         * endpoint. Only deliveries assigned before that change can still
+         * be ASSIGNED with a partner — say so instead of showing a raw 400.
+         */
+        const message =
+          'This delivery was assigned before the latest update and can\'t be moved forward from the app. Please contact Support.';
+
+        set({
+          error: message,
+        });
+
+        throw new Error(message);
+      }
 
       case 'EN_ROUTE_TO_PICKUP':
         backendStatus = 'PICKED_UP';
@@ -741,7 +773,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     }
 
     try {
-      const response = await apiFetch<BackendDelivery>(
+      const response = unwrapDelivery(await apiFetch<unknown>(
         `/logistics/deliveries/${id}/status`,
         {
           method: 'PATCH',
@@ -749,7 +781,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
             status: backendStatus,
           }),
         },
-      );
+      ));
 
       const { usePartnerStore } = await import(
         '@/src/stores/partnerStore'

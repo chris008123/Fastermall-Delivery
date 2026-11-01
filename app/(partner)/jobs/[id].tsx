@@ -14,6 +14,7 @@ import { useJobsStore } from '@/src/stores/jobsStore';
 import { colors } from '@/src/theme';
 import type { JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
+import { tripSummary } from '@/src/utils/trip';
 
 // Layout ported from the app's GlassView design system, same merge pattern
 // as Home/Jobs-list: `acceptJob()` below is the real backend-connected
@@ -118,7 +119,7 @@ export default function JobDetailScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <ModeIcon size={16} color={theme.textSecondary} />
         <Text className="text-body" style={{ color: theme.textSecondary }}>
-          {`${job.distanceKm.toFixed(1)} km \u00b7 ~${job.etaMinutes} min \u00b7 ${job.partnerMode === 'MOTORCYCLE' ? 'Motorcycle' : 'Walking'}`}
+          {tripSummary(job, [job.partnerMode === 'MOTORCYCLE' ? 'Motorcycle' : 'Walking'])}
         </Text>
       </View>
 

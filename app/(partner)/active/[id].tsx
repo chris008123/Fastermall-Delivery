@@ -39,7 +39,15 @@ const STAGE_COPY: Record<JobStage, { label: string; sublabel?: (job: Job) => str
   AVAILABLE: { label: 'Available' },
   ACCEPTED: { label: 'Job accepted', action: 'Start heading to pickup' },
   EN_ROUTE_TO_PICKUP: { label: 'Heading to pickup', sublabel: (j) => j.pickup.label, action: "I've arrived at pickup" },
-  PAY_VENDOR: { label: 'Pay the vendor', sublabel: (j) => `Front ${formatCurrency(j.vendorPayoutAmount ?? 0)} \u2014 reimbursed after delivery`, action: 'Mark as paid' },
+  PAY_VENDOR: {
+    label: 'Pay the vendor',
+    // The backend doesn't send the vendor amount yet \u2014 don't show GH\u20b50.00.
+    sublabel: (j) =>
+      j.vendorPayoutAmount != null
+        ? `Front ${formatCurrency(j.vendorPayoutAmount)} \u2014 reimbursed after delivery`
+        : 'Pay the vendor for the order \u2014 reimbursed after delivery',
+    action: 'Mark as paid',
+  },
   PICKED_UP: { label: 'Order collected', sublabel: (j) => j.itemsSummary, action: 'Start heading to customer' },
   EN_ROUTE_TO_CUSTOMER: { label: 'Heading to customer', sublabel: (j) => j.dropoff.label, action: "I've arrived at drop-off" },
   DELIVERED: { label: 'Confirm handover', sublabel: (j) => `Ask ${j.customerName} for their delivery code`, action: 'Confirm handover' },
@@ -112,7 +120,7 @@ export default function ActiveDeliveryScreen() {
   const pipeline = pipelineFor(job.type);
   const pickedUpIndex = pipeline.indexOf('PICKED_UP');
   const currentIndex = pipeline.indexOf(job.stage);
-  const navTarget = currentIndex < pickedUpIndex ? job.pickup.coordinate : job.dropoff.coordinate;
+  const navTarget = currentIndex < pickedUpIndex ? job.pickup : job.dropoff;
   const isFinished = job.stage === 'COMPLETED' || job.stage === 'FAILED';
   const isBusy = isAdvancing || isFailing;
 
