@@ -9,6 +9,7 @@ import type {
   PartnerMode,
 } from '@/src/types/job';
 import { applyLocalStage, pruneLocalStages } from '@/src/utils/localStages';
+import { isAtFoodJobLimit, MAX_ACTIVE_FOOD_JOBS } from '@/src/utils/jobFilters';
 
 type BackendDeliveryStatus =
   | 'ASSIGNED'
@@ -540,6 +541,14 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     });
 
     try {
+      const target = get().jobs.find((item) => item.id === id);
+
+      if (target?.type === 'FOOD' && isAtFoodJobLimit(get().jobs)) {
+        throw new Error(
+          `You can carry up to ${MAX_ACTIVE_FOOD_JOBS} food orders at once. Finish one before accepting another.`,
+        );
+      }
+
       const response = unwrapDelivery(await apiFetch<unknown>(
         `/logistics/deliveries/${id}/claim`,
         {

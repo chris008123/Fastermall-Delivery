@@ -15,7 +15,7 @@ import { useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
-import { findFreshJobIds, isOfferedOpenJob, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
+import { findFreshJobIds, isAtFoodJobLimit, isOfferedOpenJob, MAX_ACTIVE_FOOD_JOBS, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 import { tripSummary } from '@/src/utils/trip';
 
@@ -114,10 +114,7 @@ export default function JobsScreen() {
     }
   };
 
-  const hasActiveJob = useMemo(
-    () => jobs.some((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED'),
-    [jobs],
-  );
+  const atLimit = useMemo(() => isAtFoodJobLimit(jobs), [jobs]);
 
 
   const openJobs = useMemo(
@@ -278,7 +275,7 @@ export default function JobsScreen() {
       }
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       renderItem={({ item }) => (
-        <JobCard job={item} disabled={hasActiveJob} isNew={newIds.has(item.id)} onPress={() => openJob(item.id)} />
+        <JobCard job={item} disabled={atLimit && item.type === 'FOOD'} isNew={newIds.has(item.id)} onPress={() => openJob(item.id)} />
       )}
     />
   );
@@ -395,7 +392,7 @@ function JobCard({ job, disabled, isNew, onPress }: { job: Job; disabled: boolea
               </View>
               {disabled && (
                 <Text className="text-caption font-medium" style={{ color: theme.textSecondary }}>
-                  Finish active job first
+                  At your {MAX_ACTIVE_FOOD_JOBS}-order limit
                 </Text>
               )}
             </View>

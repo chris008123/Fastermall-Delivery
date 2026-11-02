@@ -1,20 +1,72 @@
 # Backend changes needed for the Fastermall Partner app
 
-What the partner app needs from the backend, in priority order. Written from the app's current code (24 Oct 2026).
+Everything the partner app needs from the backend, in one place. First written 24 Oct 2026. Last checked against the app and against `Fastermall-Backend-` `main` @ `8cc6589` on 2 Nov 2026.
+
+## Start here: the full to-do list
+
+The checklist below covers every item in this file. Details for each are further down.
+
+**Do first (the app is broken or unsafe without these)**
+- [ ] **R1** Allow `FAILED` from in-progress stages. The app's "Can't complete this delivery?" button gets a 400 today.
+- [ ] **R6** Limit a partner to 3 active food orders in `claim()`, and make `claim` safe when two partners tap at the same moment.
+- [ ] **R7** Let a partner start a delivery an admin assigned to them (`ASSIGNED` → `EN_ROUTE_TO_PICKUP`).
+- [ ] **R2** Decide how admins move Marketplace and Laundry deliveries forward. They can see them but can't act on them.
+- [ ] **R3** Pay the order's delivery fee (or confirm the flat GH₵15) so the fare shown matches the pay.
+- [ ] **4** Return **409** (not 400) when a job was already taken.
+
+**Needed before a store release (P1)**
+- [ ] **1** Account deletion and data export
+- [ ] **2** Logout, token lifetime, refresh tokens. Return 401 only for bad or expired tokens.
+- [ ] **3** Staff login lockout, forgot / reset / change password
+- [ ] **5** `Idempotency-Key` on claim, status change and cash-out
+
+**Needed so the app stops using mock data (P2)**
+- [ ] **6** Real `PAY_VENDOR` / code-entry statuses, stage history, pagination on `me/deliveries`
+- [ ] **7** Payout destination endpoints
+- [ ] **8** Wallet ledger and cash-out (see also R4)
+- [ ] **9** Notifications: mark unread, delete, mark all read, preferences
+- [ ] **10** Document upload and verification status
+- [ ] **11 / R5** Support tickets for staff accounts
+- [ ] **R4** `vendorPayoutAmount`, reimbursements, ratings, pickup / drop-off coordinates
+- [ ] **12** Demand map (optional)
+
+**Platform and quality (P3)**
+- [ ] **13** One error format with a stable `code`, plus `X-Request-Id`
+- [ ] **14** `GET /app/config` (minimum app version, maintenance flag, contacts, legal URLs)
+- [ ] **15** Staging environment, always-on hosting
+- [ ] **16 / 21** Online state: return the saved state, `lastSeenAt`, automatic offline
+- [ ] **17** Publish the privacy policy and terms
+- [ ] **18** Preferences stored on the account, and acted on by the server
+- [ ] **19** Partner location
+- [ ] **20** Profile edits (plate, vehicle, phone, photo)
+- [ ] Replace the placeholders listed near the end of this file
+
+**Already done on the backend (no action, listed so nobody redoes them)**
+- `/logistics/*` is limited to `DELIVERY_PARTNER` and `ADMIN` (`RolesGuard`).
+- A partner can only change status or verify the code on deliveries assigned to them.
+- Stage changes follow a fixed order (`NEXT_STATUS`), so skips and repeats are rejected.
+- Handover code: 5 wrong attempts lock the job for 5 minutes.
+- Food-only for partners: `unassigned` filters by `order.type = FOOD`, and `claim` returns 403 for anything else.
+- Push: `POST/PATCH/DELETE /notifications/devices` and Expo push sending exist. The **app** still has to register its token (app-side work).
+
+---
 
 **Endpoints the app uses today**
 
 | Endpoint | Used for |
 |---|---|
 | `POST /staff/login` | Sign in (email, password) |
-| `GET /staff/me` | Load the signed-in account and check the role is `DELIVERY_PARTNER` |
-| `GET /logistics/me` / `PATCH /logistics/me` | Partner profile and online/offline toggle |
+| `GET /staff/me` | Signed-in account, role check (`DELIVERY_PARTNER`) and the `deliveryProfile` (vehicle, online state) |
+| `PATCH /logistics/me` | Online/offline toggle |
 | `GET /logistics/deliveries/unassigned` | Jobs available to accept |
+| `POST /logistics/deliveries/:id/claim` | Accept a job |
+| `PATCH /logistics/deliveries/:id/status` | `PICKED_UP`, `EN_ROUTE_TO_CUSTOMER`, `FAILED` |
+| `POST /logistics/deliveries/:id/verify-code` | Customer's 6-digit handover code → `DELIVERED` |
 | `GET /logistics/me/deliveries` | The partner's own jobs and history |
 | `GET /logistics/me/earnings` | Earnings figures |
-| accept / advance-stage calls under `/logistics/deliveries/:id/...` | Accepting a job and moving it through its stages |
+| `GET /notifications`, `PATCH /notifications/:id/read` | Notifications list and mark-as-read |
 
-`GET /notifications` and `PATCH /notifications/:id/read` are also used (notifications list and mark-as-read).
+There is no `GET /logistics/me`. The app reads the profile from `/staff/me`.
 
 Everything else in the app (wallet ledger, cash-out, documents, support, payout destination, demand map) runs on local mock data and has no endpoint yet.
 
@@ -44,11 +96,12 @@ The app now signs the partner out on **any 401** from a signed-in request, and t
 
 ### 4. Enforce the rules on the server, not only in the app
 The app checks these, but anyone can call the API directly.
-- Only `DELIVERY_PARTNER` accounts may use `/logistics/*`.
-- A partner can read and advance **only jobs assigned to them**.
-- Stage changes must follow the allowed order; reject skips and repeats.
-- **Handover code:** verify the 6-digit code on the server, and limit attempts (for example 5, then lock that job for a few minutes). A 6-digit code can be guessed in a short time without a limit.
-- Accepting a job that was just taken must return **409 Conflict** with a clear message, so the app can show "already taken".
+- ✅ Done: only `DELIVERY_PARTNER` (and `ADMIN`) can use `/logistics/*`.
+- ✅ Done: a partner can advance **only jobs assigned to them**.
+- ✅ Done: stage changes follow the allowed order, and skips and repeats are rejected.
+- ✅ Done: the handover code is checked on the server, and 5 wrong tries lock the job for 5 minutes.
+- **To do:** accepting a job that was just taken returns **400** today. Return **409 Conflict** with a clear message, so the app can tell "already taken" apart from other errors.
+- **To do:** the 3-active-food-orders limit (see R6).
 
 ### 5. Idempotency for actions that change money or job state
 Accept job, advance stage and cash-out must be safe to repeat. Accept an `Idempotency-Key` header and return the original result if the same key is sent again. This lets the app retry safely after a timeout (it does not retry automatically yet).
@@ -75,10 +128,12 @@ Currently kept on the phone only.
 - **Send money as integer pesewas (or decimal strings) with a currency code, not floating-point numbers.**
 
 ### 9. Notifications and push
-- `GET /notifications` with read state, `PATCH /notifications/:id` (read or unread), `DELETE /notifications/:id`, and "mark all read".
-- Register the phone for push: `POST /devices` with the Expo push token; remove it on logout. Without this the app cannot alert a partner to a new job while it is closed.
-- New-job push payload, for example `{ "type": "JOB_AVAILABLE", "jobId": "..." }`, so tapping opens the job.
-- `GET` and `PUT /staff/me/notification-preferences` (the settings are local and reset on restart).
+Already on the backend: `GET /notifications`, `PATCH /notifications/:id/read`, device registration (`POST/PATCH/DELETE /notifications/devices`) and Expo push sending with a `data.type` and `deliveryId`. Still missing:
+- **Mark unread:** `PATCH /notifications/:id` with `{ "isRead": false }`. The app currently remembers "unread" on the phone only.
+- **Mark all read:** `PATCH /notifications/read-all`. The app sends one request per notification today.
+- `DELETE /notifications/:id`.
+- `GET` and `PUT /staff/me/notification-preferences` (see item 18). Push sending should respect them.
+- Keep the new-job push `data` as `{ "type": "DELIVERY_AVAILABLE", "deliveryId": "..." }`, so tapping it can open the job.
 
 ### 10. Documents and verification
 - Upload endpoint (multipart or signed URLs) with size and type limits, and virus scanning.
@@ -346,6 +401,65 @@ model SupportTicket {
 `support.controller.ts` / `support.service.ts`, pass the caller's role and use
 `staffUserId` when the caller is staff, `userId` otherwise — the same
 owner-switch `NotificationsService.ownerWhere()` already does.
+
+---
+
+### R6. Limit a partner to 3 food orders at once — **required**
+
+The app now lets a partner carry up to 3 food orders at the same time, and it greys out "Accept" when they already have 3. That check is only on the phone. Today `claim()` in `logistics.service.ts` has no limit at all, so an old app version or a direct API call can claim any number. The backend has to enforce it.
+
+In `LogisticsService.claim()`, for non-admins, after the food-only check and before the transaction:
+
+```ts
+const MAX_ACTIVE_FOOD_DELIVERIES = 3;
+
+const activeFood = await this.prisma.delivery.count({
+  where: {
+    partnerId: profile.id,
+    status: {
+      in: [
+        DeliveryStatus.EN_ROUTE_TO_PICKUP,
+        DeliveryStatus.PICKED_UP,
+        DeliveryStatus.EN_ROUTE_TO_CUSTOMER,
+      ],
+    },
+    order: { type: OrderType.FOOD },
+  },
+});
+
+if (activeFood >= MAX_ACTIVE_FOOD_DELIVERIES) {
+  throw new BadRequestException(
+    `You can carry up to ${MAX_ACTIVE_FOOD_DELIVERIES} food orders at once. Finish one before accepting another.`,
+  );
+}
+```
+
+- `DELIVERED` and `FAILED` don't count, so finishing one order frees a slot straight away.
+- The app shows the backend's `message` as-is, so keep it human-readable.
+- Two claims sent at the same moment could both pass the count. To close that gap, do the count and the update inside the same `$transaction` with `isolationLevel: 'Serializable'`, or take a row lock on the partner profile (`SELECT ... FOR UPDATE`) first.
+- The `claim` update itself should also only succeed while the delivery is still unclaimed (`where: { id, partnerId: null, status: ASSIGNED }` with `updateMany`, checking `count === 1`). Otherwise two partners can claim the same order at the same time.
+- Tests: claiming a 4th food order returns 400; claiming after one is `DELIVERED` succeeds; admins are not limited.
+- If the number should be configurable, read it from an env var such as `MAX_ACTIVE_FOOD_DELIVERIES` and tell the app team. The app's value is `MAX_ACTIVE_FOOD_JOBS` in `src/utils/jobFilters.ts`.
+
+---
+
+### R7. Deliveries an admin assigns to a partner can't be started — **required if admins assign**
+
+`NEXT_STATUS` has no entry for `ASSIGNED`, because `claim` normally moves a delivery straight to `EN_ROUTE_TO_PICKUP`. But a delivery that is `ASSIGNED` **and already has a `partnerId`** (an admin assigned it, or it was claimed before the claim change) is stuck. The partner sees it as accepted, but every status change returns 400. The app now shows "contact Support" for these jobs instead of a raw error.
+
+Fix in `logistics.service.ts`:
+
+```ts
+const NEXT_STATUS: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
+  [DeliveryStatus.ASSIGNED]: DeliveryStatus.EN_ROUTE_TO_PICKUP, // assigned partner starts the trip
+  [DeliveryStatus.EN_ROUTE_TO_PICKUP]: DeliveryStatus.PICKED_UP,
+  [DeliveryStatus.PICKED_UP]: DeliveryStatus.EN_ROUTE_TO_CUSTOMER,
+};
+```
+
+The existing `delivery.partnerId !== profile.id` check in `updateStatus` stops a partner from starting someone else's delivery, and unclaimed deliveries have no `partnerId`, so they still have to go through `claim`. Once this ships, tell the app team so the app can send `EN_ROUTE_TO_PICKUP` for these jobs. Also do a one-off check for any rows already stuck: `SELECT id FROM "Delivery" WHERE status = 'ASSIGNED' AND "partnerId" IS NOT NULL;`
+
+If option A in R2 (`POST /admin/deliveries/:id/assign`) is built, it should leave the delivery `ASSIGNED` with the partner set, and the partner then starts it through this transition.
 
 ---
 

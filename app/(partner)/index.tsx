@@ -26,7 +26,7 @@ import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificat
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
-import { isOfferedOpenJob, jobTypeNoun, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
+import { isActiveJob, isAtFoodJobLimit, isOfferedOpenJob, jobTypeNoun, MAX_ACTIVE_FOOD_JOBS, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout/visual language ported from the app's established GlassView design
@@ -133,7 +133,9 @@ export default function PartnerHomeScreen() {
   };
 
   const availableCount = jobs.filter(isOfferedOpenJob).length;
-  const activeJob = jobs.find((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED');
+  const activeJobs = jobs.filter(isActiveJob);
+  const hasActiveJob = activeJobs.length > 0;
+  const atLimit = isAtFoodJobLimit(jobs);
   const earnings = selectEarningsBalance(ledger);
   const reimbursed = selectReimbursedTotal(ledger);
   // Derived, presentation-only — not a new store selector: today's cut of
@@ -258,7 +260,7 @@ export default function PartnerHomeScreen() {
       )}
 
       {/* Only shown while the demand data describes the kind of order this partner is offered. */}
-      {!activeJob && demandSnapshot.jobType === OFFERED_JOB_TYPE && (
+      {!hasActiveJob && demandSnapshot.jobType === OFFERED_JOB_TYPE && (
         <AnimatedPressable onPress={() => router.push('/(partner)/demand')} scaleTo={0.98}>
           <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -277,7 +279,7 @@ export default function PartnerHomeScreen() {
         </AnimatedPressable>
       )}
 
-      {!isAvailable && !activeJob && (
+      {!isAvailable && !hasActiveJob && (
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
           <Zap size={22} color={colors.partner.orange} />
           <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
@@ -287,15 +289,17 @@ export default function PartnerHomeScreen() {
         </GlassView>
       )}
 
-      {activeJob && (
-        <AnimatedPressable onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} scaleTo={0.98}>
+      {activeJobs.map((activeJob, index) => (
+        <AnimatedPressable key={activeJob.id} onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} scaleTo={0.98}>
           <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Badge jobType={activeJob.type} label={activeJob.type} />
               <ChevronRight size={20} color={theme.textSecondary} />
             </View>
             <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-              Active delivery in progress
+              {activeJobs.length > 1
+                ? `Active delivery ${index + 1} of ${activeJobs.length}`
+                : 'Active delivery in progress'}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <MapPin size={16} color={theme.textSecondary} />
@@ -306,9 +310,20 @@ export default function PartnerHomeScreen() {
             <Button title="Continue delivery" variant="partner" onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} />
           </GlassView>
         </AnimatedPressable>
+      ))}
+
+      {isAvailable && atLimit && (
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
+          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
+            You're carrying {MAX_ACTIVE_FOOD_JOBS} orders
+          </Text>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            That's the most you can take at once. Deliver one to start accepting new jobs again.
+          </Text>
+        </GlassView>
       )}
 
-      {isAvailable && !activeJob && !jobsLoading && availableCount > 0 && (
+      {isAvailable && !atLimit && !jobsLoading && availableCount > 0 && (
         <AnimatedPressable onPress={() => router.push('/(partner)/jobs')} scaleTo={0.98}>
           <GlassView radius="card" style={{ padding: 20, gap: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -324,14 +339,14 @@ export default function PartnerHomeScreen() {
         </AnimatedPressable>
       )}
 
-      {isAvailable && !activeJob && jobsLoading && (
+      {isAvailable && !atLimit && jobsLoading && (
         <GlassView radius="card" style={{ padding: 20, alignItems: 'center', gap: 8 }}>
           <ActivityIndicator color={colors.partner.orange} />
           <Text className="text-caption" style={{ color: theme.textSecondary }}>Checking for nearby jobs…</Text>
         </GlassView>
       )}
 
-      {isAvailable && !activeJob && !jobsLoading && availableCount === 0 && !jobsError && (
+      {isAvailable && !atLimit && !jobsLoading && availableCount === 0 && !jobsError && (
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
           <PackageSearch size={22} color={theme.textSecondary} />
           <Text className="text-card-title font-semibold" style={{ color: theme.text }}>No jobs nearby right now</Text>

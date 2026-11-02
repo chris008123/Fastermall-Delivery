@@ -1,5 +1,5 @@
 import type { Job } from '@/src/types/job';
-import { findFreshJobIds, isOfferedOpenJob, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
+import { activeFoodJobs, findFreshJobIds, isAtFoodJobLimit, isOfferedOpenJob, MAX_ACTIVE_FOOD_JOBS, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
 
 // Only the fields the filters read matter here.
 const job = (id: string, stage: Job['stage'], type: Job['type'] = OFFERED_JOB_TYPE) =>
@@ -49,5 +49,28 @@ describe('findFreshJobIds', () => {
     first.forEach((id) => seen.add(id));
     expect(findFreshJobIds([], seen)).toEqual([]);
     expect(findFreshJobIds([job('a', 'AVAILABLE')], seen)).toEqual([]);
+  });
+});
+
+describe('food order limit', () => {
+  it('counts only claimed, unfinished food jobs', () => {
+    const jobs = [
+      job('a', 'EN_ROUTE_TO_PICKUP'),
+      job('b', 'AVAILABLE'),
+      job('c', 'COMPLETED'),
+      job('d', 'FAILED'),
+      job('e', 'PICKED_UP', 'LAUNDRY'),
+    ];
+    expect(activeFoodJobs(jobs).map((j) => j.id)).toEqual(['a']);
+  });
+
+  it('allows accepting until the partner carries the maximum', () => {
+    const carrying = (n: number) => Array.from({ length: n }, (_, i) => job(`j${i}`, 'PICKED_UP', 'FOOD'));
+    expect(isAtFoodJobLimit(carrying(MAX_ACTIVE_FOOD_JOBS - 1))).toBe(false);
+    expect(isAtFoodJobLimit(carrying(MAX_ACTIVE_FOOD_JOBS))).toBe(true);
+  });
+
+  it('is three', () => {
+    expect(MAX_ACTIVE_FOOD_JOBS).toBe(3);
   });
 });

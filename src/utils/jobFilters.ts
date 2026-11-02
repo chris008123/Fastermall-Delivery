@@ -17,3 +17,20 @@ export const isOfferedOpenJob = (job: Job) => job.stage === 'AVAILABLE' && job.t
 export function findFreshJobIds(jobs: readonly Job[], seen: ReadonlySet<string>): string[] {
   return jobs.filter((j) => isOfferedOpenJob(j) && !seen.has(j.id)).map((j) => j.id);
 }
+
+/** How many food orders a partner may carry at the same time. The backend
+ * must enforce this too (see BACKEND_CHANGES_NEEDED.md) — the app check
+ * only stops the partner from trying. */
+export const MAX_ACTIVE_FOOD_JOBS = 3;
+
+/** Claimed by this partner and not yet finished or failed. */
+export const isActiveJob = (job: Job) =>
+  job.stage !== 'AVAILABLE' && job.stage !== 'COMPLETED' && job.stage !== 'FAILED';
+
+/** The partner's food orders in progress, oldest-claimed order preserved. */
+export const activeFoodJobs = (jobs: readonly Job[]) =>
+  jobs.filter((j) => j.type === 'FOOD' && isActiveJob(j));
+
+/** True when the partner is already carrying the maximum number of food orders. */
+export const isAtFoodJobLimit = (jobs: readonly Job[]) =>
+  activeFoodJobs(jobs).length >= MAX_ACTIVE_FOOD_JOBS;

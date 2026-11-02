@@ -15,6 +15,7 @@ import { colors } from '@/src/theme';
 import type { JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
 import { tripSummary } from '@/src/utils/trip';
+import { isAtFoodJobLimit, MAX_ACTIVE_FOOD_JOBS } from '@/src/utils/jobFilters';
 
 // Layout ported from the app's GlassView design system, same merge pattern
 // as Home/Jobs-list: `acceptJob()` below is the real backend-connected
@@ -38,9 +39,7 @@ export default function JobDetailScreen() {
   const acceptJob = useJobsStore((s) => s.acceptJob);
   const loadJobs = useJobsStore((s) => s.loadJobs);
   const isLoading = useJobsStore((s) => s.isLoading);
-  const hasActiveJob = useJobsStore((s) =>
-    s.jobs.some((j) => j.stage !== 'AVAILABLE' && j.stage !== 'COMPLETED' && j.stage !== 'FAILED'),
-  );
+  const atLimit = useJobsStore((s) => isAtFoodJobLimit(s.jobs));
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [screenError, setScreenError] = useState<string | null>(null);
@@ -78,7 +77,8 @@ export default function JobDetailScreen() {
   const ModeIcon = job.partnerMode === 'MOTORCYCLE' ? Bike : Footprints;
   const isStillAvailable = job.stage === 'AVAILABLE';
   const isAlreadyAssigned = !isStillAvailable && job.stage !== 'COMPLETED' && job.stage !== 'FAILED';
-  const canAccept = isStillAvailable && !hasActiveJob;
+  const blockedByLimit = job.type === 'FOOD' && atLimit;
+  const canAccept = isStillAvailable && !blockedByLimit;
 
   const handleAccept = async () => {
     if (!canAccept || isAccepting) return;
@@ -101,8 +101,8 @@ export default function JobDetailScreen() {
 
   const acceptLabel = isAlreadyAssigned
     ? 'Already assigned to another partner'
-    : hasActiveJob
-      ? 'Finish your active job first'
+    : blockedByLimit
+      ? `You're carrying ${MAX_ACTIVE_FOOD_JOBS} orders — finish one first`
       : 'Accept job';
 
   return (
