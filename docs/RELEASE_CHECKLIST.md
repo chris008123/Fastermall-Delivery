@@ -9,7 +9,7 @@ Work through this before every store release. Tick it in the pull request.
 - [ ] `eas.json` production profile points `EXPO_PUBLIC_API_URL` at the production API (https).
 - [ ] App version and name are right in `app.json`; `autoIncrement` is on for the build number.
 - [ ] Placeholders replaced: support email (`src/config/contact.ts`), support phone in the support screens, legal links.
-- [ ] Crash reporting is set up: `EXPO_PUBLIC_SENTRY_DSN` is set for the production profile (as an EAS environment variable), and `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are set as EAS secrets so readable stack traces are uploaded. Without the token the build still works, but crash reports show minified code.
+- [ ] Crash reporting is set up: `EXPO_PUBLIC_SENTRY_DSN` is set for the production profile (as an EAS environment variable), and `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` are set as EAS secrets so readable stack traces are uploaded. Source map upload is currently turned off with `SENTRY_DISABLE_AUTO_UPLOAD=true` in every `eas.json` profile, because the Android build fails when it tries to upload without a token. Once the three values are set, remove that line from the `production` profile so crash reports show readable code.
 - [ ] The backend items marked P1 in `BACKEND_CHANGES_NEEDED.md` are live (account deletion, logout, refresh/401 behaviour, handover-code limits), or you have decided to ship without them.
 
 ## Build and test
