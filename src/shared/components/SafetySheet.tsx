@@ -1,8 +1,10 @@
 import * as Linking from 'expo-linking';
 import { LifeBuoy, Phone, ShieldAlert, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import { telUrl, useSupportNumber } from '@/src/services/supportContact';
 import { colors } from '@/src/theme';
 
 interface SafetySheetProps {
@@ -11,16 +13,25 @@ interface SafetySheetProps {
 }
 
 /**
- * "Are you in danger?" confirm sheet — reachable from a one-tap Safety
- * button on the active-delivery screen. Every action here is mock (no
- * backend/telephony to actually call out to), but the flow itself is
- * real: this is the one screen in the whole app the research flagged as
- * non-optional, so it stays reachable regardless of which pipeline stage
- * the delivery is in.
+ * "Are you in danger?" sheet, reachable from the Safety button on the
+ * active-delivery screen at every stage. Emergency services dials 191
+ * (Ghana police); Contact Fastermall Support calls the support number an
+ * admin set, or opens the Support screen when none is set yet.
  */
 export function SafetySheet({ visible, onClose }: SafetySheetProps) {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
+  const router = useRouter();
+  const supportNumber = useSupportNumber();
+
+  const contactSupport = () => {
+    onClose();
+    if (supportNumber) {
+      Linking.openURL(telUrl(supportNumber)).catch(() => router.push('/(partner)/support' as never));
+    } else {
+      router.push('/(partner)/support' as never);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -66,9 +77,9 @@ export function SafetySheet({ visible, onClose }: SafetySheetProps) {
           />
           <SafetyAction
             icon={LifeBuoy}
-            label="Contact Fastermall Support"
+            label={supportNumber ? 'Call Fastermall Support' : 'Contact Fastermall Support'}
             color={colors.brand.teal}
-            onPress={onClose}
+            onPress={contactSupport}
           />
 
           <AnimatedPressable onPress={onClose} scaleTo={0.98} style={{ alignItems: 'center', paddingTop: 4 }}>
