@@ -1,7 +1,17 @@
 import { Bell, Briefcase, Inbox, Megaphone, Vibrate, Volume2, Wallet } from 'lucide-react-native';
-import { Alert, ScrollView, Switch, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, AppState, Linking, ScrollView, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
+import { Button } from '@/src/shared/components/Button';
+import { fetchNotificationPrefs, saveNotificationPrefs } from '@/src/services/notificationPrefs';
+import {
+  getPushPermission,
+  isPushAvailable,
+  registerForPush,
+  requestPushPermission,
+  type PushPermission,
+} from '@/src/services/push';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
@@ -44,7 +54,7 @@ const OTHER_ROWS: Row[] = [
   {
     key: 'promotions',
     label: 'Promotions & announcements',
-    description: 'Fastermall news and incentive campaigns',
+    description: 'Fastermall news and incentive campaigns (none are sent yet)',
     icon: Megaphone,
     iconColor: colors.accent.purple,
     iconBg: 'rgba(139, 92, 246, 0.14)',
@@ -53,7 +63,7 @@ const OTHER_ROWS: Row[] = [
 
 const ALERT_STYLE_ROWS: Row[] = [
   { key: 'sound', label: 'Sound', description: 'Play a sound for alerts', icon: Volume2, iconColor: colors.accent.blue, iconBg: 'rgba(59, 130, 196, 0.14)' },
-  { key: 'vibration', label: 'Vibration', description: 'Vibrate for alerts', icon: Vibrate, iconColor: colors.accent.blue, iconBg: 'rgba(59, 130, 196, 0.14)' },
+  { key: 'vibration', label: 'Vibration', description: 'Vibrate for alerts while the app is open; your phone’s settings decide otherwise', icon: Vibrate, iconColor: colors.accent.blue, iconBg: 'rgba(59, 130, 196, 0.14)' },
 ];
 
 export default function NotificationSettingsScreen() {
@@ -61,7 +71,49 @@ export default function NotificationSettingsScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const prefs = useSettingsStore((s) => s.notificationPrefs);
-  const setPref = useSettingsStore((s) => s.setNotificationPref);
+  const setLocalPref = useSettingsStore((s) => s.setNotificationPref);
+  const [permission, setPermission] = useState<PushPermission | null>(null);
+
+  // The server decides which pushes to send, so its switches win. Read them
+  // on open; the local copy keeps the screen usable offline.
+  useEffect(() => {
+    let alive = true;
+    fetchNotificationPrefs()
+      .then((server) => {
+        if (!alive) return;
+        for (const [k, v] of Object.entries(server) as [keyof NotificationPrefs, boolean][]) setLocalPref(k, v);
+      })
+      .catch(() => {});
+    const readPermission = () => void getPushPermission().then((p) => alive && setPermission(p));
+    readPermission();
+    // Coming back from the phone's Settings app after allowing notifications.
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && readPermission());
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [setLocalPref]);
+
+  // Saves to the server; on failure the switch goes back and the partner is told.
+  const setPref = (key: keyof NotificationPrefs, value: boolean) => {
+    const before = useSettingsStore.getState().notificationPrefs;
+    setLocalPref(key, value);
+    if (key === 'vibration') return; // phone-only
+    saveNotificationPrefs({ ...before, [key]: value }).catch(() => {
+      setLocalPref(key, before[key]);
+      Alert.alert('Couldn’t save', 'Check your connection and try again.');
+    });
+  };
+
+  const allowPush = async () => {
+    if (permission === 'denied') {
+      Linking.openSettings().catch(() => {});
+      return;
+    }
+    const p = await requestPushPermission();
+    setPermission(p);
+    if (p === 'granted') void registerForPush();
+  };
   // Same saved choice as the "Unread only" pill on the Notifications tab.
   const unreadOnly = useNotificationFilterStore((s) => s.unreadOnly);
   const setUnreadOnly = useNotificationFilterStore((s) => s.setUnreadOnly);
@@ -119,6 +171,24 @@ export default function NotificationSettingsScreen() {
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Notifications</Text>
       </View>
 
+      {!isPushAvailable() ? (
+        <InactiveSettingNotice>
+          This version of the app can’t receive push notifications. Update the app to get alerts on your lock screen. Everything still shows in the Notifications tab.
+        </InactiveSettingNotice>
+      ) : permission && permission !== 'granted' ? (
+        <GlassView radius="card" style={{ padding: 16, gap: 10 }}>
+          <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>Notifications are off on this phone</Text>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            Allow them so new jobs and payments reach you even when the app is closed.
+          </Text>
+          <Button
+            title={permission === 'denied' ? 'Open phone settings' : 'Allow notifications'}
+            onPress={() => void allowPush()}
+            fullWidth
+          />
+        </GlassView>
+      ) : null}
+
       <View style={{ gap: 8 }}>
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginLeft: 4 }}>
           JOBS
@@ -144,10 +214,6 @@ export default function NotificationSettingsScreen() {
         <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8, marginLeft: 4 }}>
           INBOX
         </Text>
-        <InactiveSettingNotice>
-        Push notifications aren't set up yet, so these choices are saved on this phone but nothing is sent or silenced yet. Alerts you see in the Notifications tab are unaffected.
-      </InactiveSettingNotice>
-
       <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
           <SettingsRow
             icon={Inbox}

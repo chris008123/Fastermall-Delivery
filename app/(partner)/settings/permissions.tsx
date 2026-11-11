@@ -37,9 +37,9 @@ async function readStatuses(): Promise<{ camera: Status; photos: Status }> {
 }
 
 // Only permissions this app really uses are listed, with their real status
-// from the operating system. The app doesn't use location and doesn't send
-// notifications yet, so there is nothing to show for them. Add the rows back
-// when those features exist.
+// from the operating system. The app doesn't use location. Notification
+// permission is shown and asked for in Settings > Notifications, next to the
+// switches it affects.
 export default function PermissionsScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
@@ -127,7 +127,7 @@ export default function PermissionsScreen() {
       </AnimatedPressable>
 
       <Text className="text-caption" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-        The statuses above come straight from your phone. Fastermall Partner doesn&apos;t use your location and doesn&apos;t send notifications yet, so there is nothing to allow for those. Change a permission from your phone&apos;s own Settings app.
+        The statuses above come straight from your phone. Fastermall Partner doesn&apos;t use your location. Notifications are managed in Settings &gt; Notifications. Change a permission from your phone&apos;s own Settings app.
       </Text>
     </ScrollView>
   );
