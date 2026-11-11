@@ -51,7 +51,7 @@ export const supportTopics: SupportTopic[] = [
         subtitle: 'One-tap access to help.',
         icon: 'ShieldAlert',
         answer:
-          'Tap the Safety button on the active delivery screen at any time. It gives you one-tap access to emergency services, sharing your location, and Fastermall support.',
+          'Tap the Safety button on the active delivery screen at any time. It gives you one-tap access to emergency services and Fastermall support.',
       },
       {
         id: 'del-3',

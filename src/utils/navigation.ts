@@ -11,8 +11,7 @@ function hasRealCoordinate({ latitude, longitude }: JobLocation['coordinate']) {
 
 /** Opens turn-by-turn directions to `destination` in the partner's
  * preferred nav app, using its coordinate when known and otherwise
- * searching for its address label. FASTERMALL_MAPS is a deliberate no-op —
- * the built-in map is already on screen, so there's nothing to hand off to. */
+ * searching for its address label. */
 export function openNavigation(app: NavigationApp, destination: JobLocation) {
   const { coordinate, label } = destination;
   const useCoordinate = hasRealCoordinate(coordinate);

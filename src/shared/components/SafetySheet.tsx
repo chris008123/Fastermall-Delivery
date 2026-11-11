@@ -1,5 +1,5 @@
 import * as Linking from 'expo-linking';
-import { LifeBuoy, MapPin, Phone, ShieldAlert, X } from 'lucide-react-native';
+import { LifeBuoy, Phone, ShieldAlert, X } from 'lucide-react-native';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
@@ -63,12 +63,6 @@ export function SafetySheet({ visible, onClose }: SafetySheetProps) {
               Linking.openURL('tel:191').catch(() => {});
               onClose();
             }}
-          />
-          <SafetyAction
-            icon={MapPin}
-            label="Share My Location"
-            color={colors.partner.orange}
-            onPress={onClose}
           />
           <SafetyAction
             icon={LifeBuoy}
