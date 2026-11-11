@@ -21,6 +21,8 @@ type BackendDeliveryStatus =
 
 interface BackendCustomer {
   fullName?: string;
+  /** Not sent yet; used for "Call customer" once the backend includes it. */
+  phone?: string | null;
 }
 
 interface BackendProduct {
@@ -195,6 +197,11 @@ function getCustomerName(delivery: BackendDelivery): string {
   );
 }
 
+function getCustomerPhone(delivery: BackendDelivery): string | undefined {
+  const phone = delivery.order?.customer?.phone ?? delivery.laundryOrder?.customer?.phone;
+  return phone && /^\+?\d{9,15}$/.test(phone) ? phone : undefined;
+}
+
 function getPickupLabel(
   delivery: BackendDelivery,
   type: JobType,
@@ -365,6 +372,7 @@ function mapDeliveryToJob(
     itemsSummary: getItemsSummary(delivery),
 
     customerName,
+    customerPhone: getCustomerPhone(delivery),
 
     /*
      * The delivery code is never sent to the partner app. The customer

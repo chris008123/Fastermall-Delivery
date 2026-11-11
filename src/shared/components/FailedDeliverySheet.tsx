@@ -1,4 +1,6 @@
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
+import { telUrl, useSupportNumber } from '@/src/services/supportContact';
 import { AlertOctagon, ChevronLeft, MapPinOff, Phone, Store, UserX, Wrench, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
@@ -68,9 +70,13 @@ interface FailedDeliverySheetProps {
   onClose: () => void;
   onConfirmFailed: (reason: FailureReason) => void;
   customerName: string;
+  /** Only when the backend sends it; without it there is no Call button. */
+  customerPhone?: string;
 }
 
-export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, customerName }: FailedDeliverySheetProps) {
+export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, customerName, customerPhone }: FailedDeliverySheetProps) {
+  const router = useRouter();
+  const supportNumber = useSupportNumber();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [selected, setSelected] = useState<ReasonMeta | null>(null);
@@ -136,19 +142,26 @@ export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, custome
               <Text className="text-h1 font-bold" style={{ color: theme.text }}>{selected.label}</Text>
               <Text className="text-body" style={{ color: theme.textSecondary }}>{selected.guidance}</Text>
 
-              {selected.showCallCustomer && (
+              {selected.showCallCustomer && customerPhone ? (
                 <Button
                   title={`Call ${customerName}`}
                   variant="secondary"
                   fullWidth
-                  onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
+                  onPress={() => Linking.openURL(`tel:${customerPhone}`).catch(() => {})}
                 />
-              )}
+              ) : null}
               <Button
                 title="Contact Support"
                 variant="secondary"
                 fullWidth
-                onPress={() => Linking.openURL('tel:0000000000').catch(() => {})}
+                onPress={() => {
+                  if (supportNumber) {
+                    Linking.openURL(telUrl(supportNumber)).catch(() => {});
+                  } else {
+                    onClose();
+                    router.push('/(partner)/support' as never);
+                  }
+                }}
               />
 
               <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />

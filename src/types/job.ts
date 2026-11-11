@@ -56,6 +56,8 @@ export interface Job {
   vendorPayoutAmount?: number;
   itemsSummary: string;
   customerName: string;
+  /** Only when the backend sends it (it doesn't yet). */
+  customerPhone?: string;
   /** Mock-only: the code the "customer" will read out at handover. In the
    * real app this comes from the backend; here any 4 digits are accepted
    * so the flow can be demoed end to end. */

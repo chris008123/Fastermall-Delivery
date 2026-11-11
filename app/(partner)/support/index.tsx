@@ -22,6 +22,7 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { supportTopics } from '@/src/data/mockSupport';
 import { colors } from '@/src/theme';
 import type { SupportTopicId } from '@/src/types/support';
+import { telUrl, useSupportNumber } from '@/src/services/supportContact';
 
 const TOPIC_ICON: Record<SupportTopicId, typeof Wallet> = {
   PAYMENT: Wallet,
@@ -32,6 +33,8 @@ const TOPIC_ICON: Record<SupportTopicId, typeof Wallet> = {
 };
 
 export default function SupportScreen() {
+  // Hidden until an admin sets the support number.
+  const supportNumber = useSupportNumber();
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
@@ -169,7 +172,8 @@ export default function SupportScreen() {
           </View>
         </AnimatedPressable>
 
-        <AnimatedPressable onPress={() => Linking.openURL('tel:0800000000').catch(() => {})} scaleTo={0.98}>
+        {supportNumber ? (
+        <AnimatedPressable onPress={() => Linking.openURL(telUrl(supportNumber)).catch(() => {})} scaleTo={0.98}>
           <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Phone size={18} color={colors.brand.teal} />
             <View style={{ flex: 1 }}>
@@ -178,6 +182,7 @@ export default function SupportScreen() {
             </View>
           </GlassView>
         </AnimatedPressable>
+        ) : null}
       </View>
     </ScrollView>
   );

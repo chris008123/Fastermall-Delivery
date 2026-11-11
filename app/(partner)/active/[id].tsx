@@ -333,6 +333,7 @@ export default function ActiveDeliveryScreen() {
         visible={failedSheetVisible}
         onClose={() => setFailedSheetVisible(false)}
         customerName={job.customerName}
+        customerPhone={job.customerPhone}
         onConfirmFailed={(reason) => void handleFailure(reason)}
       />
     </ScrollView>
