@@ -32,6 +32,14 @@
       "expo-router",
       "@sentry/react-native/expo",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#E07A2E",
+          "defaultChannel": "deliveries"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Fastermall Partner needs your photos so you can upload your verification documents.",

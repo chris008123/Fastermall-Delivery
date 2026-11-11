@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { unregisterFromPush } from '@/src/services/push';
 import {
   ApiError,
   apiFetch,
@@ -158,6 +159,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    // Stop pushes to this phone while the session can still authorise it.
+    await unregisterFromPush();
     await clearAccessToken();
 
     // Flip to signed-out first so the partner screens leave before their
