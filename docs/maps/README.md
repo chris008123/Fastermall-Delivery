@@ -1,6 +1,6 @@
 # Bringing the delivery map back
 
-The live map is switched off, so `react-native-maps` is not installed. That keeps its native code out of every build (a noticeable saving in app size).
+Live maps were removed for this release (Fastermall work breakdown: "may be reconsidered later"), so `react-native-maps` is not installed and there is no "Fastermall Maps" navigation option. That keeps its native code out of every build (a noticeable saving in app size).
 
 `DeliveryMap.reference.tsx.txt` is the last working version of the map component. It is saved with a `.txt` ending so it is not compiled.
 

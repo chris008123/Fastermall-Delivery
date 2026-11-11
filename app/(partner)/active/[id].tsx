@@ -278,30 +278,27 @@ export default function ActiveDeliveryScreen() {
         </AnimatedPressable>
       </View>
 
-      {/* Map hidden for now (react-native-maps is not installed). To bring it back, follow docs/maps/README.md, then render <DeliveryMap job={job} />. */}
-
-      {navigationApp !== 'FASTERMALL_MAPS' && (
-        <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 12,
-              borderRadius: 14,
-              backgroundColor: theme.surface,
-              borderWidth: 1,
-              borderColor: theme.border,
-            }}
-          >
-            <Navigation size={16} color={accent} />
-            <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
-              Navigate with {navigationApp === 'GOOGLE_MAPS' ? 'Google Maps' : 'Waze'}
-            </Text>
-          </View>
-        </AnimatedPressable>
-      )}
+      {/* No in-app map: live maps were removed for this release (see docs/maps/README.md if they come back). */}
+      <AnimatedPressable onPress={() => openNavigation(navigationApp, navTarget)} scaleTo={0.98}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingVertical: 12,
+            borderRadius: 14,
+            backgroundColor: theme.surface,
+            borderWidth: 1,
+            borderColor: theme.border,
+          }}
+        >
+          <Navigation size={16} color={accent} />
+          <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+            Navigate with {navigationApp === 'GOOGLE_MAPS' ? 'Google Maps' : 'Waze'}
+          </Text>
+        </View>
+      </AnimatedPressable>
 
       <GlassView radius="card" style={{ padding: 20 }}>
         <RouteStepper

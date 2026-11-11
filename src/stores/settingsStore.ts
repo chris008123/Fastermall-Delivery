@@ -3,7 +3,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-export type NavigationApp = 'FASTERMALL_MAPS' | 'GOOGLE_MAPS' | 'WAZE';
+// The built-in map was removed for this release, so directions always open
+// in the partner's own map app.
+export type NavigationApp = 'GOOGLE_MAPS' | 'WAZE';
 export type JobCategory = 'MARKETPLACE' | 'FOOD' | 'LAUNDRY';
 
 export interface NavigationPrefs {
@@ -47,6 +49,18 @@ interface SettingsState {
 
 }
 
+/**
+ * Upgrades saved settings. Exported for tests.
+ * - v1 → v2: 'FASTERMALL_MAPS' (the removed built-in map) becomes Google Maps,
+ *   so the Navigate button shows again for partners who had it selected.
+ */
+export function migrateSettings(persisted: unknown, version: number): unknown {
+  if (version >= 2 || !persisted || typeof persisted !== 'object') return persisted;
+  const state = persisted as { navigationApp?: string };
+  const valid = state.navigationApp === 'GOOGLE_MAPS' || state.navigationApp === 'WAZE';
+  return valid ? state : { ...state, navigationApp: 'GOOGLE_MAPS' };
+}
+
 // Preferences are saved on the phone, so a partner's theme, navigation app
 // and notification choices survive closing the app. Several of them don't
 // change app behaviour yet (the settings screens say so); they live here so
@@ -57,10 +71,7 @@ export const useSettingsStore = create<SettingsState>()(
   theme: 'light',
   setTheme: (theme) => set({ theme }),
 
-  // Defaults to the built-in map since that's what every screen already
-  // renders — switching to Google Maps/Waze hands off turn-by-turn to
-  // the partner's preferred app instead.
-  navigationApp: 'FASTERMALL_MAPS',
+  navigationApp: 'GOOGLE_MAPS',
   setNavigationApp: (navigationApp) => set({ navigationApp }),
 
   navigationPrefs: {
@@ -112,7 +123,8 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'fastermall-partner-settings',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
+      migrate: migrateSettings as (persisted: unknown, version: number) => SettingsState,
     },
   ),
 );
