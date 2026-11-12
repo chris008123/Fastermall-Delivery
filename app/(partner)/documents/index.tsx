@@ -7,10 +7,11 @@ import {
   CreditCard,
   FileText,
   ShieldCheck,
+  Umbrella,
   XCircle,
 } from 'lucide-react-native';
-import { useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
@@ -28,10 +29,11 @@ import type { DocumentStatus, DocumentType, PartnerDocument } from '@/src/types/
 import { daysUntil, formatDate } from '@/src/utils/date';
 
 const TYPE_ICON: Record<DocumentType, typeof CreditCard> = {
-  GHANA_CARD: CreditCard,
-  DRIVERS_LICENCE: FileText,
+  ID_CARD: CreditCard,
+  DRIVERS_LICENSE: FileText,
   VEHICLE_REGISTRATION: Car,
-  SELFIE: Camera,
+  PROFILE_PHOTO: Camera,
+  INSURANCE: Umbrella,
 };
 
 // Status chips read entirely from `color` now (StatusChip derives its own
@@ -51,25 +53,43 @@ export default function DocumentsScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const documents = useDocumentsStore((s) => s.documents);
+  const status = useDocumentsStore((s) => s.status);
+  const error = useDocumentsStore((s) => s.error);
+  const load = useDocumentsStore((s) => s.load);
   const summary = selectVerificationSummary(documents);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+      refreshControl={<RefreshControl refreshing={status === 'loading' && documents.length > 0} onRefresh={() => void load()} />}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Documents</Text>
       </View>
 
-      <StatusBanner summary={summary} theme={theme} />
-
-      <View style={{ gap: 12 }}>
-        {documents.map((doc) => (
-          <DocumentCard key={doc.id} document={doc} theme={theme} />
-        ))}
-      </View>
+      {status === 'loading' && documents.length === 0 ? (
+        <ActivityIndicator color={colors.partner.orange} style={{ marginTop: 24 }} />
+      ) : status === 'error' && documents.length === 0 ? (
+        <GlassView radius="card" style={{ padding: 16, gap: 10 }}>
+          <Text className="text-body" style={{ color: theme.textSecondary }}>{error ?? 'Unable to load your documents.'}</Text>
+          <Button title="Try again" variant="secondary" size="sm" onPress={() => void load()} />
+        </GlassView>
+      ) : (
+        <>
+          <StatusBanner summary={summary} theme={theme} />
+          <View style={{ gap: 12 }}>
+            {documents.map((doc) => (
+              <DocumentCard key={doc.id} document={doc} theme={theme} />
+            ))}
+          </View>
+        </>
+      )}
 
       <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 8 }}>
         Keeping every document current lets you stay online without interruption. We'll remind you before
@@ -98,6 +118,22 @@ function StatusBanner({
             {summary.blockingCount === 1
               ? 'One document has expired or was rejected. Renew it to keep receiving jobs.'
               : `${summary.blockingCount} documents have expired or were rejected. Renew them to keep receiving jobs.`}
+          </Text>
+        </View>
+      </GlassView>
+    );
+  }
+
+  if (summary.pendingCount > 0) {
+    return (
+      <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Clock size={22} color={colors.semantic.info} />
+        <View style={{ flex: 1 }}>
+          <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>
+            Verification in progress
+          </Text>
+          <Text className="text-caption" style={{ color: theme.textSecondary }}>
+            Upload anything marked Not uploaded. Documents under review are usually checked within 24–48 hours.
           </Text>
         </View>
       </GlassView>
@@ -139,9 +175,10 @@ function DocumentCard({
   document: PartnerDocument;
   theme: { text: string; textSecondary: string; border: string; surface: string };
 }) {
-  const reupload = useDocumentsStore((s) => s.reuploadDocument);
+  const upload = useDocumentsStore((s) => s.upload);
   const { show } = useToast();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const Icon = TYPE_ICON[document.type];
   const meta = STATUS_META[document.status];
   const StatusIcon = meta.icon;
@@ -190,6 +227,8 @@ function DocumentCard({
           title={document.status === 'NOT_UPLOADED' ? 'Upload document' : 'Renew document'}
           variant="partner"
           size="sm"
+          loading={uploading}
+          disabled={uploading}
           onPress={() => setSheetOpen(true)}
         />
       )}
@@ -200,6 +239,9 @@ function DocumentCard({
           </Text>
         </AnimatedPressable>
       )}
+      {uploading && !needsAction ? (
+        <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>Uploading…</Text>
+      ) : null}
       {isPending && (
         <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>
           We're reviewing your document — usually within 24–48 hours.
@@ -210,16 +252,23 @@ function DocumentCard({
         visible={sheetOpen}
         onClose={() => setSheetOpen(false)}
         title={document.label}
-        front={document.type === 'SELFIE'}
+        front={document.type === 'PROFILE_PHOTO'}
         guidance={
-          document.type === 'SELFIE'
+          document.type === 'PROFILE_PHOTO'
             ? 'Take a clear photo of your face in good light, with no hat or sunglasses.'
             : 'Place the document flat in good light, with all four corners and every word readable.'
         }
         onPicked={(uri) => {
-          reupload(document.id, uri);
-          haptics.success();
-          show('Sent for review', 'success');
+          setUploading(true);
+          upload(document.type, uri)
+            .then(() => {
+              haptics.success();
+              show('Sent for review', 'success');
+            })
+            .catch((e: unknown) => {
+              show(e instanceof Error ? e.message : 'The upload didn’t go through. Try again.', 'error');
+            })
+            .finally(() => setUploading(false));
         }}
       />
     </GlassView>
