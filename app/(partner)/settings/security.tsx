@@ -78,7 +78,7 @@ export default function SecurityScreen() {
             iconColor={colors.accent.orange}
             iconBg={colors.partner.orangeTint}
             label="Change password"
-            description="Do this first if you were sent a temporary password"
+            description="Choose a new password"
             onPress={() => router.push('/settings/change-password' as never)}
           />
           <SettingsRowSpacer />

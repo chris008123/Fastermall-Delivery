@@ -41,7 +41,7 @@ export default function OnboardingSubmittedScreen() {
         Application sent
       </Text>
       <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 12 }}>
-        Our team usually reviews applications within 1–2 days. If you’re approved, we’ll call or WhatsApp you with your sign-in details.
+        Our team usually reviews applications within 1–2 days. If you’re approved, we’ll email you a code to set your password.
       </Text>
 
       <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' }}>

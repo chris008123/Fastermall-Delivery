@@ -14,9 +14,10 @@ import { changePassword, checkNewPassword } from '@/src/services/password';
 import { colors } from '@/src/theme';
 
 /**
- * Settings > Security > Change password. Needed straight away by partners
- * whose account was created on approval with a temporary password. Other
- * devices are signed out; this one stays signed in.
+ * Settings > Security > Change password, for a signed-in partner who wants
+ * a new password. (New partners set their first one with the emailed setup
+ * code, from the sign-in screen.) Other devices are signed out; this one
+ * stays signed in.
  */
 export default function ChangePasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -118,7 +119,7 @@ export default function ChangePasswordScreen() {
         </GlassView>
 
         <Text className="text-caption" style={{ color: theme.textSecondary }}>
-          At least 8 characters. If you were sent a temporary password when you were approved, enter it as your current password.
+          At least 8 characters. Forgot your current one? Sign out and use “Set up account or reset password”.
         </Text>
 
         {serverError ? (

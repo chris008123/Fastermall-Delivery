@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
@@ -42,7 +42,10 @@ export default function LoginScreen() {
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
   const passwordRef = useRef<TextInput>(null);
 
-  const [email, setEmail] = useState('');
+  // Back from "Set up account or reset password": email filled in, and a note.
+  const params = useLocalSearchParams<{ email?: string; passwordSet?: string }>();
+  const passwordJustSet = params.passwordSet === '1';
+  const [email, setEmail] = useState(typeof params.email === 'string' ? params.email : '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -175,7 +178,24 @@ export default function LoginScreen() {
             </Pressable>
           </Field>
 
-          {sessionExpired && !error && (
+          <AnimatedPressable
+            onPress={() => router.push({ pathname: '/(auth)/set-password', params: { email } } as never)}
+            scaleTo={0.98}
+            style={{ alignSelf: 'flex-end' }}
+            accessibilityLabel="Set up account or reset password"
+          >
+            <Text className="text-caption font-medium" style={{ color: colors.partner.orange }}>
+              Set up account or reset password
+            </Text>
+          </AnimatedPressable>
+
+          {passwordJustSet && !error && (
+            <Text className="text-caption" style={{ color: colors.semantic.success }}>
+              Password set. Sign in with it now.
+            </Text>
+          )}
+
+          {sessionExpired && !error && !passwordJustSet && (
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
               Your session ended. Please sign in again.
             </Text>
