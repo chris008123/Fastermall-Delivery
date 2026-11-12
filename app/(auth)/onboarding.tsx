@@ -19,7 +19,7 @@ import { colors } from '@/src/theme';
 import type { PartnerMode } from '@/src/types/job';
 
 // "Become a partner": the application an admin reviews in the console.
-// Approval creates the account; the admin then sends the sign-in details.
+// Approval creates the account and emails a code to set the password.
 // Documents (Ghana Card, selfie, licence…) are uploaded after signing in,
 // from Documents, so nothing personal is held on the phone before then.
 
@@ -264,7 +264,7 @@ export default function OnboardingScreen() {
               <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>What happens next</Text>
               {[
                 'We review your application, usually within 1–2 days.',
-                'If you’re approved, we call or WhatsApp you with your sign-in details.',
+                'If you’re approved, we email you a code. Tap “Set up account or reset password” on the sign-in screen to choose your password.',
                 motorcycle
                   ? 'Sign in and upload your Ghana Card, a selfie, your licence, vehicle registration and insurance.'
                   : 'Sign in and upload your Ghana Card and a selfie.',
