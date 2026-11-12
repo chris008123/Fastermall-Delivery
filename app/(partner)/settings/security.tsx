@@ -16,7 +16,7 @@ import { colors } from '@/src/theme';
 // the flow will do rather than silently no-op-ing or pretending to submit
 // a request that goes nowhere.
 function notImplemented(feature: string) {
-  Alert.alert(feature, 'This will be available once account management is connected to a backend.');
+  Alert.alert(feature, 'This isn’t available in the app yet. Contact Fastermall support if you need it changed.');
 }
 
 export default function SecurityScreen() {
@@ -79,6 +79,7 @@ export default function SecurityScreen() {
             iconColor={colors.accent.orange}
             iconBg={colors.partner.orangeTint}
             label="Change password / PIN"
+            description="Not available yet"
             onPress={() => notImplemented('Change password / PIN')}
           />
           <SettingsRowSpacer />
@@ -96,7 +97,7 @@ export default function SecurityScreen() {
             iconColor={colors.brand.goldDark}
             iconBg={`${colors.brand.gold}26`}
             label="Trusted devices"
-            description="Manage devices signed in to your account"
+            description="Not available yet"
             onPress={() => notImplemented('Trusted devices')}
           />
         </GlassView>

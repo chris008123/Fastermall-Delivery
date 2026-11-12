@@ -33,6 +33,9 @@ interface AnimatedPressableProps extends PressableProps {
  * here since it still applies): layout/background styles don't reliably
  * apply directly on this component once cssInterop is attached — put those
  * on a plain wrapping View instead (see Button.tsx for the pattern).
+ *
+ * Anything tappable is announced as a button unless the caller gives another
+ * role (link, radio, switch…), so screen readers don't read it as plain text.
  */
 export function AnimatedPressable({
   scaleTo = 0.96,
@@ -42,6 +45,7 @@ export function AnimatedPressable({
   style,
   entering,
   exiting,
+  accessibilityRole,
   ...rest
 }: AnimatedPressableProps) {
   const scale = useSharedValue(1);
@@ -67,6 +71,7 @@ export function AnimatedPressable({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={[animatedStyle, style]}
+      accessibilityRole={accessibilityRole ?? (rest.onPress ? 'button' : undefined)}
       {...rest}
     />
   );

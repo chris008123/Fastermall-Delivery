@@ -31,9 +31,10 @@ export function EditPlateSheet({ visible, onClose, initialValue, onSave }: EditP
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+      <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
+          accessible={false}
           style={{
             backgroundColor: theme.surface,
             borderTopLeftRadius: 28,

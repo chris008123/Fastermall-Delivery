@@ -29,6 +29,8 @@ export function BackButton({ onPress }: BackButtonProps) {
     <AnimatedPressable
       onPress={onPress ?? (() => router.back())}
       scaleTo={0.9}
+      // 36 px drawn, 48 px to tap.
+      hitSlop={6}
       accessibilityRole="button"
       accessibilityLabel="Go back"
       style={{

@@ -13,3 +13,9 @@ To restore it:
 5. Make a new build. A map change needs a native build, not just a reload.
 
 Partner position on the map comes from `getPartnerPosition` in `src/utils/geo.ts`, which is an estimate from the job stage. Real positions need the partner-location work in `BACKEND_CHANGES_NEEDED.md` (item 19).
+
+## Demand map
+
+
+
+The home "High demand near you" card and the `/(partner)/demand` map were removed with live maps. They showed fixed sample numbers (orders nearby, estimated GH₵/hour), not real data, and the backend has no demand endpoint yet. Restore them from git history (`app/(partner)/demand/index.tsx`, `src/data/mockDemand.ts`, `src/types/demand.ts`) once real demand data exists.

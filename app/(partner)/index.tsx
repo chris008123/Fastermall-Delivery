@@ -3,7 +3,6 @@ import {
   Bell,
   ChevronRight,
   CircleAlert,
-  Flame,
   MapPin,
   PackageSearch,
   Zap,
@@ -19,14 +18,13 @@ import { useNavClearance } from '@/src/shared/components/AppNav';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
 import { SlideToggle } from '@/src/shared/components/SlideToggle';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { demandSnapshot } from '@/src/data/mockDemand';
 import { useInteractionStore } from '@/src/stores/interactionStore';
 import { useJobsStore } from '@/src/stores/jobsStore';
 import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
-import { isActiveJob, isAtFoodJobLimit, isOfferedOpenJob, jobTypeNoun, MAX_ACTIVE_FOOD_JOBS, OFFERED_JOB_TYPE } from '@/src/utils/jobFilters';
+import { isActiveJob, isAtFoodJobLimit, isOfferedOpenJob, MAX_ACTIVE_FOOD_JOBS } from '@/src/utils/jobFilters';
 import { formatCurrency } from '@/src/utils/money';
 
 // Layout/visual language ported from the app's established GlassView design
@@ -259,25 +257,6 @@ export default function PartnerHomeScreen() {
         </GlassView>
       )}
 
-      {/* Only shown while the demand data describes the kind of order this partner is offered. */}
-      {!hasActiveJob && demandSnapshot.jobType === OFFERED_JOB_TYPE && (
-        <AnimatedPressable onPress={() => router.push('/(partner)/demand')} scaleTo={0.98}>
-          <GlassView radius="card" style={{ padding: 20, gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Flame size={18} color={colors.semantic.error} />
-              <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{demandSnapshot.headline}</Text>
-            </View>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>
-              {demandSnapshot.totalNearbyOrders} {jobTypeNoun(demandSnapshot.jobType)} orders within {demandSnapshot.radiusKm} km · est.{' '}
-              {formatCurrency(demandSnapshot.estimatedHourlyMin)} – {formatCurrency(demandSnapshot.estimatedHourlyMax)}/hr
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>View demand map</Text>
-              <ChevronRight size={14} color={colors.partner.orange} />
-            </View>
-          </GlassView>
-        </AnimatedPressable>
-      )}
 
       {!isAvailable && !hasActiveJob && (
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
