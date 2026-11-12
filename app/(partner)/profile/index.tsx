@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { AlertTriangle, Bike, Check, ChevronRight, CreditCard, FileCheck2, Footprints, LifeBuoy, LogOut, Pencil, Settings, ShieldCheck, User } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -38,7 +38,12 @@ export default function ProfileScreen() {
   // memoizing the derived value keeps the store selector itself stable.
   const { average, count } = useMemo(() => selectPartnerRating(jobs), [jobs]);
   const documents = useDocumentsStore((s) => s.documents);
+  const loadDocuments = useDocumentsStore((s) => s.load);
   const verification = selectVerificationSummary(documents);
+  const needsDocs = documents.some((d) => d.required && d.status === 'NOT_UPLOADED');
+  useEffect(() => {
+    void loadDocuments();
+  }, [loadDocuments]);
 
   return (
     // Switched from a fixed View to a ScrollView, matching the main app's
@@ -212,11 +217,15 @@ export default function ProfileScreen() {
           </View>
           {verification.isBlocked ? (
             <Badge label="Action needed" color={colors.semantic.error} tint="rgba(214, 69, 69, 0.12)" />
+          ) : needsDocs ? (
+            <Badge label="Upload needed" color={colors.semantic.warning} tint="rgba(224, 163, 0, 0.14)" />
           ) : verification.attentionCount > 0 ? (
             <Badge label="Expiring soon" color={colors.semantic.warning} tint="rgba(224, 163, 0, 0.14)" />
-          ) : (
-            <ShieldCheck size={16} color={colors.semantic.success} />
-          )}
+          ) : verification.isFullyVerified ? (
+            <ShieldCheck size={16} color={colors.semantic.success} accessibilityLabel="Verified" />
+          ) : verification.pendingCount > 0 ? (
+            <Badge label="Under review" color={colors.semantic.info} tint="rgba(59, 130, 196, 0.12)" />
+          ) : null}
           <ChevronRight size={18} color={theme.textSecondary} />
         </GlassView>
       </AnimatedPressable>
