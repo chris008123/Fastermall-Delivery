@@ -38,23 +38,23 @@ export default function OnboardingSubmittedScreen() {
       </View>
 
       <Text className="text-h1 font-bold" style={{ color: theme.text, textAlign: 'center' }}>
-        You're all set!
+        Application sent
       </Text>
       <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 12 }}>
-        We've received your details and documents. Our team typically reviews new partners within 24–48 hours.
+        Our team usually reviews applications within 1–2 days. If you’re approved, we’ll call or WhatsApp you with your sign-in details.
       </Text>
 
       <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' }}>
         <Clock3 size={20} color={colors.partner.orange} />
         <Text className="text-caption" style={{ color: theme.textSecondary, flex: 1 }}>
-          You can check your verification status anytime from Documents once you sign in.
+          After you sign in, upload your documents from Documents. You can take deliveries once they’re approved.
         </Text>
       </GlassView>
 
       <View style={{ flex: 1 }} />
 
       <Button
-        title="Continue to sign in"
+        title="Back to sign in"
         variant="partner"
         fullWidth
         onPress={() => router.replace('/(auth)/login')}
