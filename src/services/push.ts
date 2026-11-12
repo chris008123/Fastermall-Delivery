@@ -131,6 +131,8 @@ export function pushRoute(data: Record<string, unknown> | undefined): string {
   const type = typeof data?.type === 'string' ? data.type.toUpperCase() : '';
   const id = [data?.jobId, data?.deliveryId].find((v): v is string => typeof v === 'string' && SAFE_ID.test(v));
   if (/^(CASHOUT|PAYOUT)/.test(type)) return '/(partner)/wallet';
+  const ticketId = typeof data?.ticketId === 'string' && SAFE_ID.test(data.ticketId) ? data.ticketId : undefined;
+  if (type === 'SUPPORT_REPLY') return ticketId ? `/(partner)/support/chat?ticketId=${ticketId}` : '/(partner)/support/chat';
   if (id && type === 'DELIVERY_AVAILABLE') return `/(partner)/jobs/${id}`;
   if (id && type !== 'DELIVERY_CANCELLED') return `/(partner)/active/${id}`;
   return '/(partner)/notifications';

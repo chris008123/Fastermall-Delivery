@@ -1,57 +1,104 @@
+import { useLocalSearchParams } from 'expo-router';
 import { Headset, Send } from 'lucide-react-native';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
+import { Button } from '@/src/shared/components/Button';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
+import {
+  getConversation,
+  isOpen,
+  listConversations,
+  sendMessage,
+  startConversation,
+  type Conversation,
+} from '@/src/services/supportTickets';
 import { colors } from '@/src/theme';
 
-interface ChatMessage {
-  id: string;
-  from: 'agent' | 'me';
-  text: string;
-}
+const REFRESH_MS = 15_000;
+const MIN_FIRST_MESSAGE = 5;
 
-const INITIAL: ChatMessage[] = [
-  {
-    id: 'greet',
-    from: 'agent',
-    text: "Hi! I'm with Fastermall Support. What can I help you with today?",
-  },
-];
-
-// Mock-only: no backend chat service exists yet, so this simulates one
-// agent reply after the partner sends a message — enough to demo the
-// flow without pretending there's a live queue behind it.
+/**
+ * Messages with Fastermall support, backed by a support ticket that admins
+ * answer in the console. Opens the conversation from a SUPPORT_REPLY push
+ * (?ticketId=), or the latest open one, or lets the partner start one.
+ * Replies are checked every 15 seconds while the screen is open.
+ */
 export default function SupportChatScreen() {
   const insets = useSafeAreaInsets();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL);
+  const params = useLocalSearchParams<{ ticketId?: string; deliveryId?: string }>();
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const send = () => {
+  const load = useCallback(async () => {
+    try {
+      let id = typeof params.ticketId === 'string' ? params.ticketId : undefined;
+      if (!id) id = (await listConversations()).find((t) => isOpen(t.status))?.id;
+      setConversation(id ? await getConversation(id) : null);
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Could not load your messages.');
+    } finally {
+      setLoading(false);
+    }
+  }, [params.ticketId]);
+
+  useEffect(() => {
+    // load() only sets state after awaiting the network, never synchronously.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
+  // Pick up support's answers while the screen is open.
+  const conversationId = conversation?.id;
+  useEffect(() => {
+    if (!conversationId) return undefined;
+    const timer = setInterval(() => {
+      getConversation(conversationId).then(setConversation).catch(() => {});
+    }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [conversationId]);
+
+  const closed = conversation ? !isOpen(conversation.status) : false;
+
+  const send = async () => {
     const text = draft.trim();
-    if (!text) return;
-    const mine: ChatMessage = { id: `me-${Date.now()}`, from: 'me', text };
-    setMessages((m) => [...m, mine]);
-    setDraft('');
-    setIsTyping(true);
-
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages((m) => [
-        ...m,
-        {
-          id: `agent-${Date.now()}`,
-          from: 'agent',
-          text: "Got it — thanks for the details. A support agent will follow up shortly. If this is urgent or you're mid-delivery, use the Safety button on the active delivery screen instead.",
-        },
-      ]);
-    }, 1000);
+    if (!text || sending) return;
+    if (!conversation || closed) {
+      if (text.length < MIN_FIRST_MESSAGE) {
+        setSendError('Tell us a little more so we can help.');
+        return;
+      }
+    }
+    setSending(true);
+    setSendError(null);
+    try {
+      if (!conversation || closed) {
+        const deliveryId = typeof params.deliveryId === 'string' ? params.deliveryId : undefined;
+        setConversation(await startConversation(text, deliveryId));
+      } else {
+        await sendMessage(conversation.id, text);
+        setConversation(await getConversation(conversation.id));
+      }
+      setDraft('');
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Your message wasn’t sent. Check your connection and try again.');
+    } finally {
+      setSending(false);
+    }
   };
+
+  const messages = conversation?.messages ?? [];
+  const waiting = conversation && !closed && messages.every((m) => !m.fromSupport);
 
   return (
     <KeyboardAvoidingView
@@ -59,95 +106,60 @@ export default function SupportChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={insets.top}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-          paddingTop: insets.top + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-        }}
-      >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 12 }}>
         <BackButton />
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Support</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 10 }} style={{ flex: 1 }}>
-        {messages.map((m) => (
-          <View
-            key={m.id}
-            style={{
-              flexDirection: 'row',
-              alignSelf: m.from === 'me' ? 'flex-end' : 'flex-start',
-              alignItems: 'flex-end',
-              gap: 8,
-              maxWidth: '86%',
-            }}
-          >
-            {m.from === 'agent' && (
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: colors.brand.tealTint,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Headset size={14} color={colors.brand.teal} />
-              </View>
-            )}
-            <View
-              style={{
-                backgroundColor: m.from === 'me' ? colors.partner.orange : theme.surface,
-                borderWidth: m.from === 'me' ? 0 : 1,
-                borderColor: theme.border,
-                borderRadius: 18,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ padding: 20, gap: 10, flexGrow: 1 }}
+        style={{ flex: 1 }}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.partner.orange} style={{ marginTop: 24 }} />
+        ) : loadError ? (
+          <View style={{ gap: 10 }}>
+            <Text className="text-body" style={{ color: theme.textSecondary }}>{loadError}</Text>
+            <Button
+              title="Try again"
+              variant="secondary"
+              size="sm"
+              onPress={() => {
+                setLoading(true);
+                void load();
               }}
-            >
-              <Text
-                className="text-body"
-                style={{ color: m.from === 'me' ? colors.onBrand : theme.text }}
-              >
-                {m.text}
-              </Text>
-            </View>
+            />
           </View>
-        ))}
-        {isTyping && (
-          <View style={{ flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'flex-end', gap: 8 }}>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: colors.brand.tealTint,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Headset size={14} color={colors.brand.teal} />
-            </View>
-            <View
-              style={{
-                backgroundColor: theme.surface,
-                borderWidth: 1,
-                borderColor: theme.border,
-                borderRadius: 18,
-                paddingHorizontal: 14,
-                paddingVertical: 10,
-              }}
-            >
-              <Text className="text-body" style={{ color: theme.textSecondary }}>Typing…</Text>
-            </View>
-          </View>
+        ) : messages.length === 0 ? (
+          <Bubble fromSupport theme={theme}>
+            Hi! Tell us what’s wrong and we’ll reply here. If you’re in danger or mid-delivery and it’s urgent, use the Safety button on the active delivery screen.
+          </Bubble>
+        ) : (
+          messages.map((m) => (
+            <Bubble key={m.id} fromSupport={m.fromSupport} theme={theme}>
+              {m.text}
+            </Bubble>
+          ))
         )}
+        {waiting ? (
+          <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            Sent to Fastermall support. Replies appear here and as a notification.
+          </Text>
+        ) : null}
+        {closed ? (
+          <Text className="text-caption" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            This conversation is closed. Send a message to start a new one.
+          </Text>
+        ) : null}
       </ScrollView>
 
+      {sendError ? (
+        <Text accessibilityRole="alert" className="text-caption" style={{ color: colors.semantic.error, paddingHorizontal: 20 }}>
+          {sendError}
+        </Text>
+      ) : null}
       <View
         style={{
           flexDirection: 'row',
@@ -159,11 +171,15 @@ export default function SupportChatScreen() {
           borderTopColor: theme.border,
         }}
       >
-        <TextInput accessibilityLabel="Type a message"
+        <TextInput
+          accessibilityLabel="Type a message"
           value={draft}
           onChangeText={setDraft}
-          placeholder="Type a message"
+          placeholder={conversation && !closed ? 'Type a message' : 'Describe the problem'}
           placeholderTextColor={theme.textSecondary}
+          multiline
+          maxLength={2000}
+          editable={!loading}
           style={{
             flex: 1,
             fontSize: 16,
@@ -173,11 +189,17 @@ export default function SupportChatScreen() {
             borderRadius: 20,
             paddingHorizontal: 16,
             paddingVertical: 10,
+            maxHeight: 120,
           }}
-          onSubmitEditing={send}
-          returnKeyType="send"
         />
-        <AnimatedPressable accessibilityRole="button" accessibilityLabel="Send message" onPress={send} scaleTo={0.9}>
+        <AnimatedPressable
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
+          accessibilityState={{ disabled: sending || !draft.trim() }}
+          disabled={sending || !draft.trim()}
+          onPress={() => void send()}
+          scaleTo={0.9}
+        >
           <View
             style={{
               width: 42,
@@ -186,12 +208,51 @@ export default function SupportChatScreen() {
               backgroundColor: colors.partner.orange,
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: sending || !draft.trim() ? 0.5 : 1,
             }}
           >
-            <Send size={18} color={colors.onBrand} />
+            {sending ? <ActivityIndicator color={colors.onBrand} size="small" /> : <Send size={18} color={colors.onBrand} />}
           </View>
         </AnimatedPressable>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function Bubble({
+  fromSupport,
+  theme,
+  children,
+}: {
+  fromSupport: boolean;
+  theme: { surface: string; border: string; text: string };
+  children: React.ReactNode;
+}) {
+  return (
+    <View
+      style={{ flexDirection: 'row', alignSelf: fromSupport ? 'flex-start' : 'flex-end', alignItems: 'flex-end', gap: 8, maxWidth: '86%' }}
+      accessible
+      accessibilityLabel={`${fromSupport ? 'Fastermall support' : 'You'}: ${typeof children === 'string' ? children : ''}`}
+    >
+      {fromSupport ? (
+        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.brand.tealTint, alignItems: 'center', justifyContent: 'center' }}>
+          <Headset size={14} color={colors.brand.teal} />
+        </View>
+      ) : null}
+      <View
+        style={{
+          backgroundColor: fromSupport ? theme.surface : colors.partner.orange,
+          borderWidth: fromSupport ? 1 : 0,
+          borderColor: theme.border,
+          borderRadius: 18,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        }}
+      >
+        <Text className="text-body" style={{ color: fromSupport ? theme.text : colors.onBrand }}>
+          {children}
+        </Text>
+      </View>
+    </View>
   );
 }
