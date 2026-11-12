@@ -26,6 +26,11 @@ describe('pushRoute', () => {
     expect(pushRoute({ type: 'PAYOUT_RECORDED' })).toBe('/(partner)/wallet');
   });
 
+  it('opens the support conversation support replied to', () => {
+    expect(pushRoute({ type: 'SUPPORT_REPLY', ticketId: 't-1' })).toBe('/(partner)/support/chat?ticketId=t-1');
+    expect(pushRoute({ type: 'SUPPORT_REPLY', ticketId: '../x' })).toBe('/(partner)/support/chat');
+  });
+
   it('ignores unsafe ids', () => {
     expect(pushRoute({ type: 'DELIVERY_AVAILABLE', jobId: '../settings' })).toBe('/(partner)/notifications');
   });
