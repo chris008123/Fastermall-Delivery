@@ -11,10 +11,8 @@ import { useAuthStore } from '@/src/stores/authStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
 
-// Change password/PIN and Trusted devices have no backend to act against
-// yet (this app is explicitly frontend-only) — tapping them surfaces what
-// the flow will do rather than silently no-op-ing or pretending to submit
-// a request that goes nowhere.
+// Two-factor authentication and trusted devices have no backend yet, so
+// tapping them says so instead of pretending to do something.
 function notImplemented(feature: string) {
   Alert.alert(feature, 'This isn’t available in the app yet. Contact Fastermall support if you need it changed.');
 }
@@ -24,6 +22,7 @@ export default function SecurityScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
+  const email = useAuthStore((s) => s.user?.email);
 
   return (
     <ScrollView
@@ -54,7 +53,7 @@ export default function SecurityScreen() {
             iconColor={colors.accent.blue}
             iconBg="rgba(59, 130, 196, 0.14)"
             label="Phone number"
-            description="Not added"
+            description="Ask Fastermall support to change it"
             onPress={() => notImplemented('Change phone number')}
           />
           <SettingsRowSpacer />
@@ -63,8 +62,8 @@ export default function SecurityScreen() {
             iconColor={colors.accent.purple}
             iconBg="rgba(139, 92, 246, 0.14)"
             label="Email"
-            description="Not added"
-            onPress={() => notImplemented('Add email')}
+            description={email ? `${email} (you sign in with this)` : 'Not added'}
+            onPress={() => notImplemented('Change email')}
           />
         </GlassView>
       </View>
@@ -78,9 +77,9 @@ export default function SecurityScreen() {
             icon={KeyRound}
             iconColor={colors.accent.orange}
             iconBg={colors.partner.orangeTint}
-            label="Change password / PIN"
-            description="Not available yet"
-            onPress={() => notImplemented('Change password / PIN')}
+            label="Change password"
+            description="Do this first if you were sent a temporary password"
+            onPress={() => router.push('/settings/change-password' as never)}
           />
           <SettingsRowSpacer />
           <SettingsRow
