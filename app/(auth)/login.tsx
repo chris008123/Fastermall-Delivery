@@ -18,6 +18,7 @@ import { Button } from '@/src/shared/components/Button';
 import { CourierScene } from '@/src/shared/components/CourierScene';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { ApiError } from '@/src/services/api';
+import { useHasApplicationDraft } from '@/src/stores/applicationDraftStore';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
 
@@ -40,6 +41,7 @@ export default function LoginScreen() {
 
   const signIn = useAuthStore((s) => s.signIn);
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
+  const hasApplicationDraft = useHasApplicationDraft();
   const passwordRef = useRef<TextInput>(null);
 
   // Back from "Set up account or reset password": email filled in, and a note.
@@ -235,7 +237,7 @@ export default function LoginScreen() {
                   fontFamily: 'Fredoka_600SemiBold',
                 }}
               >
-                Get started
+                {hasApplicationDraft ? 'Continue your application' : 'Get started'}
               </Text>
             </Text>
           </AnimatedPressable>

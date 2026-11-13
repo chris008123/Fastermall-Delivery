@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Bike, Footprints, Mail, MapPin, Phone, User } from 'lucide-react-native';
-import { useMemo, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Bike, Footprints, History, Mail, MapPin, Phone, User } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Alert, AppState, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Button } from '@/src/shared/components/Button';
 import { PartnerAuthHeroHeader } from '@/src/shared/components/PartnerAuthHeroHeader';
@@ -12,16 +12,26 @@ import {
   checkContact,
   checkPersonal,
   checkVehicle,
+  EMPTY_APPLICATION,
+  isBlankApplication,
+  resumeStepIndex,
   submitApplication,
   type ApplicationForm,
 } from '@/src/services/partnerApplication';
+import { useApplicationDraftStore } from '@/src/stores/applicationDraftStore';
 import { colors } from '@/src/theme';
 import type { PartnerMode } from '@/src/types/job';
 
 // "Become a partner": the application an admin reviews in the console.
 // Approval creates the account and emails a code to set the password.
 // Documents (Ghana Card, selfie, licence…) are uploaded after signing in,
-// from Documents, so nothing personal is held on the phone before then.
+// from Documents, so no document images are held on the phone before then.
+//
+// What's typed is saved as a draft (encrypted, see applicationDraftStore) so
+// closing the app doesn't lose it; reopening carries on from the same step.
+// The draft is deleted once the application is sent.
+
+const SAVE_DELAY_MS = 400;
 
 type StepKey = 'contact' | 'personal' | 'vehicle' | 'review';
 
@@ -32,16 +42,6 @@ const STEPS: { key: StepKey; title: string; subtitle: string }[] = [
   { key: 'review', title: 'Check and send', subtitle: 'Make sure everything is right before you apply.' },
 ];
 
-const INITIAL: ApplicationForm = {
-  phone: '',
-  email: '',
-  fullName: '',
-  dateOfBirth: '',
-  address: '',
-  vehicleMode: 'MOTORCYCLE',
-  plateNumber: '',
-};
-
 function formatDob(value: string) {
   const d = value.replace(/\D/g, '').slice(0, 8);
   if (d.length <= 2) return d;
@@ -50,14 +50,83 @@ function formatDob(value: string) {
 }
 
 export default function OnboardingScreen() {
+  // The saved draft is read from encrypted storage when the app starts, which
+  // takes a moment; wait for it so the form opens with it already filled in.
+  const hydrated = useApplicationDraftStore((s) => s.hydrated);
+  if (!hydrated) return <View className="flex-1 bg-neutral-50 dark:bg-neutral-950" />;
+  return <ApplicationFormScreen />;
+}
+
+function ApplicationFormScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
-  const [form, setForm] = useState<ApplicationForm>(INITIAL);
-  const [stepIndex, setStepIndex] = useState(0);
+  const saveDraft = useApplicationDraftStore((s) => s.saveDraft);
+  const clearDraft = useApplicationDraftStore((s) => s.clearDraft);
+
+  const [draft] = useState(() => useApplicationDraftStore.getState());
+  const [form, setForm] = useState<ApplicationForm>(() => draft.form ?? EMPTY_APPLICATION);
+  const [stepIndex, setStepIndex] = useState(() => (draft.form ? resumeStepIndex(draft.form, draft.stepIndex) : 0));
+  const [resumed, setResumed] = useState(draft.form !== null);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const step = STEPS[stepIndex];
+
+  // ── Saving progress ──────────────────────────────────────────────
+  const latest = useRef({ form, stepIndex });
+  const sent = useRef(false);
+  // Declared before the save effects below, so it runs first and they always
+  // see what's on screen now.
+  useEffect(() => {
+    latest.current = { form, stepIndex };
+  }, [form, stepIndex]);
+
+  const saveNow = useCallback(() => {
+    if (sent.current) return;
+    const { form: current, stepIndex: currentStep } = latest.current;
+    if (isBlankApplication(current)) {
+      if (useApplicationDraftStore.getState().form) clearDraft();
+      return;
+    }
+    saveDraft(current, currentStep);
+  }, [clearDraft, saveDraft]);
+
+  // Shortly after typing stops, so every keystroke isn't a keystore write.
+  useEffect(() => {
+    const t = setTimeout(saveNow, SAVE_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [form, stepIndex, saveNow]);
+
+  // Right away when the app goes to the background (it may be killed there)
+  // or the screen closes, so the last few keystrokes aren't lost.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') saveNow();
+    });
+    return () => {
+      sub.remove();
+      saveNow();
+    };
+  }, [saveNow]);
+
+  const startOver = () => {
+    Alert.alert('Start over?', 'This clears everything you’ve entered so far.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Start over',
+        style: 'destructive',
+        onPress: () => {
+          clearDraft();
+          setForm(EMPTY_APPLICATION);
+          setStepIndex(0);
+          setShowErrors(false);
+          setSubmitError(null);
+          setResumed(false);
+          haptics.select();
+        },
+      },
+    ]);
+  };
 
   const update = (patch: Partial<ApplicationForm>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -94,6 +163,9 @@ export default function OnboardingScreen() {
     setSubmitError(null);
     try {
       await submitApplication(form);
+      // Sent: the personal details have no reason to stay on the phone.
+      sent.current = true;
+      clearDraft();
       haptics.success();
       router.replace('/(auth)/onboarding-submitted');
     } catch (e) {
@@ -118,6 +190,34 @@ export default function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <StepDots count={STEPS.length} activeIndex={stepIndex} />
+
+        {resumed && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              padding: 12,
+              borderRadius: 14,
+              backgroundColor: colors.partner.orangeTint,
+            }}
+          >
+            <History size={18} color={colors.partner.orange} />
+            <Text className="text-caption" style={{ flex: 1, color: theme.text }}>
+              Welcome back. We saved your application so you can pick up where you left off.
+            </Text>
+            <AnimatedPressable
+              onPress={startOver}
+              scaleTo={0.96}
+              accessibilityRole="button"
+              accessibilityLabel="Start over and clear your saved application"
+            >
+              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>
+                Start over
+              </Text>
+            </AnimatedPressable>
+          </View>
+        )}
 
         {step.key === 'contact' && (
           <View style={{ gap: 18 }}>
