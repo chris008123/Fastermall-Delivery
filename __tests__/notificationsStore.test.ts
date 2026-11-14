@@ -4,6 +4,7 @@ jest.mock('@/src/services/api', () => ({ apiFetch: (...a: unknown[]) => mockApiF
 
 import {
   toAppNotification,
+  selectUnreadCount,
   toAppType,
   UNDO_WINDOW_MS,
   useNotificationsStore,
@@ -30,7 +31,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   mockApiFetch.mockReset();
   mockApiFetch.mockResolvedValue({});
-  useNotificationsStore.setState({ notifications: [], isLoading: false, error: null });
+  useNotificationsStore.setState({ notifications: [], isLoading: false, error: null, nextCursor: null, olderUnread: 0, isLoadingMore: false });
 });
 
 afterEach(() => {
@@ -70,7 +71,7 @@ describe('read and unread are saved on the server', () => {
     await load([row('a'), row('b'), row('c')]);
     useNotificationsStore.getState().markAllRead();
 
-    expect(mockApiFetch).toHaveBeenCalledTimes(2); // the load + one read-all
+    expect(mockApiFetch).toHaveBeenCalledTimes(3); // the load (page + unread count) + one read-all
     expect(mockApiFetch).toHaveBeenLastCalledWith('/notifications/read-all', { method: 'PATCH' });
     expect(useNotificationsStore.getState().notifications.every((n) => n.read)).toBe(true);
   });
@@ -107,5 +108,40 @@ describe('dismissing', () => {
     expect(useNotificationsStore.getState().notifications.map((n) => n.id)).toEqual(['a', 'b', 'c']);
     jest.advanceTimersByTime(UNDO_WINDOW_MS * 2);
     expect(mockApiFetch).not.toHaveBeenCalledWith(expect.anything(), { method: 'DELETE' });
+  });
+});
+
+describe('paging and the unread badge', () => {
+  it('loads a page, then older pages, and counts unread ones not loaded yet', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({ success: true, data: { items: [row('a'), row('b', { isRead: true })], nextCursor: 'c1' } })
+      .mockResolvedValueOnce({ success: true, data: { unread: 5 } });
+    await useNotificationsStore.getState().loadNotifications();
+    expect(mockApiFetch).toHaveBeenNthCalledWith(1, '/notifications?limit=30');
+    expect(mockApiFetch).toHaveBeenNthCalledWith(2, '/notifications/unread-count');
+    // 1 unread loaded + 4 on later pages
+    expect(selectUnreadCount(useNotificationsStore.getState())).toBe(5);
+
+    mockApiFetch.mockResolvedValueOnce({ success: true, data: { items: [row('b'), row('c'), row('d')], nextCursor: null } });
+    await useNotificationsStore.getState().loadMore();
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/notifications?limit=30&cursor=c1');
+    const s = useNotificationsStore.getState();
+    expect(s.notifications.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']); // no duplicate b
+    expect(s.nextCursor).toBeNull();
+    expect(selectUnreadCount(s)).toBe(3); // all loaded now, counted from the list
+
+    mockApiFetch.mockClear();
+    await useNotificationsStore.getState().loadMore();
+    expect(mockApiFetch).not.toHaveBeenCalled();
+  });
+
+  it('marks unread alerts on unloaded pages read too', async () => {
+    mockApiFetch
+      .mockResolvedValueOnce({ items: [row('a', { isRead: true })], nextCursor: 'c1' })
+      .mockResolvedValueOnce({ unread: 4 });
+    await useNotificationsStore.getState().loadNotifications();
+    useNotificationsStore.getState().markAllRead();
+    expect(mockApiFetch).toHaveBeenLastCalledWith('/notifications/read-all', { method: 'PATCH' });
+    expect(selectUnreadCount(useNotificationsStore.getState())).toBe(0);
   });
 });

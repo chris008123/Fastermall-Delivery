@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Bell, BellOff, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { RefreshControl, SectionList, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { GlassView } from '@/src/shared/components/GlassView';
@@ -67,6 +67,8 @@ export default function NotificationsScreen() {
   const dismissAlerts = useNotificationsStore((s) => s.dismiss);
   const undoDismiss = useNotificationsStore((s) => s.undoDismiss);
   const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
+  const loadMore = useNotificationsStore((s) => s.loadMore);
+  const isLoadingMore = useNotificationsStore((s) => s.isLoadingMore);
   const [refreshing, setRefreshing] = useState(false);
   const refresh = async () => {
     setRefreshing(true);
@@ -146,6 +148,12 @@ export default function NotificationsScreen() {
       sections={sections}
       keyExtractor={(n) => n.id}
       stickySectionHeadersEnabled={false}
+      // Older alerts load as the list reaches its end.
+      onEndReached={() => void loadMore()}
+      onEndReachedThreshold={0.4}
+      ListFooterComponent={
+        isLoadingMore ? <ActivityIndicator color={colors.partner.orange} style={{ marginVertical: 16 }} /> : null
+      }
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
