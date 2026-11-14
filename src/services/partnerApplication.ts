@@ -18,6 +18,23 @@ export interface ApplicationForm {
   plateNumber: string;
 }
 
+export const EMPTY_APPLICATION: ApplicationForm = {
+  phone: '',
+  email: '',
+  fullName: '',
+  dateOfBirth: '',
+  address: '',
+  vehicleMode: 'MOTORCYCLE',
+  plateNumber: '',
+};
+
+/** True when nothing has been typed yet, so there is nothing worth saving. */
+export function isBlankApplication(form: ApplicationForm): boolean {
+  return (['phone', 'email', 'fullName', 'dateOfBirth', 'address', 'plateNumber'] as const).every(
+    (key) => form[key].trim() === '',
+  );
+}
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** DD/MM/YYYY → YYYY-MM-DD, or null when it isn't a real date. */
@@ -67,6 +84,23 @@ export function checkVehicle(form: ApplicationForm) {
     plateNumber:
       form.vehicleMode === 'WALKING' || form.plateNumber.trim().length >= 3 ? undefined : 'Enter your registration number',
   };
+}
+
+/** Steps in order; the review step has no fields of its own. */
+const STEP_CHECKS = [checkContact, checkPersonal, checkVehicle] as const;
+
+/**
+ * Where a saved application should reopen: the step the person was on, unless
+ * an earlier step no longer passes (a rule changed, or they turned 18 later
+ * than they typed...), in which case that step, so they can't skip past it.
+ */
+export function resumeStepIndex(form: ApplicationForm, savedStep: number, now: Date = new Date()): number {
+  const target = Math.max(0, Math.min(Math.floor(savedStep) || 0, STEP_CHECKS.length));
+  for (let i = 0; i < target; i++) {
+    const errors = i === 1 ? checkPersonal(form, now) : STEP_CHECKS[i](form);
+    if (Object.values(errors).some(Boolean)) return i;
+  }
+  return target;
 }
 
 /** The request body. Exported for tests. */
