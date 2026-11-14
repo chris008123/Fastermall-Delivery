@@ -53,7 +53,7 @@ export default function PartnerHomeScreen() {
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
   const loadWallet = useWalletStore((s) => s.loadWallet);
-  const unreadCount = useNotificationsStore((s) => selectUnreadCount(s.notifications));
+  const unreadCount = useNotificationsStore(selectUnreadCount);
   const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
 
   const [isInitializing, setIsInitializing] = useState(true);

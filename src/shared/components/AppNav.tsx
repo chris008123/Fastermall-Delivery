@@ -59,8 +59,7 @@ export function AppNav() {
   const { isDark } = useResolvedTheme();
   const navStyle = useNavStyleStore((s) => s.navStyle);
   const navAlign = useNavStyleStore((s) => s.navAlign);
-  const notifications = useNotificationsStore((s) => s.notifications);
-  const unreadCount = selectUnreadCount(notifications);
+  const unreadCount = useNotificationsStore(selectUnreadCount);
 
   const segs = segments as string[];
   if (segs[0] !== '(partner)') return null;

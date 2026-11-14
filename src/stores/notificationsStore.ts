@@ -18,12 +18,22 @@ interface BackendNotification {
 /** How long a dismissed alert can be brought back with Undo before it is deleted on the server. */
 export const UNDO_WINDOW_MS = 5000;
 
+/** Alerts per request. */
+export const PAGE_SIZE = 30;
+
 interface NotificationsState {
   notifications: AppNotification[];
   isLoading: boolean;
   error: string | null;
-  /** GET /notifications. */
+  /** Where the next page of older alerts starts; null once all are loaded. */
+  nextCursor: string | null;
+  isLoadingMore: boolean;
+  /** Unread alerts on pages not loaded yet (from GET /notifications/unread-count), for the badge. */
+  olderUnread: number;
+  /** GET /notifications: the newest page, plus the unread count. */
   loadNotifications: () => Promise<void>;
+  /** The next page of older alerts, appended. */
+  loadMore: () => Promise<void>;
   addNotification: (n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
   /** PATCH /notifications/read-all, in one request. */
   markAllRead: () => void;
@@ -43,13 +53,28 @@ export function toAppType(type: string): NotificationType {
   return 'SYSTEM';
 }
 
-function unwrapList(value: unknown): BackendNotification[] {
-  if (Array.isArray(value)) return value as BackendNotification[];
-  if (value && typeof value === 'object' && Array.isArray((value as { data?: unknown }).data)) {
-    return (value as { data: BackendNotification[] }).data;
+type Page = { items: BackendNotification[]; nextCursor: string | null };
+
+/** Accepts { items, nextCursor }, a plain array (older server), each bare or wrapped in { data }. */
+function unwrapPage(value: unknown): Page {
+  const body = value && typeof value === 'object' && 'data' in (value as object) ? (value as { data: unknown }).data : value;
+  if (Array.isArray(body)) return { items: body as BackendNotification[], nextCursor: null };
+  if (body && typeof body === 'object' && Array.isArray((body as Page).items)) {
+    return { items: (body as Page).items, nextCursor: (body as Page).nextCursor ?? null };
   }
-  return [];
+  return { items: [], nextCursor: null };
 }
+
+function unwrapCount(value: unknown): number | null {
+  const body = value && typeof value === 'object' && 'data' in (value as object) ? (value as { data: unknown }).data : value;
+  const n = Number((body as { unread?: unknown } | null)?.unread);
+  return Number.isFinite(n) ? n : null;
+}
+
+const pagePath = (cursor?: string) =>
+  `/notifications?limit=${PAGE_SIZE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+
+const unreadIn = (list: AppNotification[]) => list.filter((n) => !n.read).length;
 
 /** Exported for tests. */
 export function toAppNotification(n: BackendNotification): AppNotification {
@@ -83,17 +108,26 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
   notifications: [],
   isLoading: false,
   error: null,
+  nextCursor: null,
+  isLoadingMore: false,
+  olderUnread: 0,
 
   loadNotifications: async () => {
     set({ isLoading: true, error: null });
 
     try {
-      const response = await apiFetch<unknown>('/notifications');
+      const [response, count] = await Promise.all([
+        apiFetch<unknown>(pagePath()),
+        apiFetch<unknown>('/notifications/unread-count').catch(() => null),
+      ]);
+      const page = unwrapPage(response);
+      // Alerts still inside their Undo window stay hidden.
+      const notifications = page.items.filter((n) => !pendingDeletes.has(n.id)).map(toAppNotification);
+      const total = unwrapCount(count);
       set({
-        // Alerts still inside their Undo window stay hidden.
-        notifications: unwrapList(response)
-          .filter((n) => !pendingDeletes.has(n.id))
-          .map(toAppNotification),
+        notifications,
+        nextCursor: page.nextCursor,
+        olderUnread: total === null ? 0 : Math.max(0, total - unreadIn(notifications)),
         isLoading: false,
       });
     } catch (error) {
@@ -101,6 +135,28 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Unable to load notifications.',
       });
+    }
+  },
+
+  loadMore: async () => {
+    const { nextCursor, isLoadingMore } = get();
+    if (!nextCursor || isLoadingMore) return;
+    set({ isLoadingMore: true });
+    try {
+      const page = unwrapPage(await apiFetch<unknown>(pagePath(nextCursor)));
+      const have = new Set(get().notifications.map((n) => n.id));
+      const older = page.items
+        .filter((n) => !have.has(n.id) && !pendingDeletes.has(n.id))
+        .map(toAppNotification);
+      set((state) => ({
+        notifications: [...state.notifications, ...older],
+        nextCursor: page.nextCursor,
+        // Those unread ones are now counted from the list itself.
+        olderUnread: page.nextCursor ? Math.max(0, state.olderUnread - unreadIn(older)) : 0,
+        isLoadingMore: false,
+      }));
+    } catch {
+      set({ isLoadingMore: false });
     }
   },
 
@@ -114,10 +170,11 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
 
   markAllRead: () => {
     const unread = get().notifications.filter((n) => !n.read);
-    if (unread.length === 0) return;
+    const olderUnread = get().olderUnread;
+    if (unread.length === 0 && olderUnread === 0) return;
 
-    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })) }));
-    if (unread.some((n) => isServerId(n.id))) {
+    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, read: true })), olderUnread: 0 }));
+    if (olderUnread > 0 || unread.some((n) => isServerId(n.id))) {
       quietly(apiFetch('/notifications/read-all', { method: 'PATCH' }));
     }
   },
@@ -172,6 +229,7 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
   },
 }));
 
-export function selectUnreadCount(notifications: AppNotification[]) {
-  return notifications.filter((n) => !n.read).length;
+/** Unread alerts for the badge: the loaded ones plus those on pages not loaded yet. */
+export function selectUnreadCount(state: { notifications: AppNotification[]; olderUnread: number }) {
+  return unreadIn(state.notifications) + state.olderUnread;
 }
