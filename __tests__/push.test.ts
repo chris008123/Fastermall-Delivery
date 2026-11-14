@@ -17,7 +17,9 @@ describe('pushRoute', () => {
 
   it('sends a cancelled delivery and anything unknown to the inbox', () => {
     expect(pushRoute({ type: 'DELIVERY_CANCELLED', jobId: 'job-1' })).toBe('/(partner)/notifications');
-    expect(pushRoute({ type: 'DOCUMENT_REVIEWED' })).toBe('/(partner)/notifications');
+    expect(pushRoute({ type: 'ANNOUNCEMENT' })).toBe('/(partner)/notifications');
+    // A document approved/rejected opens Documents, where the partner can re-upload.
+    expect(pushRoute({ type: 'DOCUMENT_REVIEWED' })).toBe('/(partner)/documents');
     expect(pushRoute(undefined)).toBe('/(partner)/notifications');
   });
 
