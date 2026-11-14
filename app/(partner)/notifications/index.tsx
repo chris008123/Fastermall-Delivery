@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Bell, BellOff, Briefcase, ChevronRight, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { SectionList, Text, View } from 'react-native';
+import { RefreshControl, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { GlassView } from '@/src/shared/components/GlassView';
@@ -64,6 +64,18 @@ export default function NotificationsScreen() {
   const notifications = useNotificationsStore((s) => s.notifications);
   const markAllRead = useNotificationsStore((s) => s.markAllRead);
   const setRead = useNotificationsStore((s) => s.setRead);
+  const dismissAlerts = useNotificationsStore((s) => s.dismiss);
+  const undoDismiss = useNotificationsStore((s) => s.undoDismiss);
+  const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadNotifications();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const { show } = useToast();
 
   // What was unread when this screen opened. Opening the list marks
@@ -77,11 +89,6 @@ export default function NotificationsScreen() {
   const unreadOnly = useNotificationFilterStore((s) => s.unreadOnly);
   const setUnreadOnly = useNotificationFilterStore((s) => s.setUnreadOnly);
 
-  // Client-side-only hide list, not a store mutation — swiping a
-  // notification away hides it for this session without touching the
-  // underlying notifications data.
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-
   // Mirrors the common inbox pattern: opening the list is itself the
   // "read" action, rather than requiring a separate tap per item.
   useEffect(() => {
@@ -90,15 +97,10 @@ export default function NotificationsScreen() {
 
   const isUnread = (id: string) => (unreadAtOpen.has(id) ? !flaggedIds.has(id) : flaggedIds.has(id));
 
-  const undoDismiss = (ids: string[]) =>
-    setDismissedIds((prev) => {
-      const next = new Set(prev);
-      ids.forEach((id) => next.delete(id));
-      return next;
-    });
-
+  // Dismissed alerts are deleted on the server once the Undo toast is gone
+  // (see the store), so they stay gone after leaving the screen.
   const dismiss = (id: string) => {
-    setDismissedIds((prev) => new Set(prev).add(id));
+    dismissAlerts([id]);
     show('Alert dismissed', 'info', { action: { label: 'Undo', onPress: () => undoDismiss([id]) } });
   };
 
@@ -123,7 +125,7 @@ export default function NotificationsScreen() {
     });
   };
 
-  const notDismissed = notifications.filter((n) => !dismissedIds.has(n.id));
+  const notDismissed = notifications;
   const unreadCount = notDismissed.filter((n) => isUnread(n.id)).length;
   const visible = unreadOnly ? notDismissed.filter((n) => isUnread(n.id)) : notDismissed;
   const sections = groupByRecency(visible);
@@ -131,7 +133,7 @@ export default function NotificationsScreen() {
   const clearAll = () => {
     const ids = visible.map((n) => n.id);
     if (ids.length === 0) return;
-    setDismissedIds((prev) => new Set([...prev, ...ids]));
+    dismissAlerts(ids);
     show(ids.length === 1 ? 'Alert cleared' : `${ids.length} alerts cleared`, 'info', {
       action: { label: 'Undo', onPress: () => undoDismiss(ids) },
     });
@@ -144,6 +146,14 @@ export default function NotificationsScreen() {
       sections={sections}
       keyExtractor={(n) => n.id}
       stickySectionHeadersEnabled={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={colors.partner.orange}
+          colors={[colors.partner.orange]}
+        />
+      }
       ListHeaderComponent={
         <View style={{ marginBottom: 4, gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -245,6 +255,15 @@ export default function NotificationsScreen() {
   );
 }
 
+/** "Just now" / "12 min ago" for the last hour, then the date and time. */
+function alertTime(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const ago = now.getTime() - d.getTime();
+  if (ago >= 0 && ago < 60_000) return 'Just now';
+  if (ago >= 0 && ago < 60 * 60_000) return `${Math.floor(ago / 60_000)} min ago`;
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 function NotificationRow({
   notification,
   theme,
@@ -262,7 +281,14 @@ function NotificationRow({
   const accent = notification.type === 'PAYMENT' ? colors.partner.orange : notification.type === 'JOB' ? colors.brand.teal : theme.textSecondary;
 
   return (
-    <AnimatedPressable onPress={onPress} onLongPress={onLongPress} scaleTo={0.98} accessibilityLabel={notification.title}>
+    <AnimatedPressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      scaleTo={0.98}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${unread ? 'Unread. ' : ''}${notification.title}. ${notification.body}. ${alertTime(notification.createdAt)}`}
+      accessibilityHint="Hold to mark as read or unread. Swipe left to dismiss."
+    >
     <GlassView radius="card" shadow={false} style={{ padding: 0, overflow: 'hidden' }}>
       <View style={{ flexDirection: 'row' }}>
         {/* Unread reads as a subtle left accent, not a loud dot — per the
@@ -285,7 +311,7 @@ function NotificationRow({
             <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{notification.title}</Text>
             <Text className="text-body" style={{ color: theme.textSecondary }}>{notification.body}</Text>
             <Text className="text-caption" style={{ color: theme.textSecondary, marginTop: 2 }}>
-              {new Date(notification.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              {alertTime(notification.createdAt)}
             </Text>
           </View>
           {onPress ? <ChevronRight size={18} color={theme.textSecondary} style={{ alignSelf: 'center' }} /> : null}

@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { apiFetch } from '@/src/services/api';
+import { notificationRoute } from '@/src/utils/notificationRoute';
 
 // Push notifications for delivery partners: Android channels, foreground
 // banners, the phone's permission, the Expo push token, and keeping the
@@ -32,7 +33,6 @@ if (Platform.OS !== 'web') {
 export const isPushAvailable = () => N !== null;
 
 const DEVICES_PATH = '/notifications/devices';
-const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 let configured = false;
 let currentToken: string | null = null;
@@ -126,16 +126,9 @@ export async function unregisterFromPush(): Promise<void> {
   }
 }
 
-/** Where tapping a push should go. Exported for tests. */
+/** Where tapping a push should go: the same screen as the alert in the list, else the list. Exported for tests. */
 export function pushRoute(data: Record<string, unknown> | undefined): string {
-  const type = typeof data?.type === 'string' ? data.type.toUpperCase() : '';
-  const id = [data?.jobId, data?.deliveryId].find((v): v is string => typeof v === 'string' && SAFE_ID.test(v));
-  if (/^(CASHOUT|PAYOUT)/.test(type)) return '/(partner)/wallet';
-  const ticketId = typeof data?.ticketId === 'string' && SAFE_ID.test(data.ticketId) ? data.ticketId : undefined;
-  if (type === 'SUPPORT_REPLY') return ticketId ? `/(partner)/support/chat?ticketId=${ticketId}` : '/(partner)/support/chat';
-  if (id && type === 'DELIVERY_AVAILABLE') return `/(partner)/jobs/${id}`;
-  if (id && type !== 'DELIVERY_CANCELLED') return `/(partner)/active/${id}`;
-  return '/(partner)/notifications';
+  return notificationRoute(data) ?? '/(partner)/notifications';
 }
 
 /** Calls back with a route when a notification is tapped. Returns an unsubscribe. */
