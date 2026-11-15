@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/src/shared/components/Button';
 import { EarningsChart, sumLastSevenDays } from '@/src/shared/components/EarningsChart';
 import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
+import { LedgerSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
@@ -66,6 +67,7 @@ export default function WalletScreen() {
   const theme = isDark ? colors.dark : colors.light;
 
   const ledger = useWalletStore((s) => s.ledger);
+  const walletLoading = useWalletStore((s) => s.isLoading);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
   const loadWallet = useWalletStore((s) => s.loadWallet);
   const withdraw = useWalletStore((s) => s.withdraw);
@@ -217,6 +219,8 @@ export default function WalletScreen() {
         </Text>
       )}
       ListEmptyComponent={
+        // First load: rows in the shape of transactions, not "No transactions yet".
+        walletLoading ? <LedgerSkeleton /> :
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8, marginTop: 16 }}>
           <History size={20} color={theme.textSecondary} />
           <Text className="text-body" style={{ color: theme.textSecondary }}>

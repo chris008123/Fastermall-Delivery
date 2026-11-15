@@ -11,11 +11,12 @@ import {
   XCircle,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Image, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Button } from '@/src/shared/components/Button';
+import { DocumentListSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { IconCircle } from '@/src/shared/components/IconCircle';
 import { PhotoSourceSheet } from '@/src/shared/components/PhotoSourceSheet';
@@ -76,7 +77,7 @@ export default function DocumentsScreen() {
       </View>
 
       {status === 'loading' && documents.length === 0 ? (
-        <ActivityIndicator color={colors.partner.orange} style={{ marginTop: 24 }} />
+        <DocumentListSkeleton />
       ) : status === 'error' && documents.length === 0 ? (
         <GlassView radius="card" style={{ padding: 16, gap: 10 }}>
           <Text className="text-body" style={{ color: theme.textSecondary }}>{error ?? 'Unable to load your documents.'}</Text>

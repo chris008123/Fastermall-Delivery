@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { AlertTriangle, CheckCircle2, KeyRound, LifeBuoy, Navigation, PackageX, ShieldAlert } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
 import { FailedDeliverySheet, FAILURE_REASONS } from '@/src/shared/components/FailedDeliverySheet';
+import { JobDetailSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { RouteStepper, type RouteStep } from '@/src/shared/components/RouteStepper';
 import { extractDeliveryCode } from '@/src/utils/deliveryCode';
@@ -98,15 +99,14 @@ export default function ActiveDeliveryScreen() {
     }));
   }, [job]);
 
+  if (!job && isLoading) {
+    return <JobDetailSkeleton />;
+  }
+
   if (!job) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-        {isLoading ? (
-          <>
-            <ActivityIndicator size="large" color={colors.partner.orange} />
-            <Text className="text-body" style={{ color: theme.textSecondary }}>Loading delivery...</Text>
-          </>
-        ) : (
+        {(
           <>
             <PackageX size={32} color={theme.textSecondary} />
             <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>

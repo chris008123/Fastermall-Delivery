@@ -2,11 +2,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Bike, Footprints, MapPin, PackageX, Wallet } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Badge } from '@/src/shared/components/Badge';
 import { Button } from '@/src/shared/components/Button';
+import { JobDetailSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { haptics } from '@/src/shared/utils/haptics';
@@ -56,15 +57,14 @@ export default function JobDetailScreen() {
     }
   }, [job, id, loadJobs]);
 
+  if (!job && isLoading) {
+    return <JobDetailSkeleton />;
+  }
+
   if (!job) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 32 }}>
-        {isLoading ? (
-          <>
-            <ActivityIndicator size="large" color={colors.partner.orange} />
-            <Text className="text-body" style={{ color: theme.textSecondary }}>Loading delivery...</Text>
-          </>
-        ) : (
+        {(
           <>
             <PackageX size={32} color={theme.textSecondary} />
             <Text className="text-body" style={{ color: theme.textSecondary, textAlign: 'center' }}>

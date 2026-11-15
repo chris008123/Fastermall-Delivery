@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, SectionList, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
+import { NotificationListSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useNavClearance } from '@/src/shared/components/AppNav';
 import { SwipeableRow } from '@/src/shared/components/SwipeableRow';
@@ -69,6 +70,7 @@ export default function NotificationsScreen() {
   const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
   const loadMore = useNotificationsStore((s) => s.loadMore);
   const isLoadingMore = useNotificationsStore((s) => s.isLoadingMore);
+  const isLoading = useNotificationsStore((s) => s.isLoading);
   const [refreshing, setRefreshing] = useState(false);
   const refresh = async () => {
     setRefreshing(true);
@@ -220,6 +222,8 @@ export default function NotificationsScreen() {
         </View>
       }
       ListEmptyComponent={
+        // First load: alert-shaped rows, not "Nothing here yet".
+        isLoading ? <NotificationListSkeleton /> :
         <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
           <BellOff size={20} color={theme.textSecondary} />
           <Text className="text-body" style={{ color: theme.textSecondary }}>

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Button } from '@/src/shared/components/Button';
+import { ChatSkeleton } from '@/src/shared/components/Skeleton';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import {
   getConversation,
@@ -118,7 +119,7 @@ export default function SupportChatScreen() {
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
         {loading ? (
-          <ActivityIndicator color={colors.partner.orange} style={{ marginTop: 24 }} />
+          <ChatSkeleton />
         ) : loadError ? (
           <View style={{ gap: 10 }}>
             <Text className="text-body" style={{ color: theme.textSecondary }}>{loadError}</Text>

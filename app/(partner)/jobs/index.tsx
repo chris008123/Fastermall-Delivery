@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import { Bike, ChevronRight, CircleAlert, Footprints, History, MapPin, PackageSearch, Zap } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, RefreshControl, Text, View } from 'react-native';
+import { AppState, FlatList, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
+import { JobListSkeleton } from '@/src/shared/components/Skeleton';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { useNavClearance } from '@/src/shared/components/AppNav';
 import { StarRating } from '@/src/shared/components/StarRating';
@@ -192,10 +193,7 @@ export default function JobsScreen() {
       <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top + 16, paddingHorizontal: 20, gap: 16 }}>
         <Text className="text-h1 font-bold" style={{ color: theme.text }}>Jobs</Text>
         {segmented}
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'center', gap: 8 }}>
-          <ActivityIndicator color={colors.partner.orange} />
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>Checking for nearby jobs…</Text>
-        </GlassView>
+        <JobListSkeleton count={3} />
       </View>
     );
   }
