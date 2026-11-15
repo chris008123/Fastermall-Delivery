@@ -103,7 +103,7 @@ export default function LoginScreen() {
             rather than squeezed against the form — per the redesign brief's
             Login section. */}
         <Animated.View entering={FadeIn.duration(400)} style={{ marginBottom: 4 }}>
-          <CourierScene scheme={isDark ? 'dark' : 'light'} height={168} />
+          <CourierScene scheme={isDark ? 'dark' : 'light'} maxHeight={260} />
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(FORM_ENTRANCE_DELAY).springify().damping(18).stiffness(180)} style={{ gap: 18 }}>
