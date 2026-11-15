@@ -1,4 +1,5 @@
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -17,6 +18,8 @@ interface EditPlateSheetProps {
 // SafetySheet: transparent + fade Modal, backdrop Pressable to dismiss,
 // inner Pressable stops propagation so taps on the sheet itself don't close it.
 export function EditPlateSheet({ visible, onClose, initialValue, onSave }: EditPlateSheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [value, setValue] = useState(initialValue);
@@ -40,7 +43,7 @@ export function EditPlateSheet({ visible, onClose, initialValue, onSave }: EditP
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
-            paddingBottom: 36,
+            paddingBottom: sheetBottomPadding,
             gap: 16,
           }}
         >

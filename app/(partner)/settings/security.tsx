@@ -4,12 +4,14 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
+import { confirmSignOut } from '@/src/shared/utils/confirmSignOut';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useAuthStore } from '@/src/stores/authStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 // Two-factor authentication and trusted devices have no backend yet, so
 // tapping them says so instead of pretending to do something.
@@ -19,6 +21,7 @@ function notImplemented(feature: string) {
 
 export default function SecurityScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
@@ -27,7 +30,7 @@ export default function SecurityScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />
@@ -103,10 +106,7 @@ export default function SecurityScreen() {
       </View>
 
       <AnimatedPressable
-        onPress={() => {
-          useAuthStore.getState().signOut();
-          router.replace('/(auth)/login');
-        }}
+        onPress={confirmSignOut}
         scaleTo={0.98}
       >
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

@@ -12,6 +12,7 @@ import { useToast } from '@/src/shared/toast/ToastProvider';
 import { haptics } from '@/src/shared/utils/haptics';
 import { changePassword, checkNewPassword } from '@/src/services/password';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 /**
  * Settings > Security > Change password, for a signed-in partner who wants
@@ -21,6 +22,7 @@ import { colors } from '@/src/theme';
  */
 export default function ChangePasswordScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const { show } = useToast();
@@ -92,7 +94,7 @@ export default function ChangePasswordScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

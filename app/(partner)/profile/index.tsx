@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { Badge } from '@/src/shared/components/Badge';
 import { EditPlateSheet } from '@/src/shared/components/EditPlateSheet';
+import { confirmSignOut } from '@/src/shared/utils/confirmSignOut';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { IconCircle } from '@/src/shared/components/IconCircle';
 import { useNavClearance } from '@/src/shared/components/AppNav';
 import { StarRating } from '@/src/shared/components/StarRating';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { useAuthStore } from '@/src/stores/authStore';
 import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/documentsStore';
 import { selectPartnerRating, useJobsStore } from '@/src/stores/jobsStore';
 import { usePartnerStore } from '@/src/stores/partnerStore';
@@ -257,15 +257,12 @@ export default function ProfileScreen() {
       </AnimatedPressable>
 
       <AnimatedPressable
-        onPress={() => {
-          useAuthStore.getState().signOut();
-          router.replace('/(auth)/login');
-        }}
+        onPress={confirmSignOut}
         scaleTo={0.98}
       >
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <LogOut size={18} color={colors.semantic.error} />
-          <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>Sign out</Text>
+          <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>Log out</Text>
         </GlassView>
       </AnimatedPressable>
     </ScrollView>

@@ -1,6 +1,6 @@
 import { Bell, Briefcase, Inbox, Megaphone, Vibrate, Volume2, Wallet } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, AppState, Linking, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/src/shared/components/BackButton';
 import { Button } from '@/src/shared/components/Button';
@@ -12,6 +12,7 @@ import {
   requestPushPermission,
   type PushPermission,
 } from '@/src/services/push';
+import { AppSwitch } from '@/src/shared/components/AppSwitch';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
@@ -19,6 +20,7 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useNotificationFilterStore } from '@/src/stores/notificationFilterStore';
 import { useSettingsStore, type NotificationPrefs } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 type Row = { key: keyof NotificationPrefs; label: string; description: string; icon: typeof Bell; iconColor: string; iconBg: string; protectedToggle?: boolean };
 
@@ -68,6 +70,7 @@ const ALERT_STYLE_ROWS: Row[] = [
 
 export default function NotificationSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const prefs = useSettingsStore((s) => s.notificationPrefs);
@@ -147,11 +150,9 @@ export default function NotificationSettingsScreen() {
             label={row.label}
             description={row.description}
             right={
-              <Switch accessibilityLabel={row.label}
+              <AppSwitch accessibilityLabel={row.label}
                 value={prefs[row.key]}
                 onValueChange={(value) => handleToggle(row, value)}
-                trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
-                thumbColor={prefs[row.key] ? colors.partner.orange : theme.surfaceRaised}
               />
             }
           />
@@ -164,7 +165,7 @@ export default function NotificationSettingsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />
@@ -222,11 +223,9 @@ export default function NotificationSettingsScreen() {
             label="Unread only"
             description="Show only alerts you have not read yet in your Notifications list"
             right={
-              <Switch accessibilityLabel="Unread only"
+              <AppSwitch accessibilityLabel="Unread only"
                 value={unreadOnly}
                 onValueChange={setUnreadOnly}
-                trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
-                thumbColor={unreadOnly ? colors.partner.orange : theme.surfaceRaised}
               />
             }
           />

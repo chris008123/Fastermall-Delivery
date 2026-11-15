@@ -21,6 +21,7 @@ import { colors } from '@/src/theme';
 import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
 import { nextPayoutDate } from '@/src/utils/date';
 import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from '@/src/shared/components/MoneyText';
 
 const ENTRY_META: Record<LedgerEntryType, { icon: typeof Banknote; label: string }> = {
   EARNING: { icon: Banknote, label: 'Earning' },
@@ -114,14 +115,7 @@ export default function WalletScreen() {
                 WORK EARNINGS
               </Text>
             </View>
-            <Text
-              className="text-display font-bold"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              style={{ color: theme.text, fontVariant: ['tabular-nums'] }}
-            >
-              {formatCurrency(earnings)}
-            </Text>
+            <MoneyText amount={earnings} size="display" color={theme.text} numberOfLines={1} adjustsFontSizeToFit />
             <ProgressBar progress={threshold > 0 ? earnings / threshold : 0} color={colors.partner.orange} />
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
               {canWithdraw
@@ -188,9 +182,7 @@ export default function WalletScreen() {
                 REIMBURSED
               </Text>
             </View>
-            <Text className="text-h2 font-bold" style={{ color: colors.brand.teal, fontVariant: ['tabular-nums'] }}>
-              {formatCurrency(reimbursed)}
-            </Text>
+            <MoneyText amount={reimbursed} size="h2" color={colors.brand.teal} />
             <Text className="text-caption" style={{ color: theme.textSecondary }}>
               Your own money, returned instantly. The cash-out threshold doesn't apply to it.
             </Text>
@@ -201,8 +193,9 @@ export default function WalletScreen() {
               <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
                 EARNINGS
               </Text>
-              <Text className="text-body-lg font-bold" style={{ color: colors.partner.orange, fontVariant: ['tabular-nums'] }}>
-                {formatCurrency(sumLastSevenDays(ledger))} / 7d
+              <Text style={{ color: colors.partner.orange }}>
+                <MoneyText amount={sumLastSevenDays(ledger)} size="body" color={colors.partner.orange} />
+                <Text className="text-caption font-medium"> / 7 days</Text>
               </Text>
             </View>
             <EarningsChart ledger={ledger} />
@@ -291,9 +284,7 @@ function LedgerRow({
           {meta.label}
         </Text>
       </View>
-      <Text className="text-body-lg font-semibold" style={{ color: amountColor, fontVariant: ['tabular-nums'] }}>
-        {positive ? '+' : ''}{formatCurrency(entry.amount)}
-      </Text>
+      <MoneyText amount={Math.abs(entry.amount)} sign={positive ? '+' : entry.amount < 0 ? '−' : ''} size="body" color={amountColor} />
       {onPress ? <ChevronRight size={16} color={theme.textSecondary} /> : null}
     </View>
   );

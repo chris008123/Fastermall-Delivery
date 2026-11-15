@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useSegments } from 'expo-router';
 import { Bell, Home, Package, User, Wallet } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
@@ -175,6 +176,16 @@ export function AppNav() {
 
   if (navStyle === 'floating') {
     return (
+      <>
+        {/* Fades the page out under the floating bar and the phone's button
+            bar, so scrolling content dissolves there instead of being cut
+            off in a hard line (what made pages look like they "end early"). */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[`${theme.background}00`, `${theme.background}e6`, theme.background]}
+          locations={[0, 0.55, 1]}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: insets.bottom + g.offset + g.height + 28 }}
+        />
       <View
         pointerEvents="box-none"
         style={{
@@ -190,6 +201,7 @@ export function AppNav() {
           <View className="flex-row items-center gap-4 px-4 py-3">{items.map(renderItem)}</View>
         </GlassView>
       </View>
+      </>
     );
   }
 

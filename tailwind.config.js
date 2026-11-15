@@ -61,6 +61,16 @@ module.exports = {
           'dark-border': 'rgba(255, 255, 255, 0.08)',
         },
       },
+      // Each Fredoka weight is its own font file, picked by font-medium /
+      // font-semibold / font-bold through fontFamily above. Those class names
+      // also set fontWeight by default, and on Android a fontWeight of 700+
+      // with a single-file custom font makes the system look for a "bold"
+      // variant that doesn't exist, so it falls back to Roboto Bold. That's
+      // why every font-bold heading (and every amount) rendered in Roboto.
+      // Keeping the weight normal lets the font file supply the weight.
+      fontWeight: {
+        bold: '400',
+      },
       fontFamily: {
         sans: ['Fredoka_400Regular'],
         medium: ['Fredoka_500Medium'],

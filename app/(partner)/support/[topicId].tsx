@@ -32,6 +32,7 @@ import { supportTopics } from '@/src/data/mockSupport';
 import { colors } from '@/src/theme';
 import type { SupportFaqIconName, SupportTopicId } from '@/src/types/support';
 import { telUrl, useSupportNumber } from '@/src/services/supportContact';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 const FAQ_ICON: Record<SupportFaqIconName, typeof Wallet2> = {
   Wallet2,
@@ -54,6 +55,7 @@ export default function SupportTopicScreen() {
   const supportNumber = useSupportNumber();
   const { topicId } = useLocalSearchParams<{ topicId: SupportTopicId }>();
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function SupportTopicScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />

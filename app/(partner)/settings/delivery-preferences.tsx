@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { Bike, Check, Minus, Package, Plus, Soup } from 'lucide-react-native';
-import { ScrollView, Switch, Text, View } from 'react-native';
+import { Bike, Check, Minus, Package, Plus, Power, Soup } from 'lucide-react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
+import { AppSwitch } from '@/src/shared/components/AppSwitch';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { InactiveSettingNotice } from '@/src/shared/components/InactiveSettingNotice';
 import { SettingsRow } from '@/src/shared/components/SettingsRow';
@@ -11,6 +12,7 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { usePartnerStore } from '@/src/stores/partnerStore';
 import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 const RADIUS_MIN = 1;
 const DISTANCE_MIN = 5;
@@ -18,6 +20,7 @@ const DISTANCE_MAX = 50;
 
 export default function DeliveryPreferencesScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const partner = usePartnerStore();
@@ -27,7 +30,7 @@ export default function DeliveryPreferencesScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />
@@ -46,11 +49,9 @@ export default function DeliveryPreferencesScreen() {
           label="Auto-accept jobs"
           description="Matching jobs are accepted for you automatically"
           right={
-            <Switch accessibilityLabel="Auto-accept jobs"
+            <AppSwitch accessibilityLabel="Auto-accept jobs"
               value={deliveryPrefs.autoAccept}
               onValueChange={(value) => setDeliveryPref('autoAccept', value)}
-              trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
-              thumbColor={deliveryPrefs.autoAccept ? colors.partner.orange : theme.surfaceRaised}
             />
           }
         />
@@ -105,20 +106,16 @@ export default function DeliveryPreferencesScreen() {
           WORK
         </Text>
         <GlassView radius="card" style={{ paddingHorizontal: 16, paddingVertical: 2 }}>
+          {/* Was a plain switch that went online with a single tap, skipping
+              Home's slide-to-confirm and swallowing errors. Going online/offline
+              now happens in one place, on Home. */}
           <SettingsRow
-            icon={partner.isAvailable ? Check : Package}
+            icon={partner.isAvailable ? Check : Power}
             iconColor={partner.isAvailable ? colors.semantic.success : theme.textSecondary}
             iconBg={partner.isAvailable ? 'rgba(26, 156, 92, 0.14)' : theme.surfaceRaised}
-            label="Online — receiving jobs"
-            description={partner.isAvailable ? 'You are currently online' : 'You are currently offline'}
-            right={
-              <Switch accessibilityLabel="Online, receiving jobs"
-                value={partner.isAvailable}
-                onValueChange={partner.setAvailable}
-                trackColor={{ false: theme.border, true: colors.partner.orangeTint }}
-                thumbColor={partner.isAvailable ? colors.partner.orange : theme.surfaceRaised}
-              />
-            }
+            label={partner.isAvailable ? 'You\u2019re online' : 'You\u2019re offline'}
+            description="Go online or offline with the slider on Home"
+            onPress={() => router.navigate('/(partner)')}
           />
           <View style={{ height: 1, backgroundColor: theme.border, marginLeft: 46 }} />
           <SettingsRow

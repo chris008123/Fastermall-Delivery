@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Zap } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -6,7 +7,7 @@ import { Button } from '@/src/shared/components/Button';
 import { PayoutDestinationForm } from '@/src/shared/components/PayoutDestinationForm';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { maskMomoNumber, usePayoutStore } from '@/src/stores/payoutStore';
-import { colors } from '@/src/theme';
+import { colors, typography } from '@/src/theme';
 import { formatCurrency } from '@/src/utils/money';
 
 interface InstantCashoutSheetProps {
@@ -29,6 +30,8 @@ export function InstantCashoutSheet({
   feeAmount,
   nextPayoutLabel,
 }: InstantCashoutSheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const net = Math.max(balance - feeAmount, 0);
@@ -65,7 +68,7 @@ export function InstantCashoutSheet({
               borderTopRightRadius: 28,
               paddingTop: 24,
               paddingHorizontal: 24,
-              paddingBottom: 36,
+              paddingBottom: sheetBottomPadding,
             }}
           >
             <ScrollView bounces={false} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16 }}>
@@ -182,7 +185,7 @@ function SheetRow({
       <Text className={bold ? 'text-body-lg font-bold' : 'text-body'} style={{ color: muted ? theme.textSecondary : theme.text }}>
         {label}
       </Text>
-      <Text className={bold ? 'text-body-lg font-bold' : 'text-body font-medium'} style={{ color: muted ? theme.textSecondary : theme.text, fontVariant: ['tabular-nums'] }}>
+      <Text style={[bold ? typography.money.title : typography.money.body, { color: muted ? theme.textSecondary : theme.text, fontVariant: ['tabular-nums'] }]}>
         {value}
       </Text>
     </View>

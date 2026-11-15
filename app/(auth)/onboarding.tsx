@@ -21,6 +21,7 @@ import {
 import { useApplicationDraftStore } from '@/src/stores/applicationDraftStore';
 import { colors } from '@/src/theme';
 import type { PartnerMode } from '@/src/types/job';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 // "Become a partner": the application an admin reviews in the console.
 // Approval creates the account and emails a code to set the password.
@@ -58,6 +59,7 @@ export default function OnboardingScreen() {
 }
 
 function ApplicationFormScreen() {
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const saveDraft = useApplicationDraftStore((s) => s.saveDraft);
@@ -186,7 +188,7 @@ function ApplicationFormScreen() {
 
       <ScrollView
         className="-mt-6 flex-1 rounded-t-[24px] bg-white dark:bg-neutral-900"
-        contentContainerStyle={{ padding: 24, paddingBottom: 32, gap: 20 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: bottomPadding, gap: 20 }}
         keyboardShouldPersistTaps="handled"
       >
         <StepDots count={STEPS.length} activeIndex={stepIndex} />

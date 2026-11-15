@@ -21,7 +21,9 @@ import { useSettingsStore } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
 import type { FailureReason, Job, JobStage, JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from '@/src/shared/components/MoneyText';
 import { openNavigation } from '@/src/utils/navigation';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 // Layout ported from the app's GlassView design system, same merge pattern
 // as the rest of the Jobs flow: `advanceStage()`/`failJob()` are the real
@@ -58,6 +60,7 @@ const STAGE_COPY: Record<JobStage, { label: string; sublabel?: (job: Job) => str
 export default function ActiveDeliveryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [code, setCode] = useState('');
@@ -224,7 +227,7 @@ export default function ActiveDeliveryScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
     >
       {/* Nav is hidden on this screen (task-focused, one-way workflow).
           This is purely a navigation pop — the job stays active in the
@@ -406,7 +409,7 @@ function SummaryRow({ label, amount, theme }: { label: string; amount: number; t
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
       <Text className="text-body" style={{ color: theme.textSecondary }}>{label}</Text>
-      <Text className="text-body-lg font-semibold" style={{ color: theme.text }}>{formatCurrency(amount)}</Text>
+      <MoneyText amount={amount} size="body" color={theme.text} />
     </View>
   );
 }

@@ -18,13 +18,14 @@ import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { BackButton } from '@/src/shared/components/BackButton';
+import { confirmSignOut } from '@/src/shared/utils/confirmSignOut';
 import { GlassView } from '@/src/shared/components/GlassView';
 import { SettingsRow, SettingsRowSpacer } from '@/src/shared/components/SettingsRow';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { useAuthStore } from '@/src/stores/authStore';
 import { useNavStyleStore, type NavStyle } from '@/src/stores/navStyleStore';
 import { useSettingsStore, type ThemeMode } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 const THEME_LABEL: Record<ThemeMode, string> = { light: 'Light', dark: 'Dark', system: 'System' };
 const NAV_LABEL: Record<NavStyle, string> = { floating: 'Floating', docked: 'Docked', compact: 'Compact' };
@@ -40,6 +41,7 @@ const NAV_LABEL: Record<NavStyle, string> = { floating: 'Floating', docked: 'Doc
  */
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const themeMode = useSettingsStore((s) => s.theme);
@@ -48,7 +50,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
     >
       {/* This screen is pushed on top of the headerless (partner) Stack
           (screenOptions sets headerShown: false for every route so the
@@ -178,10 +180,7 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       <AnimatedPressable
-        onPress={() => {
-          useAuthStore.getState().signOut();
-          router.replace('/(auth)/login');
-        }}
+        onPress={confirmSignOut}
         scaleTo={0.98}
       >
         <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

@@ -21,6 +21,7 @@ import { ApiError } from '@/src/services/api';
 import { useHasApplicationDraft } from '@/src/stores/applicationDraftStore';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 type Theme = {
   text: string;
@@ -38,6 +39,7 @@ export default function LoginScreen() {
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
 
   const signIn = useAuthStore((s) => s.signIn);
   const sessionExpired = useAuthStore((s) => s.sessionExpired);
@@ -94,7 +96,7 @@ export default function LoginScreen() {
         contentContainerStyle={{
           paddingTop: insets.top + 24,
           paddingHorizontal: 24,
-          paddingBottom: 32,
+          paddingBottom: bottomPadding,
           gap: 18,
         }}
         keyboardShouldPersistTaps="handled"

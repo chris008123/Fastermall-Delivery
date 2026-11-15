@@ -23,6 +23,7 @@ import { supportTopics } from '@/src/data/mockSupport';
 import { colors } from '@/src/theme';
 import type { SupportTopicId } from '@/src/types/support';
 import { telUrl, useSupportNumber } from '@/src/services/supportContact';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 const TOPIC_ICON: Record<SupportTopicId, typeof Wallet> = {
   PAYMENT: Wallet,
@@ -36,6 +37,7 @@ export default function SupportScreen() {
   // Hidden until an admin sets the support number.
   const supportNumber = useSupportNumber();
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const [query, setQuery] = useState('');
@@ -54,7 +56,7 @@ export default function SupportScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
       keyboardShouldPersistTaps="handled"
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

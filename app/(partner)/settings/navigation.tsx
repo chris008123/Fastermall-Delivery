@@ -1,4 +1,4 @@
-import { Bike, Check, Navigation as NavigationIcon } from 'lucide-react-native';
+import { Check, MapPinned, Navigation as NavigationIcon } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -7,14 +7,16 @@ import { GlassView } from '@/src/shared/components/GlassView';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { useSettingsStore, type NavigationApp } from '@/src/stores/settingsStore';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
-const NAV_APP_OPTIONS: { value: NavigationApp; label: string; description: string; icon: typeof Bike }[] = [
+const NAV_APP_OPTIONS: { value: NavigationApp; label: string; description: string; icon: typeof Check }[] = [
   { value: 'GOOGLE_MAPS', label: 'Google Maps', description: 'Opens turn-by-turn in Google Maps', icon: NavigationIcon },
-  { value: 'WAZE', label: 'Waze', description: 'Opens turn-by-turn in Waze', icon: Bike },
+  { value: 'WAZE', label: 'Waze', description: 'Opens turn-by-turn in Waze', icon: MapPinned },
 ];
 
 export default function NavigationSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const navigationApp = useSettingsStore((s) => s.navigationApp);
@@ -23,7 +25,7 @@ export default function NavigationSettingsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />

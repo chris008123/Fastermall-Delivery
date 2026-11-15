@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import {
@@ -30,6 +31,13 @@ export function PushSetup() {
     const offTap = addPushTapListener((route) => router.push(route as never));
     const offReceive = addPushReceivedListener(() => {
       void useNotificationsStore.getState().loadNotifications();
+      // Settings > Notifications > Vibration. It used to be saved and never
+      // read; this is the "while the app is open" buzz its description
+      // promises. Goes straight to expo-haptics because it's an alert, not
+      // touch feedback, so the Appearance haptics switch shouldn't mute it.
+      if (useSettingsStore.getState().notificationPrefs.vibration) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      }
     });
     return () => {
       alive = false;

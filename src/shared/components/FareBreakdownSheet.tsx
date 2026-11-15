@@ -1,11 +1,12 @@
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
 import { computeFareBreakdown } from '@/src/utils/fare';
-import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from './MoneyText';
 
 interface FareBreakdownSheetProps {
   visible: boolean;
@@ -14,6 +15,8 @@ interface FareBreakdownSheetProps {
 }
 
 export function FareBreakdownSheet({ visible, onClose, job }: FareBreakdownSheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -31,7 +34,7 @@ export function FareBreakdownSheet({ visible, onClose, job }: FareBreakdownSheet
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
-            paddingBottom: 36,
+            paddingBottom: sheetBottomPadding,
             gap: 14,
           }}
         >
@@ -80,12 +83,7 @@ function FareRow({
       >
         {label}
       </Text>
-      <Text
-        className={bold ? 'text-body-lg font-bold' : 'text-body font-medium'}
-        style={{ color: highlight ? colors.partner.orange : theme.text }}
-      >
-        {formatCurrency(amount)}
-      </Text>
+      <MoneyText amount={amount} size={bold ? 'title' : 'body'} color={highlight ? colors.partner.orange : theme.text} />
     </View>
   );
 }

@@ -27,6 +27,7 @@ import { selectVerificationSummary, useDocumentsStore } from '@/src/stores/docum
 import { colors } from '@/src/theme';
 import type { DocumentStatus, DocumentType, PartnerDocument } from '@/src/types/document';
 import { daysUntil, formatDate } from '@/src/utils/date';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 const TYPE_ICON: Record<DocumentType, typeof CreditCard> = {
   ID_CARD: CreditCard,
@@ -50,6 +51,7 @@ const STATUS_META: Record<DocumentStatus, { label: string; icon: typeof CheckCir
 
 export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const documents = useDocumentsStore((s) => s.documents);
@@ -65,7 +67,7 @@ export default function DocumentsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
       refreshControl={<RefreshControl refreshing={status === 'loading' && documents.length > 0} onRefresh={() => void load()} />}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

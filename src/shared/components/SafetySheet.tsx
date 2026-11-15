@@ -1,4 +1,5 @@
 import * as Linking from 'expo-linking';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LifeBuoy, Phone, ShieldAlert, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Modal, Pressable, Text, View } from 'react-native';
@@ -19,6 +20,8 @@ interface SafetySheetProps {
  * admin set, or opens the Support screen when none is set yet.
  */
 export function SafetySheet({ visible, onClose }: SafetySheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const router = useRouter();
@@ -49,7 +52,7 @@ export function SafetySheet({ visible, onClose }: SafetySheetProps) {
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
-            paddingBottom: 36,
+            paddingBottom: sheetBottomPadding,
             gap: 16,
           }}
         >

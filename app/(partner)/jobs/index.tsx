@@ -16,7 +16,7 @@ import { usePartnerStore } from '@/src/stores/partnerStore';
 import { colors } from '@/src/theme';
 import type { Job } from '@/src/types/job';
 import { findFreshJobIds, isAtFoodJobLimit, isOfferedOpenJob, MAX_ACTIVE_FOOD_JOBS, OFFERED_JOB_LABEL } from '@/src/utils/jobFilters';
-import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from '@/src/shared/components/MoneyText';
 import { tripSummary } from '@/src/utils/trip';
 
 // Layout ported from the app's GlassView design system, same merge pattern
@@ -363,9 +363,7 @@ function JobCard({ job, disabled, isNew, onPress }: { job: Job; disabled: boolea
                 <Badge jobType={job.type} label={job.type} />
                 {isNew ? <Badge color={colors.accent.green} tint="rgba(62, 207, 142, 0.16)" label="New" /> : null}
               </View>
-              <Text className="text-card-title font-bold" style={{ color: theme.text }}>
-                {formatCurrency(job.deliveryFee)}
-              </Text>
+              <MoneyText amount={job.deliveryFee} size="title" color={theme.text} />
             </View>
 
             <View style={{ gap: 4 }}>
@@ -420,7 +418,7 @@ function HistoryCard({ job }: { job: Job }) {
             {isFailed ? (
               <Text className="text-caption font-semibold" style={{ color: colors.semantic.error }}>Failed</Text>
             ) : (
-              <Text className="text-card-title font-bold" style={{ color: theme.text }}>{formatCurrency(total)}</Text>
+              <MoneyText amount={total} size="title" color={theme.text} />
             )}
           </View>
 

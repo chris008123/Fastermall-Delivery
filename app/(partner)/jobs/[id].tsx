@@ -14,8 +14,10 @@ import { useJobsStore } from '@/src/stores/jobsStore';
 import { colors } from '@/src/theme';
 import type { JobType } from '@/src/types/job';
 import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from '@/src/shared/components/MoneyText';
 import { tripSummary } from '@/src/utils/trip';
 import { isAtFoodJobLimit, MAX_ACTIVE_FOOD_JOBS } from '@/src/utils/jobFilters';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 // Layout ported from the app's GlassView design system, same merge pattern
 // as Home/Jobs-list: `acceptJob()` below is the real backend-connected
@@ -32,6 +34,7 @@ const ACCEPT_VARIANT: Record<JobType, 'primary' | 'gold' | 'laundry'> = {
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -108,14 +111,14 @@ export default function JobDetailScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 32, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 16 }}
     >
       {/* Nav is hidden on this screen (task-focused detail view), so 32px
           is enough here — no floating nav to clear, unlike the section
           root tabs which use 100. */}
       <BackButton />
       <Badge jobType={job.type} label={job.type} />
-      <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(job.deliveryFee)}</Text>
+      <MoneyText amount={job.deliveryFee} size="display" color={theme.text} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <ModeIcon size={16} color={theme.textSecondary} />
         <Text className="text-body" style={{ color: theme.textSecondary }}>

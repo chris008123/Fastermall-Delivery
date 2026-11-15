@@ -1,4 +1,5 @@
 import * as Linking from 'expo-linking';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { telUrl, useSupportNumber } from '@/src/services/supportContact';
 import { AlertOctagon, ChevronLeft, MapPinOff, Phone, Store, UserX, Wrench, X } from 'lucide-react-native';
@@ -75,6 +76,8 @@ interface FailedDeliverySheetProps {
 }
 
 export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, customerName, customerPhone }: FailedDeliverySheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const router = useRouter();
   const supportNumber = useSupportNumber();
   const { isDark } = useResolvedTheme();
@@ -97,7 +100,7 @@ export function FailedDeliverySheet({ visible, onClose, onConfirmFailed, custome
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
-            paddingBottom: 36,
+            paddingBottom: sheetBottomPadding,
             gap: 14,
             maxHeight: '85%',
           }}

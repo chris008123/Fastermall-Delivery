@@ -1,358 +1,304 @@
 import { router } from 'expo-router';
-import {
-  Bell,
-  ChevronRight,
-  CircleAlert,
-  MapPin,
-  PackageSearch,
-  Zap,
-} from 'lucide-react-native';
+import { ArrowDownCircle, Banknote, ChevronRight, History, PiggyBank, RefreshCcw, Smartphone } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SectionList, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
-import { Badge } from '@/src/shared/components/Badge';
-import { Button } from '@/src/shared/components/Button';
-import { GlassView } from '@/src/shared/components/GlassView';
 import { useNavClearance } from '@/src/shared/components/AppNav';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from '@/src/shared/components/Button';
+import { EarningsChart, sumLastSevenDays } from '@/src/shared/components/EarningsChart';
+import { FareBreakdownSheet } from '@/src/shared/components/FareBreakdownSheet';
+import { GlassView } from '@/src/shared/components/GlassView';
+import { InstantCashoutSheet } from '@/src/shared/components/InstantCashoutSheet';
 import { ProgressBar } from '@/src/shared/components/ProgressBar';
-import { SlideToggle } from '@/src/shared/components/SlideToggle';
 import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
-import { useInteractionStore } from '@/src/stores/interactionStore';
+import { useToast } from '@/src/shared/toast/ToastProvider';
+import { haptics } from '@/src/shared/utils/haptics';
 import { useJobsStore } from '@/src/stores/jobsStore';
-import { selectUnreadCount, useNotificationsStore } from '@/src/stores/notificationsStore';
-import { usePartnerStore } from '@/src/stores/partnerStore';
+import { maskMomoNumber, usePayoutStore } from '@/src/stores/payoutStore';
 import { selectEarningsBalance, selectReimbursedTotal, useWalletStore } from '@/src/stores/walletStore';
 import { colors } from '@/src/theme';
-import { isActiveJob, isAtFoodJobLimit, isOfferedOpenJob, MAX_ACTIVE_FOOD_JOBS } from '@/src/utils/jobFilters';
+import type { LedgerEntry, LedgerEntryType } from '@/src/types/wallet';
+import { nextPayoutDate } from '@/src/utils/date';
 import { formatCurrency } from '@/src/utils/money';
+import { MoneyText } from '@/src/shared/components/MoneyText';
 
-// Layout/visual language ported from the app's established GlassView design
-// system (matching the customer app's dashboard patterns) — data loading,
-// refresh, and error handling below are unchanged from the backend-connected
-// version: real `loadProfile()`/`loadJobs()` calls, retry-on-error, and an
-// availability toggle that rolls back on a failed backend PATCH.
-export default function PartnerHomeScreen() {
+const ENTRY_META: Record<LedgerEntryType, { icon: typeof Banknote; label: string }> = {
+  EARNING: { icon: Banknote, label: 'Earning' },
+  REIMBURSEMENT: { icon: RefreshCcw, label: 'Reimbursement' },
+  WITHDRAWAL: { icon: ArrowDownCircle, label: 'Withdrawal' },
+};
+
+// Small flat-ish instant-transfer fee, capped so a big balance doesn't
+// pay a disproportionate amount — same shape as the mobile-money instant
+// transfer fees this is modeling.
+function instantFeeFor(balance: number): number {
+  return Math.min(Math.round(balance * 0.02 * 100) / 100, 5);
+}
+
+/** Groups ledger entries into Today / Yesterday / calendar-date sections,
+ * preserving the ledger's existing order within each day. Assumes the
+ * ledger already comes newest-first, same as before this grouping — this
+ * only inserts headers, it doesn't re-sort. */
+function groupLedgerByDate(ledger: LedgerEntry[]): { title: string; data: LedgerEntry[] }[] {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  const sections: { title: string; data: LedgerEntry[] }[] = [];
+  for (const entry of ledger) {
+    const key = new Date(entry.createdAt).toDateString();
+    const title =
+      key === today ? 'Today' : key === yesterday ? 'Yesterday' : new Date(entry.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+    const section = sections.find((s) => s.title === title);
+    if (section) {
+      section.data.push(entry);
+    } else {
+      sections.push({ title, data: [entry] });
+    }
+  }
+  return sections;
+}
+
+export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const navClearance = useNavClearance();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
-  const offlineByTap = useInteractionStore((s) => s.offlineByTap);
-
-  const name = usePartnerStore((s) => s.name);
-  const isAvailable = usePartnerStore((s) => s.isAvailable);
-  const loadProfile = usePartnerStore((s) => s.loadProfile);
-  const setAvailable = usePartnerStore((s) => s.setAvailable);
-
-  const jobs = useJobsStore((s) => s.jobs);
-  const jobsLoading = useJobsStore((s) => s.isLoading);
-  const jobsError = useJobsStore((s) => s.error);
-  const loadJobs = useJobsStore((s) => s.loadJobs);
-
   const ledger = useWalletStore((s) => s.ledger);
   const threshold = useWalletStore((s) => s.withdrawalThreshold);
   const loadWallet = useWalletStore((s) => s.loadWallet);
-  const unreadCount = useNotificationsStore(selectUnreadCount);
-  const loadNotifications = useNotificationsStore((s) => s.loadNotifications);
-
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const withdraw = useWalletStore((s) => s.withdraw);
+  const withdrawInstant = useWalletStore((s) => s.withdrawInstant);
+  const jobs = useJobsStore((s) => s.jobs);
+  const payoutNumber = usePayoutStore((s) => s.number);
+  const payoutNetwork = usePayoutStore((s) => s.network);
+  const { show } = useToast();
 
   useEffect(() => {
-    let mounted = true;
+    void loadWallet();
+  }, [loadWallet]);
 
-    const initialize = async () => {
-      setIsInitializing(true);
-      setInitializationError(null);
+  const [cashoutVisible, setCashoutVisible] = useState(false);
+  const [fareEntry, setFareEntry] = useState<LedgerEntry | null>(null);
 
-      try {
-        await Promise.all([
-          loadProfile(),
-          loadJobs(),
-          loadWallet(),
-        ]);
-      } catch (error) {
-        if (!mounted) return;
-        setInitializationError(error instanceof Error ? error.message : 'Unable to load delivery data.');
-      } finally {
-        if (mounted) setIsInitializing(false);
-      }
-    };
-
-    void initialize();
-    // Separate from initialize(): a notifications failure shouldn't block
-    // the dashboard (the store keeps its own error).
-    void loadNotifications();
-
-    return () => {
-      mounted = false;
-    };
-  }, [loadProfile, loadJobs, loadWallet, loadNotifications]);
-
-  const refresh = async () => {
-    setRefreshing(true);
-    void loadNotifications();
-    setInitializationError(null);
-
-    try {
-      await Promise.all([
-        loadProfile(),
-        loadJobs(),
-        loadWallet(),
-      ]);
-    } catch (error) {
-      setInitializationError(error instanceof Error ? error.message : 'Unable to refresh delivery data.');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleAvailabilityChange = async (value: boolean) => {
-    if (isTogglingAvailability) return;
-
-    setIsTogglingAvailability(true);
-
-    try {
-      await setAvailable(value);
-      // Refresh available deliveries after going online/offline so the
-      // dashboard reflects the backend state.
-      await loadJobs();
-    } catch (error) {
-      Alert.alert(
-        'Unable to update status',
-        error instanceof Error ? error.message : 'Unable to update availability.',
-      );
-    } finally {
-      setIsTogglingAvailability(false);
-    }
-  };
-
-  const availableCount = jobs.filter(isOfferedOpenJob).length;
-  const activeJobs = jobs.filter(isActiveJob);
-  const hasActiveJob = activeJobs.length > 0;
-  const atLimit = isAtFoodJobLimit(jobs);
   const earnings = selectEarningsBalance(ledger);
   const reimbursed = selectReimbursedTotal(ledger);
-  // Derived, presentation-only — not a new store selector: today's cut of
-  // the same ledger the wallet card already reads, for the top status card.
-  const todayKey = new Date().toDateString();
-  const todayEarnings = ledger
-    .filter((e) => e.type === 'EARNING' && new Date(e.createdAt).toDateString() === todayKey)
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  if (isInitializing) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.background, gap: 12 }}>
-        <ActivityIndicator size="large" color={colors.partner.orange} />
-        <Text className="text-body" style={{ color: theme.textSecondary }}>
-          Loading your delivery dashboard...
-        </Text>
-      </View>
-    );
-  }
+  const canWithdraw = earnings >= threshold;
+  const instantFee = instantFeeFor(earnings);
+  const payoutLabel = nextPayoutDate();
+  const fareJob = fareEntry?.jobId ? jobs.find((j) => j.id === fareEntry.jobId) ?? null : null;
+  const sections = groupLedgerByDate(ledger);
+  const lastCashout = ledger.find((e) => e.type === 'WITHDRAWAL');
+  const lastCashoutLabel = lastCashout
+    ? new Date(lastCashout.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : null;
 
   return (
-    <ScrollView
+    <SectionList<LedgerEntry, { title: string }>
       style={{ flex: 1, backgroundColor: theme.background }}
-      // paddingBottom uses the live nav clearance (it includes insets.bottom) since this
-      // screen sits under a floating, absolutely-positioned nav instead of a
-      // native tab bar that used to reserve its own space automatically.
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance, gap: 16 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => void refresh()}
-          tintColor={colors.partner.orange}
-          colors={[colors.partner.orange]}
-        />
-      }
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View>
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>Welcome back</Text>
-          <Text className="text-h1 font-bold" style={{ color: theme.text }}>{name || 'Delivery Partner'}</Text>
-        </View>
-        <AnimatedPressable onPress={() => router.push('/(partner)/notifications')} scaleTo={0.9}>
-          <View>
-            <Bell size={24} color={theme.text} />
-            {unreadCount > 0 && (
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: navClearance }}
+      sections={sections}
+      keyExtractor={(e) => e.id}
+      stickySectionHeadersEnabled={false}
+      ListHeaderComponent={
+        <View style={{ gap: 16, marginBottom: 8 }}>
+          <Text className="text-h1 font-bold" style={{ color: theme.text }}>Wallet</Text>
+
+          {/* Two lanes, kept visually separate on purpose: reimbursements are
+              always yours, earnings only cash out once they cross the
+              threshold — blending them into one number would hide that rule. */}
+          <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <PiggyBank size={18} color={colors.partner.orange} />
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                WORK EARNINGS
+              </Text>
+            </View>
+            <MoneyText amount={earnings} size="display" color={theme.text} numberOfLines={1} adjustsFontSizeToFit />
+            <ProgressBar progress={threshold > 0 ? earnings / threshold : 0} color={colors.partner.orange} />
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              {canWithdraw
+                ? `You've crossed the ${formatCurrency(threshold)} cash-out threshold.`
+                : `${formatCurrency(Math.max(threshold - earnings, 0))} more to unlock a cash-out.`}
+              {lastCashoutLabel ? ` Last cash-out: ${lastCashoutLabel}.` : ''}
+            </Text>
+            <View style={{ gap: 8 }}>
+              <Button
+                title="Cash out instantly"
+                variant="partner"
+                size="lg"
+                fullWidth
+                disabled={!canWithdraw}
+                onPress={() => setCashoutVisible(true)}
+              />
+              <Button
+                title="Scheduled payout"
+                variant="secondary"
+                fullWidth
+                disabled={!canWithdraw}
+                onPress={() => {
+                  withdraw();
+                  haptics.success();
+                  show(`${formatCurrency(earnings)} scheduled for ${payoutLabel}`, 'success');
+                }}
+              />
+            </View>
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Next automatic payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{payoutLabel}</Text>. Free, no fee.
+            </Text>
+            <AnimatedPressable
+              onPress={() => router.push('/settings/payout')}
+              scaleTo={0.98}
+              accessibilityRole="button"
+              accessibilityLabel="Payout details"
+            >
               <View
                 style={{
-                  position: 'absolute',
-                  top: -3,
-                  right: -3,
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 8,
-                  paddingHorizontal: 3,
-                  backgroundColor: colors.partner.orange,
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: 10,
+                  paddingTop: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.border,
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{unreadCount}</Text>
+                <Smartphone size={18} color={colors.partner.orange} />
+                <View style={{ flex: 1 }}>
+                  <Text className="text-body font-medium" style={{ color: theme.text }}>Payout details</Text>
+                  <Text className="text-caption" style={{ color: theme.textSecondary }}>
+                    {payoutNumber ? `${payoutNetwork} · ${maskMomoNumber(payoutNumber)}` : 'Add where instant cash-outs are sent'}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={theme.textSecondary} />
               </View>
-            )}
-          </View>
-        </AnimatedPressable>
-      </View>
+            </AnimatedPressable>
+          </GlassView>
 
-      {/* Most-important content, top-left: availability + today's earnings
-          merged into one card rather than two scattered mini-widgets, per
-          the redesign brief's dashboard rules. */}
-      <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text
-            className="text-caption font-semibold"
-            style={{ color: isAvailable ? colors.partner.orange : theme.textSecondary }}
-          >
-            {isTogglingAvailability ? 'Updating…' : isAvailable ? "You're online" : "You're offline"}
-          </Text>
-          <View style={{ alignItems: 'flex-end', gap: 2 }}>
-            <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-              TODAY
+          <GlassView radius="card" style={{ padding: 18, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <RefreshCcw size={16} color={colors.brand.teal} />
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                REIMBURSED
+              </Text>
+            </View>
+            <MoneyText amount={reimbursed} size="h2" color={colors.brand.teal} />
+            <Text className="text-caption" style={{ color: theme.textSecondary }}>
+              Your own money, returned instantly. The cash-out threshold doesn't apply to it.
             </Text>
-            <Text className="text-h1 font-bold" style={{ color: theme.text }}>{formatCurrency(todayEarnings)}</Text>
-          </View>
+          </GlassView>
+
+          <GlassView radius="card" style={{ padding: 18, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
+                EARNINGS
+              </Text>
+              <Text style={{ color: colors.partner.orange }}>
+                <MoneyText amount={sumLastSevenDays(ledger)} size="body" color={colors.partner.orange} />
+                <Text className="text-caption font-medium"> / 7 days</Text>
+              </Text>
+            </View>
+            <EarningsChart ledger={ledger} />
+          </GlassView>
+
+          {sections.length > 0 && (
+            <Text className="text-card-title font-semibold" style={{ color: theme.text, marginTop: 4 }}>
+              Activity
+            </Text>
+          )}
         </View>
-        {/* Slide instead of tap, so availability can't change by accident. */}
-        <SlideToggle
-          isOnline={isAvailable}
-          onChange={(v) => void handleAvailabilityChange(v)}
-          busy={isTogglingAvailability}
-          offlineByTap={offlineByTap}
+      }
+      renderSectionHeader={({ section }) => (
+        <Text
+          className="text-overline font-semibold"
+          style={{ color: theme.textSecondary, letterSpacing: 0.8, marginTop: 16, marginBottom: 8 }}
+        >
+          {section.title.toUpperCase()}
+        </Text>
+      )}
+      ListEmptyComponent={
+        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8, marginTop: 16 }}>
+          <History size={20} color={theme.textSecondary} />
+          <Text className="text-body" style={{ color: theme.textSecondary }}>
+            No transactions yet — earnings and reimbursements will show up here once you complete your first job.
+          </Text>
+        </GlassView>
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: theme.border, marginVertical: 4 }} />}
+      renderItem={({ item }) => (
+        <LedgerRow
+          entry={item}
+          theme={theme}
+          onPress={item.type === 'EARNING' && item.jobId ? () => setFareEntry(item) : undefined}
         />
-      </GlassView>
-
-      {initializationError && (
-        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <CircleAlert size={19} color={colors.semantic.error} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
-              Something needs attention
-            </Text>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>{initializationError}</Text>
-            <AnimatedPressable onPress={() => void refresh()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
-            </AnimatedPressable>
-          </View>
-        </GlassView>
       )}
+      ListFooterComponent={
+        <>
+          <InstantCashoutSheet
+            visible={cashoutVisible}
+            onClose={() => setCashoutVisible(false)}
+            onConfirm={() => {
+              const net = Math.max(earnings - instantFee, 0);
+              withdrawInstant(instantFee);
+              setCashoutVisible(false);
+              haptics.success();
+              show(`${formatCurrency(net)} sent instantly`, 'success');
+            }}
+            balance={earnings}
+            feeAmount={instantFee}
+            nextPayoutLabel={payoutLabel}
+          />
+          <FareBreakdownSheet visible={!!fareEntry} onClose={() => setFareEntry(null)} job={fareJob} />
+        </>
+      }
+    />
+  );
+}
 
-      {jobsError && !initializationError && (
-        <GlassView radius="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-          <CircleAlert size={19} color={colors.semantic.error} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text className="text-body-lg font-semibold" style={{ color: colors.semantic.error }}>
-              Couldn't load jobs
-            </Text>
-            <Text className="text-caption" style={{ color: theme.textSecondary }}>{jobsError}</Text>
-            <AnimatedPressable onPress={() => void loadJobs()} scaleTo={0.97} style={{ alignSelf: 'flex-start', marginTop: 6 }}>
-              <Text className="text-caption font-semibold" style={{ color: colors.partner.orange }}>Try again</Text>
-            </AnimatedPressable>
-          </View>
-        </GlassView>
-      )}
+function LedgerRow({
+  entry,
+  theme,
+  onPress,
+}: {
+  entry: LedgerEntry;
+  theme: { text: string; textSecondary: string };
+  onPress?: () => void;
+}) {
+  const meta = ENTRY_META[entry.type];
+  const Icon = meta.icon;
+  const positive = entry.amount >= 0;
+  const accent =
+    entry.type === 'EARNING' ? colors.partner.orange : entry.type === 'REIMBURSEMENT' ? colors.brand.teal : theme.textSecondary;
+  // Amount color follows entry type, not sign — a withdrawal's negative
+  // amount is a routine, deliberate cash-out, not an error.
+  const amountColor = entry.type === 'WITHDRAWAL' ? theme.text : accent;
 
+  const Row = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, minHeight: 56 }}>
+      <Icon size={20} color={accent} />
+      <View style={{ flex: 1 }}>
+        <Text className="text-body font-medium" style={{ color: theme.text }} numberOfLines={1}>
+          {entry.note}
+        </Text>
+        <Text className="text-caption" style={{ color: theme.textSecondary }}>
+          {meta.label}
+        </Text>
+      </View>
+      <MoneyText amount={Math.abs(entry.amount)} sign={positive ? '+' : entry.amount < 0 ? '−' : ''} size="body" color={amountColor} />
+      {onPress ? <ChevronRight size={16} color={theme.textSecondary} /> : null}
+    </View>
+  );
 
-      {!isAvailable && !hasActiveJob && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 10 }}>
-          <Zap size={22} color={colors.partner.orange} />
-          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>You're offline</Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            Slide to go online and start receiving food delivery jobs near you.
-          </Text>
-        </GlassView>
-      )}
+  if (!onPress) return Row;
 
-      {activeJobs.map((activeJob, index) => (
-        <AnimatedPressable key={activeJob.id} onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} scaleTo={0.98}>
-          <GlassView radius="card" intensity="strong" style={{ padding: 20, gap: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Badge jobType={activeJob.type} label={activeJob.type} />
-              <ChevronRight size={20} color={theme.textSecondary} />
-            </View>
-            <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-              {activeJobs.length > 1
-                ? `Active delivery ${index + 1} of ${activeJobs.length}`
-                : 'Active delivery in progress'}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MapPin size={16} color={theme.textSecondary} />
-              <Text className="text-body" style={{ color: theme.textSecondary }} numberOfLines={1}>
-                {activeJob.dropoff.label}
-              </Text>
-            </View>
-            <Button title="Continue delivery" variant="partner" onPress={() => router.push(`/(partner)/active/${activeJob.id}`)} />
-          </GlassView>
-        </AnimatedPressable>
-      ))}
-
-      {isAvailable && atLimit && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
-          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-            You're carrying {MAX_ACTIVE_FOOD_JOBS} orders
-          </Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            That's the most you can take at once. Deliver one to start accepting new jobs again.
-          </Text>
-        </GlassView>
-      )}
-
-      {isAvailable && !atLimit && !jobsLoading && availableCount > 0 && (
-        <AnimatedPressable onPress={() => router.push('/(partner)/jobs')} scaleTo={0.98}>
-          <GlassView radius="card" style={{ padding: 20, gap: 8 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text className="text-card-title font-semibold" style={{ color: theme.text }}>
-                {availableCount} job{availableCount === 1 ? '' : 's'} available
-              </Text>
-              <ChevronRight size={20} color={theme.textSecondary} />
-            </View>
-            <Text className="text-body" style={{ color: theme.textSecondary }}>
-              Browse and accept a food delivery job.
-            </Text>
-          </GlassView>
-        </AnimatedPressable>
-      )}
-
-      {isAvailable && !atLimit && jobsLoading && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'center', gap: 8 }}>
-          <ActivityIndicator color={colors.partner.orange} />
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>Checking for nearby jobs…</Text>
-        </GlassView>
-      )}
-
-      {isAvailable && !atLimit && !jobsLoading && availableCount === 0 && !jobsError && (
-        <GlassView radius="card" style={{ padding: 20, alignItems: 'flex-start', gap: 8 }}>
-          <PackageSearch size={22} color={theme.textSecondary} />
-          <Text className="text-card-title font-semibold" style={{ color: theme.text }}>No jobs nearby right now</Text>
-          <Text className="text-body" style={{ color: theme.textSecondary }}>
-            You're online and ready — a new food delivery job will show up here as soon as one opens up.
-          </Text>
-        </GlassView>
-      )}
-
-      <AnimatedPressable onPress={() => router.push('/(partner)/wallet')} scaleTo={0.98}>
-        <GlassView radius="card" style={{ padding: 20, gap: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text className="text-overline font-semibold" style={{ color: theme.textSecondary, letterSpacing: 0.8 }}>
-              WALLET
-            </Text>
-            <ChevronRight size={18} color={theme.textSecondary} />
-          </View>
-          <Text className="text-display font-bold" style={{ color: theme.text }}>{formatCurrency(earnings)}</Text>
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            toward your {formatCurrency(threshold)} cash-out
-          </Text>
-          <ProgressBar progress={earnings / threshold} color={colors.partner.orange} />
-          <Text className="text-caption" style={{ color: theme.textSecondary }}>
-            + {formatCurrency(reimbursed)} already reimbursed to you
-          </Text>
-        </GlassView>
-      </AnimatedPressable>
-    </ScrollView>
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      scaleTo={0.99}
+      accessibilityRole="button"
+      accessibilityLabel={`${entry.note}, see how this was calculated`}
+    >
+      {Row}
+    </AnimatedPressable>
   );
 }

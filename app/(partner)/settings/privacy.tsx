@@ -10,6 +10,7 @@ import { SUPPORT_EMAIL } from '@/src/config/contact';
 import { useAuthStore } from '@/src/stores/authStore';
 import { colors } from '@/src/theme';
 import { buildDeletionRequestMailto } from '@/src/utils/accountDeletion';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 // Placeholder domain — swap for the real legal-pages URL once Fastermall
 // publishes one; kept as a single constant so that's a one-line change.
@@ -17,6 +18,7 @@ const LEGAL_BASE_URL = 'https://fastermall.com';
 
 export default function PrivacyScreen() {
   const insets = useSafeAreaInsets();
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
 
@@ -59,7 +61,7 @@ export default function PrivacyScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: 48, gap: 20 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 20, paddingBottom: bottomPadding, gap: 20 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <BackButton />

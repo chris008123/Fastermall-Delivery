@@ -9,6 +9,7 @@ import { useResolvedTheme } from '@/src/shared/hooks/useResolvedTheme';
 import { haptics } from '@/src/shared/utils/haptics';
 import { checkResetForm, requestResetCode, resetWithCode } from '@/src/services/password';
 import { colors } from '@/src/theme';
+import { useScreenBottomPadding } from '@/src/shared/hooks/useScreenBottomPadding';
 
 /**
  * "Set up account or reset password". New partners arrive here from their
@@ -16,6 +17,7 @@ import { colors } from '@/src/theme';
  * asks for a code here. Either way they choose their own password.
  */
 export default function SetPasswordScreen() {
+  const bottomPadding = useScreenBottomPadding();
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const params = useLocalSearchParams<{ email?: string }>();
@@ -82,7 +84,7 @@ export default function SetPasswordScreen() {
       />
       <ScrollView
         className="-mt-6 flex-1 rounded-t-[24px] bg-white dark:bg-neutral-900"
-        contentContainerStyle={{ padding: 24, paddingBottom: 32, gap: 18 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: bottomPadding, gap: 18 }}
         keyboardShouldPersistTaps="handled"
       >
         <Field label="Email" error={shown('email')} theme={theme} icon={<Mail size={18} color={theme.textSecondary} />}>

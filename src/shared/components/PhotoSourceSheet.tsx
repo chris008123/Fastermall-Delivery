@@ -1,4 +1,5 @@
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { AnimatedPressable } from '@/src/shared/components/AnimatedPressable';
@@ -24,6 +25,8 @@ interface PhotoSourceSheetProps {
  * denial and picker errors itself, so the screens only deal with a
  * finished photo. */
 export function PhotoSourceSheet({ visible, onClose, title, guidance, front, onPicked }: PhotoSourceSheetProps) {
+  // Clear the phone's button/gesture bar, never less than the old 36.
+  const sheetBottomPadding = Math.max(36, useSafeAreaInsets().bottom + 16);
   const { isDark } = useResolvedTheme();
   const theme = isDark ? colors.dark : colors.light;
   const { show } = useToast();
@@ -61,7 +64,7 @@ export function PhotoSourceSheet({ visible, onClose, title, guidance, front, onP
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             padding: 24,
-            paddingBottom: 36,
+            paddingBottom: sheetBottomPadding,
             gap: 14,
           }}
         >

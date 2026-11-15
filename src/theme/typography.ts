@@ -21,6 +21,16 @@ export const typography = {
     letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },
+  // Money — Plus Jakarta Sans, which (unlike Fredoka) has the cedi sign
+  // and tabular figures, so amounts line up and don't jiggle as they change.
+  money: {
+    display: { fontSize: 34, lineHeight: 42, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.8 },
+    h1: { fontSize: 26, lineHeight: 32, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.5 },
+    h2: { fontSize: 20, lineHeight: 26, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: -0.3 },
+    title: { fontSize: 17, lineHeight: 22, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: -0.2 },
+    body: { fontSize: 15, lineHeight: 20, fontFamily: 'PlusJakartaSans_600SemiBold' },
+    caption: { fontSize: 13, lineHeight: 18, fontFamily: 'PlusJakartaSans_600SemiBold' },
+  },
   // Kept for any existing call sites relying on the old raw family map.
   fontFamily: {
     regular: 'Fredoka_400Regular',
